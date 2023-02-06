@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <data>
+        <import type="android.view.View" />
+        <variable
+            name="user"
+            type="kr.young.examplewebrtc.model.User" />
+    </data>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/white"
+        tools:context=".MainActivity">
+
+        <TextView
+            android:id="@+id/tv_test_data"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:layout_marginStart="20dp"
+            android:text="@string/test_data"
+            android:textSize="18sp"
+            android:textColor="@color/black"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintLeft_toLeftOf="parent" />
+
+        <EditText
+            android:id="@+id/et_id"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:layout_marginStart="20dp"
+            android:layout_marginEnd="20dp"
+            android:paddingStart="15dp"
+            android:paddingEnd="0dp"
+            android:paddingVertical="10dp"
+            android:background="@drawable/text_box"
+            android:hint="@string/id"
+            android:textColor="@color/black"
+            android:textSize="16sp"
+            android:inputType="text"
+            android:maxLines="1"
+            android:text="@{user.id}"
+            app:layout_constraintTop_toBottomOf="@+id/tv_test_data"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent" />
+
+        <EditText
+            android:id="@+id/et_name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:layout_marginStart="20dp"
+            android:layout_marginEnd="20dp"
+            android:paddingStart="15dp"
+            android:paddingEnd="0dp"
+            android:paddingVertical="10dp"
+            android:background="@drawable/text_box"
+            android:hint="@string/name"
+            android:textColor="@color/black"
+            android:textSize="16sp"
+            android:inputType="text"
+            android:maxLines="1"
+            android:text="@{user.name}"
+            app:layout_constraintTop_toBottomOf="@+id/et_id"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent" />
+
+        <TextView
+            android:id="@+id/tv_post"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:layout_marginStart="20dp"
+            android:padding="10dp"
+            android:background="@color/button_gray"
+            android:textSize="16sp"
+            android:text="@string/send"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/et_name" />
+
+        <TextView
+            android:id="@+id/tv_get"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:layout_marginStart="10dp"
+            android:padding="10dp"
+            android:background="@color/button_gray"
+            android:textSize="16sp"
+            android:text="@string/get"
+            app:layout_constraintLeft_toRightOf="@+id/tv_post"
+            app:layout_constraintTop_toBottomOf="@+id/et_name" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</layout>
