@@ -14,3 +14,5 @@ dependencyResolutionManagement {
 }
 rootProject.name = "ExampleWebRTC"
 include ':app'
+include ':common'
+project(':common').projectDir = file("../../AndroidUtil/common")

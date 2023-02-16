@@ -17,37 +17,16 @@
         tools:context=".MainActivity">
 
         <TextView
-            android:id="@+id/tv_test_data"
+            android:id="@+id/tv_room"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
             android:layout_marginStart="20dp"
-            android:text="@string/test_data"
+            android:text="@string/room"
             android:textSize="18sp"
             android:textColor="@color/black"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintLeft_toLeftOf="parent" />
-
-        <EditText
-            android:id="@+id/et_id"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:layout_marginStart="20dp"
-            android:layout_marginEnd="20dp"
-            android:paddingStart="15dp"
-            android:paddingEnd="0dp"
-            android:paddingVertical="10dp"
-            android:background="@drawable/text_box"
-            android:hint="@string/id"
-            android:textColor="@color/black"
-            android:textSize="16sp"
-            android:inputType="text"
-            android:maxLines="1"
-            android:text="@{user.id}"
-            app:layout_constraintTop_toBottomOf="@+id/tv_test_data"
-            app:layout_constraintLeft_toLeftOf="parent"
-            app:layout_constraintRight_toRightOf="parent" />
 
         <EditText
             android:id="@+id/et_name"
@@ -56,45 +35,40 @@
             android:layout_marginTop="10dp"
             android:layout_marginStart="20dp"
             android:layout_marginEnd="20dp"
-            android:paddingStart="15dp"
-            android:paddingEnd="0dp"
             android:paddingVertical="10dp"
-            android:background="@drawable/text_box"
-            android:hint="@string/name"
+            android:hint="@string/id"
             android:textColor="@color/black"
             android:textSize="16sp"
             android:inputType="text"
             android:maxLines="1"
-            android:text="@{user.name}"
-            app:layout_constraintTop_toBottomOf="@+id/et_id"
+            app:layout_constraintTop_toBottomOf="@+id/tv_room"
             app:layout_constraintLeft_toLeftOf="parent"
             app:layout_constraintRight_toRightOf="parent" />
 
         <TextView
-            android:id="@+id/tv_post"
+            android:id="@+id/tv_warn"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
             android:layout_marginStart="20dp"
-            android:padding="10dp"
-            android:background="@color/button_gray"
-            android:textSize="16sp"
-            android:text="@string/send"
-            app:layout_constraintLeft_toLeftOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/et_name" />
+            android:layout_marginTop="10dp"
+            android:textColor="#b31030"
+            android:textSize="15sp"
+            app:layout_constraintTop_toBottomOf="@+id/et_name"
+            app:layout_constraintLeft_toLeftOf="parent" />
 
         <TextView
-            android:id="@+id/tv_get"
+            android:id="@+id/tv_join"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
-            android:layout_marginStart="10dp"
+            android:layout_marginEnd="20dp"
             android:padding="10dp"
             android:background="@color/button_gray"
             android:textSize="16sp"
-            android:text="@string/get"
-            app:layout_constraintLeft_toRightOf="@+id/tv_post"
+            android:text="@string/join"
+            app:layout_constraintRight_toRightOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/et_name" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
+
 </layout>

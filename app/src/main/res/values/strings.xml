@@ -5,4 +5,10 @@
     <string name="name">Name</string>
     <string name="send">Send</string>
     <string name="get">Get</string>
+    <string name="room">Room</string>
+    <string name="join">Join</string>
+    <string name="empty_warn">Name can\'t be empty</string>
+    <string name="create_warn">Can\'t create</string>
+    <string name="duplicate_warn">Duplicate name</string>
+    <string name="end">End</string>
 </resources>

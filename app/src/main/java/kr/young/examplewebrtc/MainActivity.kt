@@ -1,76 +1,93 @@
 package kr.young.examplewebrtc
 
 import android.annotation.SuppressLint
-import androidx.appcompat.app.AppCompatActivity
+import android.content.Intent
 import android.os.Bundle
-import android.util.Log
 import android.view.MotionEvent
 import android.view.View
 import android.view.View.OnClickListener
 import android.view.View.OnTouchListener
+import android.view.inputmethod.EditorInfo.IME_ACTION_DONE
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatActivity
 import androidx.databinding.DataBindingUtil
-import com.google.firebase.firestore.ktx.firestore
-import com.google.firebase.ktx.Firebase
+import kr.young.common.TouchEffect
+import kr.young.common.UtilLog.Companion.d
+import kr.young.common.UtilLog.Companion.i
 import kr.young.examplewebrtc.databinding.ActivityMainBinding
-import kr.young.examplewebrtc.model.User
+import kr.young.examplewebrtc.vm.CallViewModel
 
 class MainActivity : AppCompatActivity(), OnTouchListener, OnClickListener {
     private lateinit var binding: ActivityMainBinding
+    private lateinit var launcher: ActivityResultLauncher<Intent>
+    private lateinit var callViewModel: CallViewModel
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = DataBindingUtil.setContentView(this, R.layout.activity_main)
+        i(TAG, "onCreate()")
 
-        binding.tvPost.setOnTouchListener(this)
-        binding.tvPost.setOnClickListener(this)
-        binding.tvGet.setOnTouchListener(this)
-        binding.tvGet.setOnClickListener(this)
-    }
+        binding.tvJoin.setOnTouchListener(this)
+        binding.tvJoin.setOnClickListener(this)
 
-    companion object {
-        private const val TAG = "MainActivity"
+        binding.etName.setOnEditorActionListener { v, actionId, event ->
+            if (actionId == IME_ACTION_DONE) {
+                d(TAG, "DONE")
+                join()
+                true
+            } else {
+                false
+            }
+        }
+
+        callViewModel = CallViewModel.instance
+        callViewModel.hasExistSpace.observe(this) {
+            d(TAG, "hasExistSpace.observe - $it")
+            if (it!!) {
+                binding.etName.setText("")
+                val intent = Intent(this, CallActivity::class.java)
+                startActivity(intent)
+            } else {
+                callViewModel.createSpace(binding.etName.text.toString())
+            }
+        }
+
+        launcher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == RESULT_OK) {
+                i(TAG, "result ok")
+            } else if (result.resultCode == RESULT_CANCELED) {
+                i(TAG, "result canceled")
+                finish()
+            }
+        }
     }
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouch(v: View?, event: MotionEvent?): Boolean {
         when (v!!.id) {
-            R.id.tv_post -> {}
-            R.id.tv_get -> {}
+            R.id.tv_join -> TouchEffect.alpha(v, event)
         }
         return super.onTouchEvent(event)
     }
 
     override fun onClick(v: View?) {
         when (v!!.id) {
-            R.id.tv_post -> {
-                val user = User(binding.etId.text.toString(), binding.etName.toString())
-//                binding.user = user
-
-                val db = Firebase.firestore
-                db.collection(User.COLLECTION).document(user.id)
-                    .set(user.toMap())
-                    .addOnSuccessListener {
-                        Log.d(TAG, "DocumentSnapshot added with ID")
-                    }
-                    .addOnFailureListener { e ->
-                        Log.w(TAG, "Error adding document", e)
-                    }
-            }
-            R.id.tv_get -> {
-                val db = Firebase.firestore
-                db.collection(User.COLLECTION)
-                    .get()
-                    .addOnSuccessListener { result ->
-                        for (document in result) {
-                            Log.d(TAG, "${document.id} => ${document.data}")
-                            val user = User(document.id, document.data)
-                        }
-                    }
-                    .addOnFailureListener { exception ->
-                        Log.w(TAG, "Error getting documents.", exception)
-                    }
-            }
+            R.id.tv_join -> join()
         }
+    }
+
+    private fun join() {
+        d(TAG, "join")
+        if (binding.etName.text.toString().isNotEmpty()) {
+            callViewModel.checkExistSpace(binding.etName.text.toString())
+        } else {
+            binding.tvWarn.text = getString(R.string.empty_warn)
+        }
+    }
+
+    companion object {
+        private const val TAG = "MainActivity"
     }
 }
