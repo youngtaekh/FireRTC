@@ -1,12 +1,15 @@
 <resources>
     <string name="app_name">ExampleWebRTC</string>
+    <string name="default_notification_channel_id">Default</string>
     <string name="test_data">Test Data</string>
+    <string name="user">User</string>
     <string name="id">ID</string>
     <string name="name">Name</string>
     <string name="send">Send</string>
     <string name="get">Get</string>
     <string name="room">Room</string>
     <string name="join">Join</string>
+    <string name="start">Start</string>
     <string name="empty_warn">Name can\'t be empty</string>
     <string name="create_warn">Can\'t create</string>
     <string name="duplicate_warn">Duplicate name</string>

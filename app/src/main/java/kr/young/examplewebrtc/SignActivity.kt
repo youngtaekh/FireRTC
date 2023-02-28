@@ -1,14 +1,14 @@
 package kr.young.examplewebrtc
 
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.MotionEvent
 import android.view.View
 import android.view.View.OnClickListener
 import android.view.View.OnTouchListener
 import kr.young.examplewebrtc.databinding.ActivitySignBinding
+import kr.young.examplewebrtc.util.BaseActivity
 
-class SignActivity : AppCompatActivity(), OnTouchListener, OnClickListener {
+class SignActivity : BaseActivity(), OnTouchListener, OnClickListener {
     private lateinit var binding: ActivitySignBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {

@@ -6,18 +6,24 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.View.OnClickListener
 import android.view.View.OnTouchListener
-import androidx.appcompat.app.AppCompatActivity
 import androidx.databinding.DataBindingUtil
 import kr.young.common.TouchEffect
 import kr.young.common.UtilLog.Companion.d
 import kr.young.examplewebrtc.databinding.ActivityCallBinding
+import kr.young.examplewebrtc.fcm.SendFCM
+import kr.young.examplewebrtc.fcm.SendFCM.FCMType
 import kr.young.examplewebrtc.model.Space
+import kr.young.examplewebrtc.model.Space.SpaceStatus
+import kr.young.examplewebrtc.util.BaseActivity
 import kr.young.examplewebrtc.vm.CallViewModel
-import java.text.SimpleDateFormat
+import kr.young.examplewebrtc.vm.MyDataViewModel
+import kr.young.examplewebrtc.vm.SpaceViewModel
+import kr.young.examplewebrtc.vm.UserViewModel
 import java.util.*
 
-class CallActivity : AppCompatActivity(), OnClickListener, OnTouchListener {
+class CallActivity : BaseActivity(), OnClickListener, OnTouchListener {
     private lateinit var binding: ActivityCallBinding
+    private lateinit var spaceViewModel: SpaceViewModel
     private lateinit var callViewModel: CallViewModel
 
     @SuppressLint("ClickableViewAccessibility")
@@ -28,47 +34,81 @@ class CallActivity : AppCompatActivity(), OnClickListener, OnTouchListener {
         binding.tvEnd.setOnClickListener(this)
         binding.tvEnd.setOnTouchListener(this)
 
+        spaceViewModel = SpaceViewModel.instance
         callViewModel = CallViewModel.instance
-        binding.space = callViewModel.space.value!!
 
-        callViewModel.space.observe(this) {
-            d(TAG, "space.observe $it")
-            binding.tvCount.text = "${it.calls.size}"
-        }
-        callViewModel.myCall.observe(this) {
-            d(TAG, "myCall.observe $it")
-            val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ", Locale.getDefault())
-            val outputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS", Locale.getDefault())
-            val date = inputFormat.parse(it.createdAt)
-            d(TAG, "parse date = ${outputFormat.format(date!!)}")
-        }
-        callViewModel.remoteCall.observe(this) {
+        spaceViewModel.isOffer.observe(this) {
             if (it != null) {
-                d(TAG, "call.observe.size ${it.size}")
-                for (call in it) {
-                    d(TAG, "call.observe $call")
+                if (it) {
+                    spaceViewModel.makeOffer()
+                } else {
+                    spaceViewModel.updateSpaceStatus(Space.SpaceStatus.ACTIVE)
+                    spaceViewModel.makeAnswer()
                 }
+                spaceViewModel.isOffer.value = null
             }
         }
-
-        if (callViewModel.space.value!!.calls.isEmpty()) {
-            //make call
-            callViewModel.makeCall()
-        } else {
-            //getRemoteCall
-            callViewModel.updateSpaceStatus(Space.SpaceStatus.ACTIVE)
-            callViewModel.answerCall()
+        spaceViewModel.space.observe(this) {
+            if (it != null) {
+                d(TAG, "space.observe name ${it.name} id ${it.id.substring(0, 5)}")
+                binding.space = it
+            }
+        }
+        spaceViewModel.calls.observe(this) {
+            d(TAG, "calls.observe")
+            var count = 0
+            for (call in it) {
+                d(TAG, "calls.observe call id ${call.id.substring(0, 5)} userId ${call.userId}")
+                if (!call.terminated) {
+                    if (call.userId != MyDataViewModel.instance.getMyId()) {
+                        UserViewModel.instance.get(call.userId!!)
+                    }
+                    count++
+                }
+            }
+            binding.tvCount.text = "$count"
+        }
+        spaceViewModel.participants.observe(this) {
+            if (it != null) {
+                d(TAG, "participants.observe $it")
+            }
+        }
+        callViewModel.myCall.observe(this) {
+            if (it != null) {
+                d(TAG, "myCall.observe call id ${it.id.substring(0, 5)} userId ${it.userId}")
+            }
         }
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        callViewModel.terminateSpace()
-        callViewModel.endCall()
+        endCall()
     }
 
-    private fun end() {
-        finish()
+    private fun endCall() {
+        //update call to terminated
+        d(TAG, "endCall")
+        callViewModel.endCall()
+        var isTerminatedSpace = true
+        for (call in spaceViewModel.calls.value!!) {
+            d(TAG, "endCall ${call.userId} terminated ${call.terminated}")
+            if (!call.terminated) {
+                isTerminatedSpace = false
+            }
+            if (call.userId != MyDataViewModel.instance.getMyId()) {
+                SendFCM.sendMessage(
+                    to = call.token!!,
+                    type = FCMType.Leave,
+                    spaceId = call.spaceId,
+                    callId = call.id
+                )
+            }
+        }
+        if (isTerminatedSpace) {
+            spaceViewModel.updateSpaceStatus(SpaceStatus.TERMINATED)
+        } else {
+            spaceViewModel.updateSpaceStatus(SpaceStatus.INACTIVE)
+        }
     }
 
     companion object {
@@ -77,7 +117,7 @@ class CallActivity : AppCompatActivity(), OnClickListener, OnTouchListener {
 
     override fun onClick(v: View?) {
         when (v!!.id) {
-            R.id.tv_end -> { end() }
+            R.id.tv_end -> { finish() }
         }
     }
 

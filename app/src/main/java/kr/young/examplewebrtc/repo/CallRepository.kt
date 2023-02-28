@@ -5,47 +5,61 @@ import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.QuerySnapshot
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
-import kr.young.common.DateUtil
 import kr.young.common.UtilLog.Companion.d
 import kr.young.common.UtilLog.Companion.e
 import kr.young.examplewebrtc.model.Call
-import kr.young.examplewebrtc.model.Call.Companion.STATE
-import kr.young.examplewebrtc.model.Call.Companion.TERMINATED_AT
+import kr.young.examplewebrtc.util.Config.Companion.SPACE_ID
+import kr.young.examplewebrtc.util.Config.Companion.TERMINATED
+import kr.young.examplewebrtc.util.Config.Companion.TERMINATED_AT
 
 class CallRepository {
     companion object {
         fun getById(id: String, success: OnSuccessListener<DocumentSnapshot>) {
             d(TAG, "getById")
-            Firebase.firestore.collection(Call.COLLECTION).document(id)
+            Firebase.firestore.collection(COLLECTION).document(id)
                 .get()
                 .addOnSuccessListener(success)
                 .addOnFailureListener { e -> e(TAG, "get call fail", e) }
         }
 
+        fun getBySpaceId(id: String, success: OnSuccessListener<QuerySnapshot>) {
+            d(TAG, "getsBySpaceId")
+            Firebase.firestore.collection(COLLECTION)
+                .whereEqualTo(SPACE_ID, id)
+                .get()
+                .addOnSuccessListener(success)
+                .addOnFailureListener { e -> e(TAG, "get by space id is failed") }
+        }
+
         fun getActiveCalls(spaceId: String, success: OnSuccessListener<QuerySnapshot>) {
             d(TAG, "getActiveCalls")
-            Firebase.firestore.collection(Call.COLLECTION)
-                .whereEqualTo(Call.SPACE_ID, spaceId)
-                .whereEqualTo(TERMINATED_AT, null)
+            Firebase.firestore.collection(COLLECTION)
+                .whereEqualTo(SPACE_ID, spaceId)
+                .whereEqualTo(TERMINATED, false)
                 .limit(2)
                 .get()
                 .addOnSuccessListener(success)
         }
 
         fun post(call: Call) {
-            d(TAG, "post")
-            Firebase.firestore.collection(Call.COLLECTION).document(call.id)
+            d(TAG, "post call user ${call.userId}")
+            Firebase.firestore.collection(COLLECTION).document(call.id)
                 .set(call)
                 .addOnFailureListener { e -> e(TAG, "post fail", e) }
         }
 
         fun updateTerminatedAt(call: Call) {
-            d(TAG, "end")
-            Firebase.firestore.collection(Call.COLLECTION).document(call.id)
-                .update(TERMINATED_AT, call.terminatedAt)
+            d(TAG, "end call user ${call.userId}")
+            val update = hashMapOf<String, Any> (
+                TERMINATED_AT to call.terminatedAt!!,
+                "terminated" to true
+            )
+            Firebase.firestore.collection(COLLECTION).document(call.id)
+                .update(update)
                 .addOnFailureListener { e -> e(TAG, "update call state fail", e) }
         }
 
         private const val TAG = "CallRepository"
+        private const val COLLECTION = "calls"
     }
 }

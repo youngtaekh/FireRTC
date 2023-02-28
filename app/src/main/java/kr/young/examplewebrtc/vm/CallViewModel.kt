@@ -7,116 +7,57 @@ import com.google.android.gms.tasks.OnSuccessListener
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.QuerySnapshot
 import com.google.firebase.firestore.ktx.toObject
+import com.google.gson.JsonObject
 import kr.young.common.Crypto
 import kr.young.common.DateUtil
 import kr.young.common.UtilLog.Companion.d
 import kr.young.common.UtilLog.Companion.e
 import kr.young.common.UtilLog.Companion.i
-import kr.young.examplewebrtc.AppSP
+import kr.young.common.UtilLog.Companion.w
+import kr.young.examplewebrtc.repo.AppSP
+import kr.young.examplewebrtc.fcm.ApiClient
 import kr.young.examplewebrtc.model.Call
 import kr.young.examplewebrtc.model.Call.CallDirection.Answer
 import kr.young.examplewebrtc.model.Call.CallDirection.Offer
 import kr.young.examplewebrtc.model.Space
 import kr.young.examplewebrtc.model.Space.SpaceStatus
+import kr.young.examplewebrtc.model.Space.SpaceStatus.INACTIVE
 import kr.young.examplewebrtc.model.Space.SpaceStatus.TERMINATED
 import kr.young.examplewebrtc.repo.CallRepository
 import kr.young.examplewebrtc.repo.SpaceRepository
+import retrofit2.Callback
+import retrofit2.Response
 import java.lang.System.currentTimeMillis
 
 class CallViewModel: ViewModel() {
-    val hasExistSpace = MutableLiveData<Boolean?>()
-    val space = MutableLiveData<Space>()
     val myCall = MutableLiveData<Call>()
-    val remoteCall = MutableLiveData<MutableList<Call>>()
 
     //implementation fire store result interface
-    private val getCallSuccess =
-        OnSuccessListener<DocumentSnapshot> { document ->
-            val remoteCall = document!!.toObject<Call>()
-            addRemoteCall(remoteCall!!)
-        }
-    private val checkExistSpaceSuccess = OnSuccessListener<QuerySnapshot> { documents ->
-        d(TAG, "checkExistSpaceSuccess")
-        if (documents.isEmpty) {
-            hasExistSpace.value = false
-        } else {
-            hasExistSpace.value = true
-            for (document in documents) {
-                this.space.value = document.toObject()
-                break
-            }
-        }
-    }
-    private val checkExistSpaceFailure = OnFailureListener {
-        d(TAG, "checkExistSpaceFailure")
-        hasExistSpace.value = false
-    }
     private val checkLastParticipant = OnSuccessListener<QuerySnapshot> { documents ->
         d(TAG, "checkLastParticipant size - ${documents.size()}")
         if (documents.size() == 0) {
-            updateSpaceStatus(TERMINATED)
+            SpaceViewModel.instance.updateSpaceStatus(TERMINATED)
         }
         for (document in documents) {
             val call = document.toObject<Call>()
-            if (documents.size() == 1 && call.userId == AppSP.instance.getUserId()) {
+            if (documents.size() == 1) {
                 d(TAG, "call.userId - ${call.userId}")
-                updateSpaceStatus(TERMINATED)
+                if (call.userId == AppSP.instance.getUserId()) {
+                    SpaceViewModel.instance.updateSpaceStatus(TERMINATED)
+                } else {
+                    SpaceViewModel.instance.updateSpaceStatus(INACTIVE)
+                }
             }
         }
-        release()
-    }
-
-    private fun setSpace(space: Space) {
-        this.space.value = space
     }
 
     private fun setMyCall(call: Call) {
         this.myCall.value = call
     }
 
-    private fun addRemoteCall(call: Call) {
-        if (remoteCall.value == null) {
-            remoteCall.value = mutableListOf()
-        }
-        val callList = remoteCall.value!!
-        callList.add(call)
-        remoteCall.value = callList
-    }
-
-    private fun release() {
+    fun release() {
         d(TAG, "release")
-        space.value = null
         myCall.value = null
-        remoteCall.value = null
-    }
-
-    private fun getMyId(): String {
-        var userId = AppSP.instance.getUserId()
-        if (userId == null) {
-            userId = Crypto().getHash(currentTimeMillis().toString())
-            AppSP.instance.setUserId(userId)
-        }
-        return userId
-    }
-
-    fun createSpace(name: String) {
-        d(TAG, "createSpace")
-        setSpace(Space(name = name, createdBy = getMyId()))
-        hasExistSpace.value = true
-        SpaceRepository.post(space.value!!)
-    }
-
-    fun checkExistSpace(name: String) {
-        d(TAG, "checkExistSpace")
-        SpaceRepository.getActiveSpace(name, checkExistSpaceSuccess, checkExistSpaceFailure)
-    }
-
-    fun updateSpaceStatus(status: SpaceStatus) {
-        i(TAG, "${space.value!!.status} -> $status")
-        val space = space.value!!
-        space.status = status
-        setSpace(space)
-        SpaceRepository.updateStatus(space)
     }
 
     fun terminateSpace() {
@@ -128,33 +69,36 @@ class CallViewModel: ViewModel() {
         CallRepository.getActiveCalls(myCall.value!!.spaceId!!, checkLastParticipant)
     }
 
-    fun makeCall() {
-        d(TAG, "makeCall")
-        val call = Call(userId = getMyId(), spaceId = space.value!!.id, direction = Offer)
-
-        setMyCall(call)
-        CallRepository.post(myCall.value!!)
-        val space = this.space.value!!
-        space.calls.add(call.id)
-        this.space.value = space
-        SpaceRepository.updateCallList(space.id, call.id)
+    fun getCallsBySpaceId(id: String) {
+        CallRepository.getBySpaceId(id) { documents ->
+            val callList = mutableListOf<Call>()
+            d(TAG, "getCallsBySpaceIdSuccess documents.size ${documents.size()}")
+            for (document in documents) {
+                val call = document.toObject<Call>()
+                d(TAG, "getCallsBySpaceId userId ${call.userId}")
+                callList.add(call)
+            }
+            SpaceViewModel.instance.setCalls(callList)
+            SpaceViewModel.instance.setOffer(false)
+        }
     }
 
-    fun answerCall() {
-        d(TAG, "answerCall")
-        val call = Call(userId = getMyId(), spaceId = space.value!!.id, direction = Answer)
-
-        for (callId in space.value!!.calls) {
-            i(TAG, "answerCall() callId - $callId")
-            CallRepository.getById(callId, getCallSuccess)
+    fun refreshCalls(id: String) {
+        CallRepository.getBySpaceId(id) { documents ->
+            val callList = mutableListOf<Call>()
+            d(TAG, "refreshCallsSuccess documents.size ${documents.size()}")
+            for (document in documents) {
+                val call = document.toObject<Call>()
+                d(TAG, "refreshCalls userId ${call.userId}")
+                callList.add(call)
+            }
+            SpaceViewModel.instance.setCalls(callList)
         }
+    }
 
+    fun setCall(call: Call) {
         setMyCall(call)
         CallRepository.post(myCall.value!!)
-        val space = this.space.value!!
-        space.calls.add(call.id)
-        this.space.value = space
-        SpaceRepository.updateCallList(space.id, call.id)
     }
 
     fun endCall() {
@@ -165,6 +109,7 @@ class CallViewModel: ViewModel() {
         }
         val call = myCall.value!!
         call.terminatedAt = DateUtil.toFormattedString(currentTimeMillis())
+        call.terminated = true
         setMyCall(call)
         CallRepository.updateTerminatedAt(call)
     }

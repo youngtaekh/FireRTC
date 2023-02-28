@@ -2,19 +2,26 @@ package kr.young.examplewebrtc.model
 
 import kr.young.common.Crypto
 import kr.young.common.DateUtil
+import kr.young.examplewebrtc.util.Config.Companion.SPACE_ID
+import kr.young.examplewebrtc.util.Config.Companion.USER_ID
 import java.lang.System.currentTimeMillis
 
 data class Call(
     val userId: String? = null,
+    val token: String? = null,
     val spaceId: String? = null,
     val id: String = Crypto().getHash("$userId${currentTimeMillis()}"),
     var direction: CallDirection? = null,
+    var connected: Boolean = false,
+    var terminated: Boolean = false,
     var sdp: String? = null,
     val createdAt: String = DateUtil.toFormattedString(currentTimeMillis()),
     var terminatedAt: String? = null
 ) {
     override fun toString(): String {
-        return "userId=$userId\nspaceId=$spaceId\nstate=$direction\ncreateDate=$createdAt\nid=$id\nsdp=$sdp"
+        val s = if (sdp == null) 0
+        else 1
+        return "($USER_ID=${userId?.substring(0,5)}\n$SPACE_ID=${spaceId?.substring(0,5)}\nstate=$direction\nterminated=${terminated}\ncreateAt=$createdAt\nid=${id.substring(0,5)}\nsdp=$s)"
     }
 
     override fun equals(other: Any?): Boolean {
@@ -43,10 +50,6 @@ data class Call(
 
     companion object {
         private const val TAG = "Call"
-        const val COLLECTION = "calls"
-        const val DIRECTION = "direction"
-        const val SPACE_ID = "spaceId"
-        const val TERMINATED_AT = "terminatedAt"
     }
 
     enum class CallDirection {
