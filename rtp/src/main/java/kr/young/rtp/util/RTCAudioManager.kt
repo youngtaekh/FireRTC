@@ -11,10 +11,10 @@ import android.media.AudioDeviceInfo
 import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.media.AudioManager.*
-import android.os.Build
-import android.os.Build.VERSION_CODES.M
 import android.util.Log
-import kr.young.common.DebugLog
+import kr.young.common.UtilLog.Companion.d
+import kr.young.common.UtilLog.Companion.e
+import kr.young.common.UtilLog.Companion.i
 import kr.young.rtp.util.RTCBluetoothManager.State.*
 import org.webrtc.ThreadUtils
 
@@ -110,7 +110,7 @@ class RTCAudioManager private constructor(val context: Context) {
             val state = intent?.getIntExtra("state", STATE_UNPLUGGED)
             val microphone = intent?.getIntExtra("microphone", HAS_NO_MIC)
             val name = intent?.getStringExtra("name")
-            DebugLog.d(TAG, "WiredHeadsetReceiver.onReceive ${RTCUtils.getThreadInfo()}: " +
+            d(TAG, "WiredHeadsetReceiver.onReceive ${RTCUtils.getThreadInfo()}: " +
                     "a=${intent?.action}, " +
                     "s=${if (state == STATE_UNPLUGGED) "unplugged" else "plugged"}, " +
                     "m=${if (microphone == HAS_MIC) "mic" else "no mic"}, " +
@@ -128,7 +128,7 @@ class RTCAudioManager private constructor(val context: Context) {
         wiredHeadsetReceiver = WiredHeadsetReceiver()
         audioManagerState = AudioManagerState.UNINITIALIZED
 
-        DebugLog.d(TAG, "useSpeakerphone: $useSpeakerphone")
+        d(TAG, "useSpeakerphone: $useSpeakerphone")
         defaultAudioDevice = if (useSpeakerphone == SPEAKERPHONE_FALSE) {
             AudioDevice.EARPIECE
         } else {
@@ -136,19 +136,19 @@ class RTCAudioManager private constructor(val context: Context) {
         }
 
         proximitySensor = RTCProximitySensor.create(context, this::onProximitySensorChangedState)
-        DebugLog.d(TAG, "defaultAudioDevice: $defaultAudioDevice")
+        d(TAG, "defaultAudioDevice: $defaultAudioDevice")
         RTCUtils.logDeviceInfo(TAG)
     }
 
     fun start(audioManagerEvents: AudioManagerEvents) {
-        DebugLog.i(TAG, "start")
+        i(TAG, "start")
         ThreadUtils.checkIsOnMainThread()
         if (audioManagerState == AudioManagerState.RUNNING) {
-            DebugLog.e(TAG, "AudioManager is already active")
+            e(TAG, "AudioManager is already active")
             return
         }
 
-        DebugLog.d(TAG, "AudioManager starts...")
+        d(TAG, "AudioManager starts...")
         this.audioManagerEvents = audioManagerEvents
         audioManagerState = AudioManagerState.RUNNING
 
@@ -168,30 +168,23 @@ class RTCAudioManager private constructor(val context: Context) {
                 AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> "AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK"
                 else -> "AUDIOFOCUS_INVALID"
             }
-            DebugLog.d(TAG, "onAudioFocusChangeL $typeOfChange")
+            d(TAG, "onAudioFocusChangeL $typeOfChange")
         }
 
-        val result = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val attributes = AudioAttributes.Builder()
+        val attributes = AudioAttributes.Builder()
 //                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
-                .build()
-            audioFocusRequest = AudioFocusRequest.Builder(AUDIOFOCUS_GAIN_TRANSIENT)
-                .setAudioAttributes(attributes)
-                .setAcceptsDelayedFocusGain(true)
-                .setOnAudioFocusChangeListener(audioFocusChangeListener!!)
-                .build()
-            audioManager!!.requestAudioFocus(audioFocusRequest!!)
-        } else {
-            audioManager!!.requestAudioFocus(
-                audioFocusChangeListener,
-                STREAM_VOICE_CALL,
-                AUDIOFOCUS_GAIN_TRANSIENT)
-        }
-        when (result) {
+            .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
+            .build()
+        audioFocusRequest = AudioFocusRequest.Builder(AUDIOFOCUS_GAIN_TRANSIENT)
+            .setAudioAttributes(attributes)
+            .setAcceptsDelayedFocusGain(true)
+            .setOnAudioFocusChangeListener(audioFocusChangeListener!!)
+            .build()
+
+        when (audioManager!!.requestAudioFocus(audioFocusRequest!!)) {
             AUDIOFOCUS_REQUEST_GRANTED ->
-                DebugLog.d(TAG, "Audio focus request granted for VOICE_CALL streams")
-            else -> DebugLog.d(TAG, "Audio focus request failed")
+                d(TAG, "Audio focus request granted for VOICE_CALL streams")
+            else -> d(TAG, "Audio focus request failed")
         }
 
         audioManager!!.mode = MODE_IN_COMMUNICATION
@@ -204,14 +197,14 @@ class RTCAudioManager private constructor(val context: Context) {
         bluetoothManager.start()
         updateAudioDeviceState()
         registerReceiver(wiredHeadsetReceiver, IntentFilter(Intent.ACTION_HEADSET_PLUG))
-        DebugLog.d(TAG, "AudioManager started")
+        d(TAG, "AudioManager started")
     }
 
     fun stop() {
         Log.d(TAG, "stop")
         ThreadUtils.checkIsOnMainThread()
         if (audioManagerState != AudioManagerState.RUNNING) {
-            DebugLog.e(TAG, "Trying to stop AudioManager in incorrect state: $audioManagerState")
+            e(TAG, "Trying to stop AudioManager in incorrect state: $audioManagerState")
             return
         }
         audioManagerState = AudioManagerState.UNINITIALIZED
@@ -221,14 +214,10 @@ class RTCAudioManager private constructor(val context: Context) {
         setSpeakerphoneOn(savedIsSpeakerPhoneOn)
         setMicrophoneMute(savedIsMicrophoneMute)
         audioManager!!.mode = savedAudioMode
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            audioManager!!.abandonAudioFocusRequest(audioFocusRequest!!)
-            audioFocusRequest = null
-        } else {
-            audioManager!!.abandonAudioFocus(audioFocusChangeListener)
-        }
+        audioManager!!.abandonAudioFocusRequest(audioFocusRequest!!)
+        audioFocusRequest = null
         audioFocusChangeListener = null
-        DebugLog.d(TAG, "Abandoned audio focus for VOICE_CALL streams")
+        d(TAG, "Abandoned audio focus for VOICE_CALL streams")
 
         if (proximitySensor != null) {
             proximitySensor!!.stop()
@@ -236,11 +225,11 @@ class RTCAudioManager private constructor(val context: Context) {
         }
 
         audioManagerEvents = null
-        DebugLog.i(TAG, "AudioManager stopped")
+        i(TAG, "AudioManager stopped")
     }
 
     private fun setAudioDeviceInternal(device: AudioDevice) {
-        DebugLog.i(TAG, "setAudioDeviceInternal(device=$device)")
+        i(TAG, "setAudioDeviceInternal(device=$device)")
         RTCUtils.assertIsTrue(audioDevices.contains(device))
 
         when (device) {
@@ -248,7 +237,7 @@ class RTCAudioManager private constructor(val context: Context) {
             AudioDevice.EARPIECE -> setSpeakerphoneOn(false)
             AudioDevice.WIRED_HEADSET -> setSpeakerphoneOn(false)
             AudioDevice.BLUETOOTH -> setSpeakerphoneOn(false)
-            else -> DebugLog.e(TAG, "Invalid audio device selection")
+            else -> e(TAG, "Invalid audio device selection")
         }
         selectedAudioDevice = device
     }
@@ -264,16 +253,16 @@ class RTCAudioManager private constructor(val context: Context) {
                     defaultAudioDevice = AudioDevice.SPEAKER_PHONE
                 }
             }
-            else -> DebugLog.e(TAG, "Invalid default audio device selection")
+            else -> e(TAG, "Invalid default audio device selection")
         }
-        DebugLog.d(TAG, "setDefaultAudioDevice(device=$defaultAudioDevice)")
+        d(TAG, "setDefaultAudioDevice(device=$defaultAudioDevice)")
         updateAudioDeviceState()
     }
 
     fun selectAudioDevice(device: AudioDevice) {
         ThreadUtils.checkIsOnMainThread()
         if (!audioDevices.contains(device)) {
-            DebugLog.e(TAG, "Can not select $device from available $audioDevices")
+            e(TAG, "Can not select $device from available $audioDevices")
         }
         userSelectedAudioDevice = device
         updateAudioDeviceState()
@@ -318,20 +307,16 @@ class RTCAudioManager private constructor(val context: Context) {
     }
 
     private fun hasWiredHeadset(): Boolean {
-        if (Build.VERSION.SDK_INT < M) {
-            return audioManager!!.isWiredHeadsetOn
-        } else {
-            @SuppressLint("WrongConstant")
-            val devices = audioManager!!.getDevices(GET_DEVICES_ALL)
-            for (device in devices) {
-                val type = device.type
-                if (type == AudioDeviceInfo.TYPE_WIRED_HEADSET) {
-                    DebugLog.d(TAG, "hasWiredHeadset: found wired headset")
-                    return true
-                } else if (type == AudioDeviceInfo.TYPE_USB_DEVICE) {
-                    DebugLog.d(TAG, "hasWiredHeadset: found USB audio device")
-                    return true
-                }
+        @SuppressLint("WrongConstant")
+        val devices = audioManager!!.getDevices(GET_DEVICES_ALL)
+        for (device in devices) {
+            val type = device.type
+            if (type == AudioDeviceInfo.TYPE_WIRED_HEADSET) {
+                d(TAG, "hasWiredHeadset: found wired headset")
+                return true
+            } else if (type == AudioDeviceInfo.TYPE_USB_DEVICE) {
+                d(TAG, "hasWiredHeadset: found USB audio device")
+                return true
             }
         }
         return false
@@ -339,10 +324,10 @@ class RTCAudioManager private constructor(val context: Context) {
 
     fun updateAudioDeviceState() {
         ThreadUtils.checkIsOnMainThread()
-        DebugLog.d(TAG, "updateAudioDeviceState: " +
+        d(TAG, "updateAudioDeviceState: " +
                 "wired headset=$hasWiredHeadset, " +
                 "BT state=${bluetoothManager.getState()}")
-        DebugLog.d(TAG, "Device status: " +
+        d(TAG, "Device status: " +
                 "available=$audioDevices, " +
                 "selected=$selectedAudioDevice, " +
                 "user selected=$userSelectedAudioDevice")
@@ -395,7 +380,7 @@ class RTCAudioManager private constructor(val context: Context) {
         if (bluetoothManager.getState() == HEADSET_AVAILABLE
             || bluetoothManager.getState() == SCO_CONNECTING
             || bluetoothManager.getState() == SCO_CONNECTED) {
-            DebugLog.d(TAG, "Need BT audio: start=$needBluetoothAudioStart, " +
+            d(TAG, "Need BT audio: start=$needBluetoothAudioStart, " +
                     "stop=$needBluetoothAudioStop, " +
                     "BT state=${bluetoothManager.getState()}")
         }
@@ -426,14 +411,14 @@ class RTCAudioManager private constructor(val context: Context) {
 
         if (newAudioDevice != selectedAudioDevice || audioDeviceSetUpdated) {
             setAudioDeviceInternal(newAudioDevice)
-            DebugLog.d(TAG, "New device status: " +
+            d(TAG, "New device status: " +
                     "available=${audioDevices}, " +
                     "selected=$newAudioDevice")
             if (audioManagerEvents != null) {
                 audioManagerEvents!!.onAudioDeviceChanged(selectedAudioDevice, audioDevices)
             }
         }
-        DebugLog.i(TAG, "updateAudioDeviceState done")
+        i(TAG, "updateAudioDeviceState done")
     }
 
     companion object {

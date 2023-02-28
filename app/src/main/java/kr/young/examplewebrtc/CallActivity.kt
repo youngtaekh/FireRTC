@@ -12,16 +12,19 @@ import kr.young.common.UtilLog.Companion.d
 import kr.young.examplewebrtc.databinding.ActivityCallBinding
 import kr.young.examplewebrtc.fcm.SendFCM
 import kr.young.examplewebrtc.fcm.SendFCM.FCMType
-import kr.young.examplewebrtc.model.Space
 import kr.young.examplewebrtc.model.Space.SpaceStatus
 import kr.young.examplewebrtc.util.BaseActivity
 import kr.young.examplewebrtc.vm.CallViewModel
 import kr.young.examplewebrtc.vm.MyDataViewModel
 import kr.young.examplewebrtc.vm.SpaceViewModel
 import kr.young.examplewebrtc.vm.UserViewModel
+import kr.young.rtp.observer.PCObserver
+import org.webrtc.IceCandidate
+import org.webrtc.SessionDescription
+import org.webrtc.StatsReport
 import java.util.*
 
-class CallActivity : BaseActivity(), OnClickListener, OnTouchListener {
+class CallActivity : BaseActivity(), OnClickListener, OnTouchListener, PCObserver.SDP, PCObserver.ICE, PCObserver {
     private lateinit var binding: ActivityCallBinding
     private lateinit var spaceViewModel: SpaceViewModel
     private lateinit var callViewModel: CallViewModel
@@ -42,7 +45,7 @@ class CallActivity : BaseActivity(), OnClickListener, OnTouchListener {
                 if (it) {
                     spaceViewModel.makeOffer()
                 } else {
-                    spaceViewModel.updateSpaceStatus(Space.SpaceStatus.ACTIVE)
+                    spaceViewModel.updateSpaceStatus(SpaceStatus.ACTIVE)
                     spaceViewModel.makeAnswer()
                 }
                 spaceViewModel.isOffer.value = null
@@ -127,5 +130,53 @@ class CallActivity : BaseActivity(), OnClickListener, OnTouchListener {
             R.id.tv_end -> { TouchEffect.alpha(v, event) }
         }
         return super.onTouchEvent(event)
+    }
+
+    override fun onLocalDescription(sdp: SessionDescription?) {
+        d(TAG, "onLocalDescription")
+    }
+
+    override fun onICECandidate(candidate: IceCandidate?) {
+        d(TAG, "onICECandidate")
+    }
+
+    override fun onICECandidatesRemoved(candidates: Array<out IceCandidate>?) {
+        d(TAG, "onICECandidatesRemoved")
+    }
+
+    override fun onICEConnected() {
+        d(TAG, "onICEConnected")
+    }
+
+    override fun onICEDisconnected() {
+        d(TAG, "onICEDisconnected")
+    }
+
+    override fun onPCConnected() {
+        d(TAG, "onPCConnected")
+    }
+
+    override fun onPCDisconnected() {
+        d(TAG, "onPCDisconnected")
+    }
+
+    override fun onPCFailed() {
+        d(TAG, "onPCFailed")
+    }
+
+    override fun onPCClosed() {
+        d(TAG, "onPCClosed")
+    }
+
+    override fun onPCStatsReady(reports: Array<StatsReport?>?) {
+        d(TAG, "onPCStatsReady")
+    }
+
+    override fun onPCError(description: String?) {
+        d(TAG, "onPCError")
+    }
+
+    override fun onMessage(message: String) {
+        d(TAG, "onMessage")
     }
 }

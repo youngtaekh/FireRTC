@@ -1,7 +1,8 @@
 package kr.young.rtp
 
 import android.os.ParcelFileDescriptor
-import kr.young.common.DebugLog
+import kr.young.common.UtilLog.Companion.e
+import kr.young.common.UtilLog.Companion.i
 import org.webrtc.PeerConnection
 import java.io.File
 import java.io.IOException
@@ -23,7 +24,7 @@ class RTCEventLog constructor(private val peerConnection: PeerConnection?) {
 
     fun start(outputFile: File) {
         if (state == RTCEventLogState.STARTED) {
-            DebugLog.e(TAG, "RTCEventLog has already started.")
+            e(TAG, "RTCEventLog has already started.")
             return
         }
         val fileDescriptor: ParcelFileDescriptor
@@ -33,27 +34,27 @@ class RTCEventLog constructor(private val peerConnection: PeerConnection?) {
                         ParcelFileDescriptor.MODE_CREATE or
                         ParcelFileDescriptor.MODE_TRUNCATE)
         } catch (e: IOException) {
-            DebugLog.e(TAG, "Failed to create a new file $e")
+            e(TAG, "Failed to create a new file $e")
             return
         }
 
         val success = peerConnection!!.startRtcEventLog(fileDescriptor.detachFd(), OUTPUT_FILE_MAX_BYTES)
         if (!success) {
-            DebugLog.e(TAG, "Failed to start RTC event log.")
+            e(TAG, "Failed to start RTC event log.")
             return
         }
         state = RTCEventLogState.STARTED
-        DebugLog.i(TAG, "started")
+        i(TAG, "started")
     }
 
     fun stop() {
         if (state != RTCEventLogState.STARTED) {
-            DebugLog.e(TAG, "RTCEventLog was not started")
+            e(TAG, "RTCEventLog was not started")
             return
         }
         peerConnection!!.stopRtcEventLog()
         state = RTCEventLogState.STOPPED
-        DebugLog.i(TAG, "stopped")
+        i(TAG, "stopped")
     }
 
     companion object {

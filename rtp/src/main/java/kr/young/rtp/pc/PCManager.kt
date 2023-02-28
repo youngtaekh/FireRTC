@@ -1,8 +1,9 @@
 package kr.young.rtp.pc
 
 import android.content.Context
-import android.util.Log
-import kr.young.common.DebugLog
+import kr.young.common.UtilLog.Companion.d
+import kr.young.common.UtilLog.Companion.e
+import kr.young.common.UtilLog.Companion.i
 import kr.young.rtp.RecordedAudioToFileController
 import kr.young.rtp.observer.PCListener
 import kr.young.rtp.observer.PCObserverImpl
@@ -64,16 +65,16 @@ class PCManager(
         PeerConnectionFactory.initialize(options)
     }
 
-    private fun getFieldTrials(): String? {
+    private fun getFieldTrials(): String {
         var fieldTrials = ""
         if (isFlexFEC) {
             fieldTrials += VIDEO_FLEX_FEC_FIELD_TRIAL
-            Log.d(TAG, "Enable FlexFEC field trial.")
+            d(TAG, "Enable FlexFEC field trial.")
         }
         fieldTrials += VIDEO_VP8_INTEL_HW_ENCODER_FIELD_TRIAL
         if (isBuiltInAGC) {
             fieldTrials += DISABLE_WEBRTC_AGC_FIELD_TRIAL
-            Log.d(TAG, "Disable WebRTC AGC field trial.")
+            d(TAG, "Disable WebRTC AGC field trial.")
         }
         return fieldTrials
     }
@@ -89,7 +90,7 @@ class PCManager(
         isAudioToFile: Boolean = true
     ): PeerConnectionFactory? {
         if (factory != null) {
-            DebugLog.e(TAG, "peerConnectionFactory already created")
+            e(TAG, "peerConnectionFactory already created")
             return null
         }
         if (isAudioToFile) {
@@ -164,28 +165,28 @@ class PCManager(
     }
 
     fun startRecording() {
-        DebugLog.i(TAG, "startRecording(${isAudioToFile && useOpenSLES})")
+        i(TAG, "startRecording(${isAudioToFile && useOpenSLES})")
         saveRecordedAudioToFile?.start()
     }
 
     fun release() {
         statTimer?.cancel()
-        DebugLog.d(TAG, "Dispose dataChannel.")
+        d(TAG, "Dispose dataChannel.")
         dataChannel?.dispose()
         dataChannel = null
 
-        DebugLog.d(TAG, "Dispose peerConnection.")
+        d(TAG, "Dispose peerConnection.")
         peerConnection?.dispose()
         peerConnection = null
 
         saveRecordedAudioToFile?.stop()
         saveRecordedAudioToFile = null
 
-        Log.d(TAG, "Closing peer connection factory.")
+        d(TAG, "Closing peer connection factory.")
         factory?.dispose()
         factory = null
 
-        Log.d(TAG, "Closing peer connection done.")
+        d(TAG, "Closing peer connection done.")
         pcObserverImpl!!.onPCClosedObserver()
         PeerConnectionFactory.stopInternalTracingCapture()
         PeerConnectionFactory.shutdownInternalTracer()
@@ -207,7 +208,7 @@ class PCManager(
             if (videoFPS == 0) {
                 videoFPS = 30
             }
-            DebugLog.d(TAG, "Capturing format: $videoWidth x $videoHeight @ $videoFPS")
+            d(TAG, "Capturing format: $videoWidth x $videoHeight @ $videoFPS")
         }
 
         // Create SDP constraints.
@@ -249,26 +250,26 @@ class PCManager(
 
     fun createOffer() {
         if (peerConnection != null) {
-            DebugLog.d(TAG, "PC Create OFFER")
+            d(TAG, "PC Create OFFER")
             peerConnection!!.createOffer(sdpListener, sdpMediaConstraints)
         }
     }
 
     fun createAnswer() {
         if (peerConnection != null) {
-            DebugLog.d(TAG, "PC create ANSWER")
+            d(TAG, "PC create ANSWER")
             peerConnection!!.createAnswer(sdpListener, sdpMediaConstraints)
         }
     }
 
     fun addRemoteIceCandidate(candidate: IceCandidate?) {
-        DebugLog.d(TAG, "addRemoteIceCandidate")
+        d(TAG, "addRemoteIceCandidate")
         if (peerConnection != null) {
             if (sdpListener != null) {
-                DebugLog.d(TAG, "sdpListener!!.addCandidate")
+                d(TAG, "sdpListener!!.addCandidate")
                 sdpListener!!.addCandidate(candidate!!)
             } else {
-                DebugLog.d(TAG, "peerConnection!!.addIceCandidate")
+                d(TAG, "peerConnection!!.addIceCandidate")
                 peerConnection!!.addIceCandidate(candidate)
             }
         }
@@ -277,14 +278,14 @@ class PCManager(
     /** Set remote description to peer connection */
     fun setRemoteDescription(sdp: SessionDescription) {
         if (peerConnection != null) {
-            DebugLog.d(TAG, "Set remote SDP.")
+            d(TAG, "Set remote SDP.")
             peerConnection!!.setRemoteDescription(sdpListener, sdp)
         }
     }
 
     fun sendData(message: String) {
         if (dataChannel == null) return
-        DebugLog.i(TAG, "sendData($message)")
+        i(TAG, "sendData($message)")
         val byteBuffer = ByteBuffer.allocate(100)
         byteBuffer.put(message.toByteArray())
         byteBuffer.flip()

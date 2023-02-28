@@ -1,6 +1,7 @@
 package kr.young.rtp.observer
 
-import kr.young.common.DebugLog
+import kr.young.common.UtilLog.Companion.e
+import kr.young.common.UtilLog.Companion.i
 import org.webrtc.IceCandidate
 import org.webrtc.PeerConnection
 import org.webrtc.SdpObserver
@@ -30,8 +31,8 @@ class SDPListener(
     }
 
     private fun drainCandidates() {
-        DebugLog.i(TAG, "drainCandidates")
-        DebugLog.i(TAG, "Add ${queueRemoteCandidates.size} remote candidates")
+        i(TAG, "drainCandidates")
+        i(TAG, "Add ${queueRemoteCandidates.size} remote candidates")
         for (candidate in queueRemoteCandidates) {
             peerConnection.addIceCandidate(candidate)
         }
@@ -42,7 +43,7 @@ class SDPListener(
         val sdp = SessionDescription(p0.type, description)
         localSDP = sdp
         executor!!.execute {
-            DebugLog.i(TAG, "Set local SDP from ${sdp.type}")
+            i(TAG, "Set local SDP from ${sdp.type}")
             peerConnection.setLocalDescription(this, sdp)
         }
     }
@@ -51,15 +52,15 @@ class SDPListener(
         this.executor!!.execute {
             if (isOffer) {
                 if (peerConnection.remoteDescription == null) {
-                    DebugLog.i(TAG, "Local SDP set successfully")
+                    i(TAG, "Local SDP set successfully")
                     pcObserverImpl.onLocalDescriptionObserver(localSDP)
                 } else {
-                    DebugLog.i(TAG, "Remote SDP set successfully")
+                    i(TAG, "Remote SDP set successfully")
                     drainCandidates()
                 }
             } else {
                 if (peerConnection.localDescription != null) {
-                    DebugLog.i(TAG, "Local SDP set successfully")
+                    i(TAG, "Local SDP set successfully")
                     pcObserverImpl.onLocalDescriptionObserver(localSDP)
                     drainCandidates()
                 }
@@ -68,11 +69,11 @@ class SDPListener(
     }
 
     override fun onCreateFailure(p0: String?) {
-        DebugLog.e(TAG, "onCreateFailure($p0)")
+        e(TAG, "onCreateFailure($p0)")
     }
 
     override fun onSetFailure(p0: String?) {
-        DebugLog.e(TAG, "onSetFailure($p0)")
+        e(TAG, "onSetFailure($p0)")
     }
 
     companion object {

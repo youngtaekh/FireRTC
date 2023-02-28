@@ -60,6 +60,10 @@ class MainActivity : BaseActivity(), OnTouchListener, OnClickListener {
         binding.tvJoin.setOnClickListener(this)
         binding.tvUserStart.setOnTouchListener(this)
         binding.tvUserStart.setOnClickListener(this)
+        binding.tvStart.setOnTouchListener(this)
+        binding.tvStart.setOnClickListener(this)
+        binding.tvStop.setOnTouchListener(this)
+        binding.tvStop.setOnClickListener(this)
 
         binding.etName.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == IME_ACTION_DONE) {
@@ -132,7 +136,7 @@ class MainActivity : BaseActivity(), OnTouchListener, OnClickListener {
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouch(v: View?, event: MotionEvent?): Boolean {
         when (v!!.id) {
-            R.id.tv_join, R.id.tv_user_start -> TouchEffect.alpha(v, event)
+            R.id.tv_join, R.id.tv_user_start, R.id.tv_start, R.id.tv_stop -> TouchEffect.alpha(v, event)
         }
         return super.onTouchEvent(event)
     }
@@ -141,6 +145,8 @@ class MainActivity : BaseActivity(), OnTouchListener, OnClickListener {
         when (v!!.id) {
             R.id.tv_join -> join()
             R.id.tv_user_start -> userStart()
+            R.id.tv_start -> { startService(Intent(this, CallService::class.java)) }
+            R.id.tv_stop -> { stopService(Intent(this, CallService::class.java)) }
         }
     }
 

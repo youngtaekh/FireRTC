@@ -52,6 +52,7 @@ dependencies {
     implementation 'com.google.firebase:firebase-firestore-ktx'
     implementation 'com.google.firebase:firebase-messaging-ktx'
     implementation project(path: ':common')
+    implementation project(path: ':rtp')
     implementation 'androidx.work:work-runtime-ktx:2.8.0'
 
     implementation 'com.squareup.retrofit2:retrofit:2.9.0'

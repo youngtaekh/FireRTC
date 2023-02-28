@@ -2,7 +2,8 @@ package kr.young.rtp
 
 import android.content.Context
 import android.content.Intent
-import kr.young.common.DebugLog
+import kr.young.common.UtilLog.Companion.d
+import kr.young.common.UtilLog.Companion.i
 import kr.young.rtp.observer.PCObserver
 import kr.young.rtp.observer.PCObserverImpl
 import kr.young.rtp.pc.*
@@ -18,7 +19,6 @@ import java.io.IOException
 import java.util.*
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import kotlin.collections.ArrayList
 
 /**
  * WebRTC init order
@@ -92,7 +92,7 @@ class RTPManager: PCObserver, PCObserver.SDP, PCObserver.ICE {
              isDataChannel: Boolean = this.isDataChannel,
              enableStat: Boolean = this.enableStat,
              recordAudio: Boolean = this.recordAudio) {
-        DebugLog.i(TAG, "init")
+        i(TAG, "init")
         this.remoteSinks = arrayListOf()
         this.localVideoSink = ProxyVideoSink()
         this.statParser = StatParser()
@@ -104,6 +104,8 @@ class RTPManager: PCObserver, PCObserver.SDP, PCObserver.ICE {
         this.enableStat = enableStat
         this.recordAudio = recordAudio
         this.executor = Executors.newSingleThreadExecutor()
+
+        this.iceServers = ICE().getIceServers()
 
         PCObserverImpl.instance.add(this as PCObserver)
         PCObserverImpl.instance.add(this as PCObserver.SDP)
@@ -130,7 +132,7 @@ class RTPManager: PCObserver, PCObserver.SDP, PCObserver.ICE {
 
     /** Release resources */
     fun release() {
-        DebugLog.i(TAG, "release()")
+        i(TAG, "release()")
 
         PCObserverImpl.instance.remove(this as PCObserver)
         PCObserverImpl.instance.remove(this as PCObserver.SDP)
@@ -144,9 +146,9 @@ class RTPManager: PCObserver, PCObserver.SDP, PCObserver.ICE {
         this.fullRenderer = null
 
         this.executor!!.execute {
-            DebugLog.d(TAG, "Release audio.")
+            d(TAG, "Release audio.")
             this.audioMedia?.release()
-            DebugLog.d(TAG, "Release video.")
+            d(TAG, "Release video.")
             this.videoMedia?.release()
 
             this.localVideoSink = null
@@ -172,7 +174,7 @@ class RTPManager: PCObserver, PCObserver.SDP, PCObserver.ICE {
         remoteSdp: SessionDescription?,
         remoteICE: String?
     ) {
-        DebugLog.i(
+        i(
             TAG, "startRTP(context, isOffer $isOffer, " +
                     "remoteSdp is null ${remoteSdp==null})")
         this.isOffer = isOffer
@@ -208,7 +210,7 @@ class RTPManager: PCObserver, PCObserver.SDP, PCObserver.ICE {
 
     /** Manage audio setting(select speaker, audio focus gain/loss) */
     private fun audioManagerStart(context: Context) {
-        DebugLog.i(TAG, "audioManagerStart()")
+        i(TAG, "audioManagerStart()")
         rtcAudioManager = RTCAudioManager.create(context)
 
         rtcAudioManager!!.start(object: RTCAudioManager.AudioManagerEvents {
@@ -216,7 +218,7 @@ class RTPManager: PCObserver, PCObserver.SDP, PCObserver.ICE {
                 selectedAudioDevice: RTCAudioManager.AudioDevice,
                 availableAudioDevices: Set<RTCAudioManager.AudioDevice>
             ) {
-                DebugLog.d(
+                d(
                     TAG,
                     "onAudioManagerDevicesChanged: $availableAudioDevices ," +
                             "selected: $selectedAudioDevice")
@@ -225,19 +227,19 @@ class RTPManager: PCObserver, PCObserver.SDP, PCObserver.ICE {
     }
 
     private fun updateEncoderStatistics(reports: Array<StatsReport?>) {
-        DebugLog.i(TAG, "updateEncoderStatistics()")
+        i(TAG, "updateEncoderStatistics()")
         statParser!!.updateEncoderStatistics(reports, isVideo)
     }
 
     private fun setPCParameters() {
-        DebugLog.i(TAG, "setPCParameters()")
+        i(TAG, "setPCParameters()")
         pcParameters = PCParameters(
             isAudio, isVideo, isScreen, isDataChannel
         )
     }
 
     private fun createPeerConnectionFactory(context: Context) {
-        DebugLog.i(TAG, "createPeerConnectionFactory()")
+        i(TAG, "createPeerConnectionFactory()")
 
         executor!!.execute {
             pcManager =
@@ -252,8 +254,8 @@ class RTPManager: PCObserver, PCObserver.SDP, PCObserver.ICE {
      */
     private fun createPeerConnection(context: Context,
                                      data: Intent?) {
-        DebugLog.i(TAG, "createPeerConnection()")
-        DebugLog.i(TAG, "createPeerConnection - $iceServers")
+        i(TAG, "createPeerConnection()")
+        i(TAG, "createPeerConnection - $iceServers")
         this.isScreen = data!=null
 
         executor!!.execute {
@@ -295,7 +297,7 @@ class RTPManager: PCObserver, PCObserver.SDP, PCObserver.ICE {
     /** Create "Caller" SDP and Gather ICE candidates(host, relay, server reflexive) */
     fun createOffer() {
         executor!!.execute {
-            DebugLog.i(TAG, "createOffer()")
+            i(TAG, "createOffer()")
             pcState!!.setPCState(PCState.State.CREATE_OFFER)
             pcManager!!.createOffer()
         }
@@ -304,7 +306,7 @@ class RTPManager: PCObserver, PCObserver.SDP, PCObserver.ICE {
     /** Create "Callee" SDP and Gather ICE candidates(host, relay, server reflexive) */
     fun createAnswer() {
         executor!!.execute {
-            DebugLog.i(TAG, "createAnswer()")
+            i(TAG, "createAnswer()")
             pcState!!.setPCState(PCState.State.CREATE_ANSWER)
             pcManager!!.createAnswer()
         }
@@ -312,7 +314,7 @@ class RTPManager: PCObserver, PCObserver.SDP, PCObserver.ICE {
 
     fun setRemoteDescription(remoteSdp: SessionDescription) {
         executor!!.execute {
-            DebugLog.i(TAG, "setRemoteDescription()")
+            i(TAG, "setRemoteDescription()")
             if (isOffer) {
                 pcState!!.setPCState(PCState.State.CONNECT_PENDING)
             } else {
@@ -324,7 +326,7 @@ class RTPManager: PCObserver, PCObserver.SDP, PCObserver.ICE {
 
     fun addRemoteIceCandidate(iceCandidate: IceCandidate) {
         executor!!.execute {
-            DebugLog.i(TAG, "addRemoteIceCandidate()")
+            i(TAG, "addRemoteIceCandidate()")
             pcManager!!.addRemoteIceCandidate(iceCandidate)
         }
     }
@@ -353,7 +355,7 @@ class RTPManager: PCObserver, PCObserver.SDP, PCObserver.ICE {
     }
 
     fun setSwappedFeeds(isSwappedFeeds: Boolean) {
-        DebugLog.d(TAG, "setSwappedFeeds: $isSwappedFeeds")
+        d(TAG, "setSwappedFeeds: $isSwappedFeeds")
         this.isSwappedFeeds = isSwappedFeeds
         localVideoSink?.setTarget(if (isSwappedFeeds) fullRenderer else pipRenderer)
         remoteRenderer.setTarget(if (isSwappedFeeds) pipRenderer else fullRenderer)
@@ -363,34 +365,34 @@ class RTPManager: PCObserver, PCObserver.SDP, PCObserver.ICE {
 
     fun switchCamera() {
         executor!!.execute {
-            DebugLog.i(TAG, "switchCamera()")
+            i(TAG, "switchCamera()")
             videoMedia?.switchCamera()
         }
     }
 
     fun captureFormatChange(width: Int, height: Int, frameRate: Int) {
         executor?.execute {
-            DebugLog.i(TAG, "captureFormatChange(width $width, height $height, frameRate $frameRate)")
+            i(TAG, "captureFormatChange(width $width, height $height, frameRate $frameRate)")
             videoMedia?.changeCaptureFormat(width, height, frameRate)
         }
     }
 
     fun setScaleType(type: RendererCommon.ScalingType) {
-        DebugLog.i(TAG, "setScaleType(type $type)")
+        i(TAG, "setScaleType(type $type)")
         fullRenderer?.setScalingType(type)
     }
 
     /** Mute on/off */
     fun setAudioEnable(enable: Boolean) {
         executor!!.execute {
-            DebugLog.i(TAG, "setAudioEnable(enable $enable)")
+            i(TAG, "setAudioEnable(enable $enable)")
             audioMedia?.setEnable(enable)
         }
     }
 
     fun setVideoEnable(enable: Boolean) {
         executor!!.execute {
-            DebugLog.i(TAG, "setVideoEnable(enable $enable)")
+            i(TAG, "setVideoEnable(enable $enable)")
             videoMedia?.setEnable(enable)
         }
     }
@@ -424,7 +426,7 @@ class RTPManager: PCObserver, PCObserver.SDP, PCObserver.ICE {
 
     /** Event local SDP created */
     override fun onLocalDescription(sdp: SessionDescription?) {
-        DebugLog.i(TAG, "onLocalDescription()")
+        i(TAG, "onLocalDescription()")
         if (isOffer) {
             pcState!!.setPCState(PCState.State.SET_LOCAL_OFFER)
         } else {
@@ -434,25 +436,25 @@ class RTPManager: PCObserver, PCObserver.SDP, PCObserver.ICE {
 
     /** Event ICE candidate gather */
     override fun onICECandidate(candidate: IceCandidate?) {
-        DebugLog.i(TAG, "onIceCandidate()")
-        DebugLog.i(TAG, "candidate - $candidate")
+        i(TAG, "onIceCandidate()")
+        i(TAG, "candidate - $candidate")
 //        addRemoteIceCandidate(candidate!!)
     }
 
     override fun onICECandidatesRemoved(candidates: Array<out IceCandidate>?) {
-        DebugLog.i(TAG, "onIceCandidatesRemoved()")
+        i(TAG, "onIceCandidatesRemoved()")
     }
 
     override fun onICEConnected() {
-        DebugLog.i(TAG, "onIceConnected()")
+        i(TAG, "onIceConnected()")
     }
 
     override fun onICEDisconnected() {
-        DebugLog.i(TAG, "onIceDisconnected()")
+        i(TAG, "onIceDisconnected()")
     }
 
     override fun onPCConnected() {
-        DebugLog.i(TAG, "onPeerConnectionConnected()")
+        i(TAG, "onPeerConnectionConnected()")
         enableStatsEvents()
         if (isVideo) {
             setSwappedFeeds(false)
@@ -460,30 +462,30 @@ class RTPManager: PCObserver, PCObserver.SDP, PCObserver.ICE {
     }
 
     override fun onPCDisconnected() {
-        DebugLog.i(TAG, "onPeerConnectionDisconnected()")
+        i(TAG, "onPeerConnectionDisconnected()")
     }
 
     override fun onPCFailed() {
-        DebugLog.i(TAG, "onPeerConnectionFailed()")
+        i(TAG, "onPeerConnectionFailed()")
     }
 
     override fun onPCClosed() {
-        DebugLog.i(TAG, "onPeerConnectionClosed()")
+        i(TAG, "onPeerConnectionClosed()")
     }
 
     override fun onPCStatsReady(reports: Array<StatsReport?>?) {
-        DebugLog.i(TAG, "onPeerConnectionStatsReady()")
+        i(TAG, "onPeerConnectionStatsReady()")
         if (reports != null) {
             updateEncoderStatistics(reports)
         }
     }
 
     override fun onPCError(description: String?) {
-        DebugLog.i(TAG, "onPeerConnectionError()")
+        i(TAG, "onPeerConnectionError()")
     }
 
     /** Event receive data */
     override fun onMessage(message: String) {
-        DebugLog.i(TAG, "onMessage()")
+        i(TAG, "onMessage()")
     }
 }

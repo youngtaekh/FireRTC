@@ -2,7 +2,7 @@ package kr.young.rtp.pc
 
 import android.content.Context
 import android.util.Log
-import kr.young.common.DebugLog
+import kr.young.common.UtilLog.Companion.i
 import kr.young.rtp.RecordedAudioToFileController
 import kr.young.rtp.util.DefaultValues
 import org.webrtc.AudioSource
@@ -52,7 +52,7 @@ class AudioMedia {
     }
 
     fun release() {
-        DebugLog.i(TAG, "Closing audio source.")
+        i(TAG, "Closing audio source.")
         audioSource?.dispose()
         audioSource = null
     }

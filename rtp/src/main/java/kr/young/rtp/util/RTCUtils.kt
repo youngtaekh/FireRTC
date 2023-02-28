@@ -1,7 +1,7 @@
 package kr.young.rtp.util
 
 import android.os.Build
-import kr.young.common.DebugLog
+import kr.young.common.UtilLog.Companion.d
 
 class RTCUtils private constructor() {
     companion object {
@@ -19,7 +19,7 @@ class RTCUtils private constructor() {
 
         @JvmStatic
         fun logDeviceInfo(tag: String) {
-            DebugLog.d(tag, "Android SDK: ${Build.VERSION.SDK_INT}, " +
+            d(tag, "Android SDK: ${Build.VERSION.SDK_INT}, " +
                     "Release: ${Build.VERSION.RELEASE}, " +
                     "Brand: ${Build.BRAND}, " +
                     "Device: ${Build.DEVICE}, " +

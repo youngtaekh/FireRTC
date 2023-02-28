@@ -11,7 +11,9 @@ open class BaseActivity: AppCompatActivity() {
     private var hasPermission = false
     private var requesting = false
     private val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        arrayOf(CAMERA, RECORD_AUDIO, POST_NOTIFICATIONS)
+        arrayOf(BLUETOOTH_CONNECT, CAMERA, RECORD_AUDIO, POST_NOTIFICATIONS)
+    } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        arrayOf(BLUETOOTH_CONNECT, CAMERA, RECORD_AUDIO)
     } else {
         arrayOf(CAMERA, RECORD_AUDIO)
     }

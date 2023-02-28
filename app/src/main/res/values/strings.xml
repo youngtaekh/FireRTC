@@ -10,6 +10,7 @@
     <string name="room">Room</string>
     <string name="join">Join</string>
     <string name="start">Start</string>
+    <string name="stop">Stop</string>
     <string name="empty_warn">Name can\'t be empty</string>
     <string name="create_warn">Can\'t create</string>
     <string name="duplicate_warn">Duplicate name</string>

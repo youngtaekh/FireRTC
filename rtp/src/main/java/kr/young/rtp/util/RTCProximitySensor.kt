@@ -5,7 +5,9 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
-import kr.young.common.DebugLog
+import kr.young.common.UtilLog.Companion.d
+import kr.young.common.UtilLog.Companion.e
+import kr.young.common.UtilLog.Companion.i
 import org.webrtc.ThreadUtils
 
 class RTCProximitySensor private constructor(
@@ -19,24 +21,24 @@ class RTCProximitySensor private constructor(
     private var lastStateReportIsNear = false
 
     init {
-        DebugLog.i(TAG, "RTCProximitySensor ${RTCUtils.getThreadInfo()}")
+        i(TAG, "RTCProximitySensor ${RTCUtils.getThreadInfo()}")
     }
 
     override fun onSensorChanged(event: SensorEvent?) {
         threadChecker.checkIsOnValidThread()
         RTCUtils.assertIsTrue(event!!.sensor.type == Sensor.TYPE_PROXIMITY)
         val distanceInCentimeters = event.values[0]
-        if (distanceInCentimeters < proximitySensor!!.maximumRange) {
-            DebugLog.d(TAG, "Proximity sensor => NEAR state")
-            lastStateReportIsNear = true
+        lastStateReportIsNear = if (distanceInCentimeters < proximitySensor!!.maximumRange) {
+            d(TAG, "Proximity sensor => NEAR state")
+            true
         } else {
-            DebugLog.d(TAG, "Proximity sensor => FAR state")
-            lastStateReportIsNear = false
+            d(TAG, "Proximity sensor => FAR state")
+            false
         }
 
         onSensorStateListener.run()
 
-        DebugLog.d(TAG, "onSensorChanged ${RTCUtils.getThreadInfo()}: " +
+        d(TAG, "onSensorChanged ${RTCUtils.getThreadInfo()}: " +
                 "accuracy=${event.accuracy}, timestamp=${event.timestamp}, " +
                 "distance=${event.values[0]}")
     }
@@ -45,13 +47,13 @@ class RTCProximitySensor private constructor(
         threadChecker.checkIsOnValidThread()
         RTCUtils.assertIsTrue(sensor!!.type == Sensor.TYPE_PROXIMITY)
         if (accuracy == SensorManager.SENSOR_STATUS_UNRELIABLE) {
-            DebugLog.e(TAG, "The values returned by this sensor cannot be trusted")
+            e(TAG, "The values returned by this sensor cannot be trusted")
         }
     }
 
     fun start(): Boolean {
         threadChecker.checkIsOnValidThread()
-        DebugLog.d(TAG, "start ${RTCUtils.getThreadInfo()}")
+        d(TAG, "start ${RTCUtils.getThreadInfo()}")
         if (!initDefaultSensor()) {
             return false
         }
@@ -61,7 +63,7 @@ class RTCProximitySensor private constructor(
 
     fun stop() {
         threadChecker.checkIsOnValidThread()
-        DebugLog.d(TAG, "stop ${RTCUtils.getThreadInfo()}")
+        d(TAG, "stop ${RTCUtils.getThreadInfo()}")
         if (proximitySensor == null) return
         sensorManager.unregisterListener(this, proximitySensor)
     }
@@ -86,7 +88,7 @@ class RTCProximitySensor private constructor(
     private fun logProximitySensorInfo() {
         if (proximitySensor == null) return
 
-        DebugLog.d(TAG, "Proximity sensor: name=${proximitySensor!!.name}, " +
+        d(TAG, "Proximity sensor: name=${proximitySensor!!.name}, " +
                 "vendor: ${proximitySensor!!.vendor}, " +
                 "power: ${proximitySensor!!.power}, " +
                 "resolution: ${proximitySensor!!.resolution}, " +

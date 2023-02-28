@@ -1,6 +1,6 @@
 package kr.young.rtp
 
-import kr.young.common.DebugLog
+import kr.young.common.UtilLog.Companion.i
 import kr.young.rtp.pc.VideoMedia
 import kr.young.rtp.util.DefaultValues
 import org.webrtc.StatsReport
@@ -35,16 +35,16 @@ class StatParser {
     fun updateEncoderStatistics(reports: Array<StatsReport?>, isVideo: Boolean) {
         if (test) {
             for ((index, report) in reports.withIndex()) {
-                DebugLog.i(TAG, "index $index")
-                DebugLog.i(TAG, "report.id ${report?.id}")
-                DebugLog.i(TAG, "report.type ${report?.type}")
-                DebugLog.i(TAG, "report.timestamp ${report?.timestamp}")
-                DebugLog.i(TAG, "report.values====================")
+                i(TAG, "index $index")
+                i(TAG, "report.id ${report?.id}")
+                i(TAG, "report.type ${report?.type}")
+                i(TAG, "report.timestamp ${report?.timestamp}")
+                i(TAG, "report.values====================")
                 for ((index2, value) in report!!.values.withIndex()) {
-                    DebugLog.i(TAG, "\tindex2 $index2")
-                    DebugLog.i(TAG, "\tvalue.name ${value.name}")
-                    DebugLog.i(TAG, "\tvalue.value ${value.value}")
-                    DebugLog.i(TAG, "=============================")
+                    i(TAG, "\tindex2 $index2")
+                    i(TAG, "\tvalue.name ${value.name}")
+                    i(TAG, "\tvalue.value ${value.value}")
+                    i(TAG, "=============================")
                 }
             }
             return
@@ -127,10 +127,10 @@ class StatParser {
                 }
             }
         }
-        DebugLog.i(TAG, "Bwe $bweStat")
-        DebugLog.i(TAG, "Connection $connectionStat")
-//        DebugLog.i(TAG, "Video Send $videoSendStat")
-//        DebugLog.i(TAG, "Video Receive $videoRecvStat")
+        i(TAG, "Bwe $bweStat")
+        i(TAG, "Connection $connectionStat")
+//        i(TAG, "Video Send $videoSendStat")
+//        i(TAG, "Video Receive $videoRecvStat")
         if (isVideo) {
             if (fps != null) {
                 encoderStat.append("Fps:  ").append(fps).append("\n")
@@ -142,7 +142,7 @@ class StatParser {
                 encoderStat.append("Actual BR: ").append(actualBitrate).append("\n")
             }
         }
-        DebugLog.i(TAG, "Encoder stat $encoderStat")
+        i(TAG, "Encoder stat $encoderStat")
     }
 
     companion object {

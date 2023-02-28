@@ -2,7 +2,9 @@ package kr.young.rtp
 
 import android.media.AudioFormat
 import android.os.Environment
-import kr.young.common.DebugLog
+import kr.young.common.UtilLog.Companion.d
+import kr.young.common.UtilLog.Companion.e
+import kr.young.common.UtilLog.Companion.i
 import org.webrtc.audio.JavaAudioDeviceModule
 import java.io.*
 import java.util.concurrent.ExecutorService
@@ -16,9 +18,9 @@ class RecordedAudioToFileController constructor(
     private var fileSizeInBytes: Long = 0L
 
     fun start(): Boolean {
-        DebugLog.i(TAG, "start")
+        i(TAG, "start")
         if (!isExternalStorageWritable()) {
-            DebugLog.e(TAG, "Writing to external media is not possible")
+            e(TAG, "Writing to external media is not possible")
             return false
         }
         synchronized(lock) {
@@ -28,14 +30,14 @@ class RecordedAudioToFileController constructor(
     }
 
     fun stop() {
-        DebugLog.i(TAG, "stop")
+        i(TAG, "stop")
         synchronized(lock) {
             isRunning = false
             if (rawAudioFileOutputStream != null) {
                 try {
                     rawAudioFileOutputStream!!.close()
                 } catch (e: IOException) {
-                    DebugLog.e(TAG, "Failed to close file with saved input audio: ${e.message}")
+                    e(TAG, "Failed to close file with saved input audio: ${e.message}")
                 }
                 rawAudioFileOutputStream = null
             }
@@ -56,10 +58,10 @@ class RecordedAudioToFileController constructor(
         try {
             rawAudioFileOutputStream = FileOutputStream(outputFile)
         } catch (e: FileNotFoundException) {
-            DebugLog.e(TAG, "Failed to open audio output file: ${e.message}")
+            e(TAG, "Failed to open audio output file: ${e.message}")
             stop()
         }
-        DebugLog.d(TAG, "Opened file for recording: $fileName")
+        d(TAG, "Opened file for recording: $fileName")
     }
 
     companion object {
@@ -69,7 +71,7 @@ class RecordedAudioToFileController constructor(
 
     override fun onWebRtcAudioRecordSamplesReady(samples: JavaAudioDeviceModule.AudioSamples?) {
         if (samples!!.audioFormat != AudioFormat.ENCODING_PCM_16BIT) {
-            DebugLog.e(TAG, "Invalid audio format")
+            e(TAG, "Invalid audio format")
             return
         }
         synchronized(lock) {
@@ -90,7 +92,7 @@ class RecordedAudioToFileController constructor(
                         fileSizeInBytes += samples.data.size
                     }
                 } catch (e: IOException) {
-                    DebugLog.e(TAG, "Failed to write audio to file: ${e.message}")
+                    e(TAG, "Failed to write audio to file: ${e.message}")
                 }
             }
         }
