@@ -6,12 +6,12 @@ plugins {
 
 android {
     namespace 'kr.young.examplewebrtc'
-    compileSdk 33
+    compileSdk rootProject.ext.compileSdkVersion
 
     defaultConfig {
         applicationId "kr.young.examplewebrtc"
-        minSdk 26
-        targetSdk 33
+        minSdk rootProject.ext.minSdkVersion
+        targetSdk rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
 
@@ -58,6 +58,8 @@ dependencies {
     implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
     implementation 'com.squareup.retrofit2:adapter-rxjava2:2.9.0'
     implementation "com.squareup.okhttp3:logging-interceptor:4.3.1"
+
+    implementation 'org.webrtc:google-webrtc:1.0.32006'
 
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
