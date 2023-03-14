@@ -46,7 +46,7 @@ open class BaseActivity: AppCompatActivity() {
     }
 
     private fun checkPermission() {
-        if (!PermissionUtil.check(permissions)) {
+        if (!PermissionUtil.check(permissions = permissions)) {
             requesting = true
             PermissionUtil.request(this, permissions)
         } else {
