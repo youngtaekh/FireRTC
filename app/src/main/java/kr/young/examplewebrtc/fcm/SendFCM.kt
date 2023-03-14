@@ -4,6 +4,7 @@ import com.google.gson.JsonObject
 import kr.young.common.UtilLog
 import kr.young.examplewebrtc.util.Config.Companion.CALL_ID
 import kr.young.examplewebrtc.util.Config.Companion.DATA
+import kr.young.examplewebrtc.util.Config.Companion.SDP
 import kr.young.examplewebrtc.util.Config.Companion.SPACE_ID
 import kr.young.examplewebrtc.util.Config.Companion.TO
 import kr.young.examplewebrtc.util.Config.Companion.TYPE
@@ -17,8 +18,9 @@ class SendFCM {
             type: FCMType,
             spaceId: String? = null,
             callId: String? = null,
+            sdp: String? = null,
         ) {
-            ApiClient.getApiService().sendNotification(payload = fcmPayload(to, type, spaceId, callId))?.enqueue(object:
+            ApiClient.getApiService().sendNotification(payload = fcmPayload(to, type, spaceId, callId, sdp))?.enqueue(object:
                 Callback<JsonObject?> {
                 override fun onResponse(
                     call: retrofit2.Call<JsonObject?>,
@@ -42,6 +44,7 @@ class SendFCM {
             type: FCMType,
             spaceId: String?,
             callId: String?,
+            sdp: String?
         ): JsonObject {
             val payload = JsonObject()
             payload.addProperty(TO, to)
@@ -53,6 +56,9 @@ class SendFCM {
             if (spaceId != null) {
                 data.addProperty(SPACE_ID, spaceId)
             }
+            if (sdp != null) {
+                data.addProperty(SDP, sdp)
+            }
             payload.add(DATA, data)
             return payload
         }
@@ -63,6 +69,8 @@ class SendFCM {
     enum class FCMType {
         New,
         Leave,
+        Sdp,
+        Ice,
         Else
     }
 }

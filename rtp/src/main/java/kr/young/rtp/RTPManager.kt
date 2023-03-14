@@ -169,10 +169,10 @@ class RTPManager: PCObserver, PCObserver.SDP, PCObserver.ICE {
      */
     fun startRTP(
         context: Context,
-        data: Intent?,
+        data: Intent? = null,
         isOffer: Boolean,
-        remoteSdp: SessionDescription?,
-        remoteICE: String?
+        remoteSdp: SessionDescription? = null,
+        remoteICE: String? = null
     ) {
         i(
             TAG, "startRTP(context, isOffer $isOffer, " +
@@ -382,6 +382,18 @@ class RTPManager: PCObserver, PCObserver.SDP, PCObserver.ICE {
         fullRenderer?.setScalingType(type)
     }
 
+    fun setSpeaker(speaker: Boolean) {
+        if (speaker) {
+            rtcAudioManager!!.setAudioDeviceInternal(RTCAudioManager.AudioDevice.SPEAKER_PHONE)
+        } else {
+            rtcAudioManager!!.setAudioDeviceInternal(RTCAudioManager.AudioDevice.EARPIECE)
+        }
+    }
+
+    fun setMute(mute: Boolean) {
+        rtcAudioManager!!.setMicrophoneMute(mute)
+    }
+
     /** Mute on/off */
     fun setAudioEnable(enable: Boolean) {
         executor!!.execute {
@@ -441,7 +453,7 @@ class RTPManager: PCObserver, PCObserver.SDP, PCObserver.ICE {
 //        addRemoteIceCandidate(candidate!!)
     }
 
-    override fun onICECandidatesRemoved(candidates: Array<out IceCandidate>?) {
+    override fun onICECandidatesRemoved(candidates: Array<out IceCandidate?>?) {
         i(TAG, "onIceCandidatesRemoved()")
     }
 

@@ -185,6 +185,7 @@ class MainActivity : BaseActivity(), OnTouchListener, OnClickListener {
             binding.etName.setText("")
             val intent = Intent(this, CallActivity::class.java)
             startActivity(intent)
+            startService(Intent(this, CallService::class.java))
         } else {
             binding.tvWarn.text = getString(R.string.empty_warn)
         }

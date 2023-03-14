@@ -228,7 +228,7 @@ class RTCAudioManager private constructor(val context: Context) {
         i(TAG, "AudioManager stopped")
     }
 
-    private fun setAudioDeviceInternal(device: AudioDevice) {
+    fun setAudioDeviceInternal(device: AudioDevice) {
         i(TAG, "setAudioDeviceInternal(device=$device)")
         RTCUtils.assertIsTrue(audioDevices.contains(device))
 
@@ -294,7 +294,7 @@ class RTCAudioManager private constructor(val context: Context) {
         audioManager!!.isSpeakerphoneOn = on
     }
 
-    private fun setMicrophoneMute(on: Boolean) {
+    fun setMicrophoneMute(on: Boolean) {
         val wasMuted = audioManager!!.isMicrophoneMute
         if (wasMuted == on) {
             return

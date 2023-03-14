@@ -11,12 +11,16 @@ import kr.young.examplewebrtc.model.Call
 import kr.young.examplewebrtc.model.Space
 import kr.young.examplewebrtc.model.User
 import kr.young.examplewebrtc.repo.SpaceRepository
+import kr.young.rtp.RTPManager
+import kr.young.rtp.util.SDPEditor
 
 class SpaceViewModel: ViewModel() {
     val isOffer = MutableLiveData<Boolean?>(null)
     val space = MutableLiveData<Space>()
     val participants = MutableLiveData<MutableMap<String, User>>(mutableMapOf())
     val calls = MutableLiveData<MutableList<Call>>(mutableListOf())
+    val newSdp = MutableLiveData<String>()
+    val newIce = MutableLiveData<String>()
 
     fun setOffer(isOffer: Boolean?) {
         this.isOffer.value = isOffer
@@ -31,7 +35,7 @@ class SpaceViewModel: ViewModel() {
 
     private fun addCall(call: Call) {
         d(TAG, "addCall user ${call.userId}")
-        val callList = calls.value!!
+        val callList = getCalls()
         callList.add(call)
         calls.value = callList
     }
@@ -39,6 +43,16 @@ class SpaceViewModel: ViewModel() {
     internal fun setCalls(callList: MutableList<Call>) {
         d(TAG, "setCalls size ${callList.size}")
         calls.value = callList
+    }
+
+    fun getCalls() = calls.value!!
+
+    fun setNewSdp(sdp: String) {
+        newSdp.value = sdp
+    }
+
+    fun setNewIce(ice: String) {
+        newIce.value = ice
     }
 
     private fun addParticipants(user: User) {
@@ -83,6 +97,8 @@ class SpaceViewModel: ViewModel() {
     }
 
     fun updateSpaceStatus(status: Space.SpaceStatus) {
+        if (space.value == null)
+            return
         i(TAG, "updateSpaceStatus ${space.value!!.status} -> $status")
         val space = space.value!!
         space.status = status
@@ -104,7 +120,7 @@ class SpaceViewModel: ViewModel() {
         SpaceRepository.addCallList(space.value!!.id, call.id)
     }
 
-    fun makeAnswer() {
+    fun makeAnswer(): String {
         d(TAG, "makeAnswer")
         val call = Call(
             userId = MyDataViewModel.instance.getMyId(),
@@ -113,9 +129,16 @@ class SpaceViewModel: ViewModel() {
             direction = Call.CallDirection.Answer
         )
 
-        for (remoteCall in calls.value!!) {
-            i(TAG, "makeAnswer() call - ${remoteCall.userId}")
+        var sdp = ""
+        var candidates = mutableListOf<String>()
+        for (remoteCall in getCalls()) {
+            i(TAG, "makeAnswer() call-${remoteCall.userId}, direction-${remoteCall.direction}")
 //            CallViewModel.instance.getCall(callSimple.id)
+            if (remoteCall.direction == Call.CallDirection.Offer) {
+                d(TAG, "Find Offer Call!!!!!!!!!!!")
+                sdp = remoteCall.sdp!!
+                candidates = remoteCall.candidates
+            }
             if (remoteCall.userId != MyDataViewModel.instance.myData.value!!.id) {
                 SendFCM.sendMessage(
                     to = remoteCall.token!!,
@@ -129,6 +152,7 @@ class SpaceViewModel: ViewModel() {
         CallViewModel.instance.setCall(call)
         addCall(call)
         SpaceRepository.addCallList(space.value!!.id, call.id)
+        return SDPEditor().addIceCandidate(sdp, candidates as ArrayList<String>)
     }
 
     fun checkSpaceId(spaceId: String?) =

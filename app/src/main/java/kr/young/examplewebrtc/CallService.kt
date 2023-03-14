@@ -4,9 +4,7 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
-import android.os.Binder
 import android.os.IBinder
-import kr.young.common.UtilLog
 import kr.young.common.UtilLog.Companion.d
 import kr.young.rtp.RTPManager
 import kr.young.rtp.observer.PCObserver
@@ -64,14 +62,12 @@ class CallService : Service(), PCObserver, PCObserver.ICE, PCObserver.SDP {
             enableStat = false,
             recordAudio = false
         )
-
-        RTPManager.instance.startRTP(this, null, true, null, null)
         return START_NOT_STICKY
     }
 
     override fun onDestroy() {
         super.onDestroy()
-//        NetworkMonitor.getInstance().stopMonitoring()
+        NetworkMonitor.getInstance().stopMonitoring()
         RTPManager.instance.release()
         d(TAG, "onDestroy")
         PCObserverImpl.instance.remove(this as PCObserver)
@@ -112,7 +108,7 @@ class CallService : Service(), PCObserver, PCObserver.ICE, PCObserver.SDP {
         d(TAG, "onICECandidate")
     }
 
-    override fun onICECandidatesRemoved(candidates: Array<out IceCandidate>?) {
+    override fun onICECandidatesRemoved(candidates: Array<out IceCandidate?>?) {
         d(TAG, "onICECandidatesRemoved")
     }
 

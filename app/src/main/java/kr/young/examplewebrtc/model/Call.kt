@@ -15,13 +15,18 @@ data class Call(
     var connected: Boolean = false,
     var terminated: Boolean = false,
     var sdp: String? = null,
+    var candidates: MutableList<String> = mutableListOf(),
     val createdAt: String = DateUtil.toFormattedString(currentTimeMillis()),
     var terminatedAt: String? = null
 ) {
     override fun toString(): String {
         val s = if (sdp == null) 0
         else 1
-        return "($USER_ID=${userId?.substring(0,5)}\n$SPACE_ID=${spaceId?.substring(0,5)}\nstate=$direction\nterminated=${terminated}\ncreateAt=$createdAt\nid=${id.substring(0,5)}\nsdp=$s)"
+        return "($USER_ID=${userId?.substring(0,5)}\n" +
+                "$SPACE_ID=${spaceId?.substring(0,5)}\n" +
+                "state=$direction\nterminated=${terminated}\n" +
+                "createAt=$createdAt\nid=${id.substring(0,5)}\n" +
+                "sdp=$s\ncandidates=${candidates.size})"
     }
 
     override fun equals(other: Any?): Boolean {

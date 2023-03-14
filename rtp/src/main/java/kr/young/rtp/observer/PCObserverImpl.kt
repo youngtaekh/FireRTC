@@ -4,8 +4,7 @@ import org.webrtc.IceCandidate
 import org.webrtc.SessionDescription
 import org.webrtc.StatsReport
 
-class PCObserverImpl private constructor()
-    : PCPublisher {
+class PCObserverImpl private constructor(): PCPublisher {
 
     private object Holder {
         val INSTANCE = PCObserverImpl()
@@ -51,7 +50,7 @@ class PCObserverImpl private constructor()
         }
     }
 
-    override fun onICECandidatesRemovedObserver(candidates: Array<out IceCandidate>?) {
+    override fun onICECandidatesRemovedObserver(candidates: Array<out IceCandidate?>?) {
         for (observer in iceObservers) {
             observer.onICECandidatesRemoved(candidates)
         }

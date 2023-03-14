@@ -41,6 +41,34 @@
             app:layout_constraintRight_toRightOf="parent" />
 
         <TextView
+            android:id="@+id/tv_mute"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="20dp"
+            android:layout_marginBottom="10dp"
+            android:padding="10dp"
+            android:textSize="20sp"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold"
+            android:text="@string/mute_on"
+            app:layout_constraintBottom_toTopOf="@+id/tv_end"
+            app:layout_constraintLeft_toLeftOf="parent" />
+
+        <TextView
+            android:id="@+id/tv_speaker"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="20dp"
+            android:layout_marginBottom="10dp"
+            android:padding="10dp"
+            android:textSize="20sp"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold"
+            android:text="@string/speaker_on"
+            app:layout_constraintBottom_toTopOf="@+id/tv_end"
+            app:layout_constraintRight_toRightOf="parent" />
+
+        <TextView
             android:id="@+id/tv_end"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

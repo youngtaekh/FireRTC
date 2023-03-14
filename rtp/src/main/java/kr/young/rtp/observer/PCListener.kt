@@ -1,5 +1,6 @@
 package kr.young.rtp.observer
 
+import kr.young.common.UtilLog.Companion.d
 import kr.young.common.UtilLog.Companion.e
 import kr.young.common.UtilLog.Companion.i
 import kr.young.rtp.observer.PCObserverImpl.Companion.instance
@@ -8,77 +9,14 @@ import java.nio.charset.Charset
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
-class PCListener(private val pcObserverImpl: PCObserverImpl)
-    : PeerConnection.Observer {
-
+class PCListener(private val pcObserverImpl: PCObserverImpl): PeerConnection.Observer {
     private var executor: ExecutorService? = null
-
     init {
         this.executor = Executors.newSingleThreadExecutor()
     }
 
-    override fun onSignalingChange(p0: PeerConnection.SignalingState?) {
-        i(TAG, "onSignalingChange($p0)")
-    }
-
-    override fun onIceConnectionChange(p0: PeerConnection.IceConnectionState?) {
-        i(TAG, "onIceConnectionChange($p0)")
-        this.executor!!.execute {
-            when (p0) {
-                PeerConnection.IceConnectionState.CONNECTED -> {
-                    i(TAG, "ICE connection CONNECTED")
-                    pcObserverImpl.onICEConnectedObserver()
-                }
-                PeerConnection.IceConnectionState.DISCONNECTED -> {
-                    i(TAG, "ICE connection DISCONNECTED")
-                    pcObserverImpl.onICEDisconnectedObserver()
-                }
-                PeerConnection.IceConnectionState.FAILED -> {
-                    e(TAG, "ICE connection FAILED")
-                }
-                PeerConnection.IceConnectionState.NEW -> {
-                    i(TAG, "ICE connection NEW")
-                }
-                PeerConnection.IceConnectionState.CHECKING -> {
-                    i(TAG, "ICE connection CHECKING")
-                }
-                PeerConnection.IceConnectionState.COMPLETED -> {
-                    i(TAG, "ICE connection COMPLETED")
-                }
-                PeerConnection.IceConnectionState.CLOSED -> {
-                    i(TAG, "ICE connection CLOSED")
-                }
-                else -> {
-                    e(TAG, "ICE connection UNKNOWN")
-                }
-            }
-        }
-    }
-
-    override fun onIceConnectionReceivingChange(p0: Boolean) {
-        i(TAG, "onIceConnectionReceivingChange($p0)")
-    }
-
-    override fun onIceGatheringChange(p0: PeerConnection.IceGatheringState?) {
-        i(TAG, "onIceGatheringChange($p0)")
-    }
-
     override fun onIceCandidate(p0: IceCandidate?) {
-        i(TAG, "onIceCandidate($p0)")
         this.executor!!.execute { pcObserverImpl.onICECandidateObserver(p0) }
-    }
-
-    override fun onIceCandidatesRemoved(p0: Array<out IceCandidate>?) {
-        i(TAG, "onIceCandidatesRemoved($p0)")
-        this.executor!!.execute { pcObserverImpl.onICECandidatesRemovedObserver(p0) }
-    }
-
-    override fun onAddStream(p0: MediaStream?) {
-        i(TAG, "onAddStream($p0)")
-    }
-
-    override fun onRemoveStream(p0: MediaStream?) {
-        i(TAG, "onRemoveStream($p0)")
     }
 
     override fun onDataChannel(dc: DataChannel?) {
@@ -93,14 +31,14 @@ class PCListener(private val pcObserverImpl: PCObserverImpl)
                         "label: ${dc.label()}, state: ${dc.state()}")
             }
 
-            override fun onMessage(p0: DataChannel.Buffer?) {
+            override fun onMessage(buffer: DataChannel.Buffer?) {
                 i(TAG, "onDataChannel.onMessage" +
                         "label: ${dc.label()}, state: ${dc.state()}")
-                if (p0 == null || p0.binary) {
+                if (buffer == null || buffer.binary) {
                     i(TAG, "Received binary msg over $dc")
                     return
                 }
-                val data = p0.data
+                val data = buffer.data
                 val bytes = ByteArray(data.capacity())
                 data[bytes]
                 val strData = String(bytes, Charset.forName("UTF-8"))
@@ -108,6 +46,96 @@ class PCListener(private val pcObserverImpl: PCObserverImpl)
                 instance.onMessageObserver(strData)
             }
         })
+    }
+
+    /** State for offer/answer */
+    override fun onSignalingChange(p0: PeerConnection.SignalingState?) {
+        i(TAG, "onSignalingChange($p0)")
+    }
+
+    override fun onIceConnectionReceivingChange(p0: Boolean) {
+        d(
+            TAG,
+            "IceConnectionReceiving changed to $p0"
+        )
+    }
+
+    override fun onIceConnectionChange(p0: PeerConnection.IceConnectionState?) {
+        d(TAG, "IceConnectionState: $p0")
+        this.executor!!.execute {
+            when (p0) {
+                PeerConnection.IceConnectionState.CONNECTED -> {
+                    pcObserverImpl.onICEConnectedObserver()
+                }
+                PeerConnection.IceConnectionState.DISCONNECTED -> {
+                    pcObserverImpl.onICEDisconnectedObserver()
+                }
+                PeerConnection.IceConnectionState.FAILED -> {
+                    e(TAG, "ICE connection FAILED.")
+                }
+                PeerConnection.IceConnectionState.NEW -> {
+                    i(TAG, "ICE connection NEW.")
+                }
+                PeerConnection.IceConnectionState.CHECKING -> {
+                    i(TAG, "ICE connection CHECKING.")
+                }
+                PeerConnection.IceConnectionState.COMPLETED -> {
+                    i(TAG, "ICE connection COMPLETED.")
+                }
+                PeerConnection.IceConnectionState.CLOSED -> {
+                    i(TAG, "ICE connection CLOSED.")
+                }
+                else -> { i(TAG, "ICE connection else.") }
+            }
+        }
+    }
+
+    override fun onIceGatheringChange(p0: PeerConnection.IceGatheringState?) {
+        d(TAG, "IceGatheringState: $p0")
+    }
+
+    override fun onIceCandidatesRemoved(p0: Array<IceCandidate?>?) {
+        i(TAG, "onIceCandidatesRemoved()")
+        this.executor!!.execute {
+            pcObserverImpl.onICECandidatesRemovedObserver(p0)
+        }
+    }
+
+    override fun onConnectionChange(newState: PeerConnection.PeerConnectionState?) {
+        i(TAG, "PeerConnectionState: $newState")
+        this.executor!!.execute {
+            when (newState) {
+                PeerConnection.PeerConnectionState.CONNECTED -> {
+                    pcObserverImpl.onPCConnectedObserver()
+                }
+                PeerConnection.PeerConnectionState.DISCONNECTED -> {
+                    pcObserverImpl.onPCDisconnectedObserver()
+                }
+                PeerConnection.PeerConnectionState.FAILED -> {
+                    e(TAG, "ICE connection FAILED.")
+                    pcObserverImpl.onPCFailedObserver()
+                }
+                PeerConnection.PeerConnectionState.NEW -> {
+                    i(TAG, "ICE connection NEW.")
+                }
+                PeerConnection.PeerConnectionState.CONNECTING -> {
+                    i(TAG, "ICE connection CONNECTING.")
+                }
+                PeerConnection.PeerConnectionState.CLOSED -> {
+                    i(TAG, "ICE connection CLOSED.")
+                    pcObserverImpl.onPCClosedObserver()
+                }
+                else -> { i(TAG, "ICE Connection else") }
+            }
+        }
+    }
+
+    override fun onAddStream(p0: MediaStream?) {
+        i(TAG, "onAddStream($p0)")
+    }
+
+    override fun onRemoveStream(p0: MediaStream?) {
+        i(TAG, "onRemoveStream($p0)")
     }
 
     override fun onRenegotiationNeeded() {

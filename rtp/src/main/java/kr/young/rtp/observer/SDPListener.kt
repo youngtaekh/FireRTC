@@ -39,6 +39,10 @@ class SDPListener(
     }
 
     override fun onCreateSuccess(p0: SessionDescription?) {
+        if (localSDP != null) {
+            e(TAG, "Multiple SDP created.")
+            return
+        }
         val description = p0!!.description
         val sdp = SessionDescription(p0.type, description)
         localSDP = sdp

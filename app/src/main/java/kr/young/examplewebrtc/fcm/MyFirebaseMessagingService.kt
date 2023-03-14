@@ -19,10 +19,14 @@ import kr.young.examplewebrtc.R
 import kr.young.examplewebrtc.fcm.SendFCM.FCMType
 import kr.young.examplewebrtc.repo.AppSP
 import kr.young.examplewebrtc.util.Config.Companion.CALL_ID
+import kr.young.examplewebrtc.util.Config.Companion.SDP
 import kr.young.examplewebrtc.util.Config.Companion.SPACE_ID
 import kr.young.examplewebrtc.util.Config.Companion.TYPE
 import kr.young.examplewebrtc.vm.CallViewModel
 import kr.young.examplewebrtc.vm.SpaceViewModel
+import kr.young.rtp.RTPManager
+import org.webrtc.IceCandidate
+import org.webrtc.SessionDescription
 
 class MyFirebaseMessagingService : FirebaseMessagingService() {
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
@@ -36,6 +40,8 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
                             remoteMessage.data[SPACE_ID],
                             remoteMessage.data[CALL_ID])
                     }
+                    FCMType.Sdp -> { receiveSDPMessage(remoteMessage.data[SDP]) }
+                    FCMType.Ice -> { receiveICEMessage(remoteMessage.data[SDP]) }
                     else ->{ sendNotification("else") }
                 }
             }
@@ -61,6 +67,20 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         if (spaceViewModel.checkSpaceId(spaceId)) {
             SpaceViewModel.instance.getSpace()
             CallViewModel.instance.refreshCalls(spaceId!!)
+        }
+    }
+
+    private fun receiveSDPMessage(sdp: String?) {
+        if (sdp != null) {
+            val remote = SessionDescription(SessionDescription.Type.ANSWER, sdp)
+            RTPManager.instance.setRemoteDescription(remote)
+        }
+    }
+
+    private fun receiveICEMessage(sdp: String?) {
+        if (sdp != null) {
+            val remote = IceCandidate("0", 0, sdp)
+            RTPManager.instance.addRemoteIceCandidate(remote)
         }
     }
 

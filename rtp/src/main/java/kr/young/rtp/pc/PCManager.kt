@@ -239,7 +239,7 @@ class PCManager(
             PeerConnection.ContinualGatheringPolicy.GATHER_CONTINUALLY
         rtcConfig.keyType = PeerConnection.KeyType.ECDSA
         rtcConfig.enableDtlsSrtp = !isLoopback
-        rtcConfig.sdpSemantics = PeerConnection.SdpSemantics.UNIFIED_PLAN
+        rtcConfig.sdpSemantics = PeerConnection.SdpSemantics.PLAN_B
         return rtcConfig
     }
 

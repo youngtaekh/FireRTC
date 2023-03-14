@@ -23,25 +23,25 @@ class AudioMedia {
             audioConstraints.mandatory.add(
                 MediaConstraints.KeyValuePair(
                     AUDIO_ECHO_CANCELLATION_CONSTRAINT,
-                    "false"
+                    "true"
                 )
             )
             audioConstraints.mandatory.add(
                 MediaConstraints.KeyValuePair(
                     AUDIO_AUTO_GAIN_CONTROL_CONSTRAINT,
-                    "false"
+                    "true"
                 )
             )
             audioConstraints.mandatory.add(
                 MediaConstraints.KeyValuePair(
                     AUDIO_HIGH_PASS_FILTER_CONSTRAINT,
-                    "false"
+                    "true"
                 )
             )
             audioConstraints.mandatory.add(
                 MediaConstraints.KeyValuePair(
                     AUDIO_NOISE_SUPPRESSION_CONSTRAINT,
-                    "false"
+                    "true"
                 )
             )
         }

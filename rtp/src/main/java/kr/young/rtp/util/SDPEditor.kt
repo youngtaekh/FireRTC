@@ -10,6 +10,7 @@ class SDPEditor {
         val builder = StringBuilder()
         val lines: Array<String> = sdp.split(NEW_LINE.toRegex()).toTypedArray()
         for (line in lines) {
+            if (line.isEmpty()) { continue }
             if (line.startsWith(PREFIX, true)) {
                 find = true
                 builder.append(line).append(NEW_LINE)

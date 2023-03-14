@@ -14,6 +14,8 @@ class Config {
         const val TYPE = "type"
         const val CALL_ID = "callId"
         const val DATA = "data"
+        const val SDP = "sdp"
+        const val CANDIDATES = "candidates"
         const val USER_ID = "userId"
     }
 }

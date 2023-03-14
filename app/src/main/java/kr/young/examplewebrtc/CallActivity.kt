@@ -1,6 +1,7 @@
 package kr.young.examplewebrtc
 
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.os.Bundle
 import android.view.MotionEvent
 import android.view.View
@@ -18,7 +19,9 @@ import kr.young.examplewebrtc.vm.CallViewModel
 import kr.young.examplewebrtc.vm.MyDataViewModel
 import kr.young.examplewebrtc.vm.SpaceViewModel
 import kr.young.examplewebrtc.vm.UserViewModel
+import kr.young.rtp.RTPManager
 import kr.young.rtp.observer.PCObserver
+import kr.young.rtp.observer.PCObserverImpl
 import org.webrtc.IceCandidate
 import org.webrtc.SessionDescription
 import org.webrtc.StatsReport
@@ -36,17 +39,29 @@ class CallActivity : BaseActivity(), OnClickListener, OnTouchListener, PCObserve
 
         binding.tvEnd.setOnClickListener(this)
         binding.tvEnd.setOnTouchListener(this)
+        binding.tvMute.setOnClickListener(this)
+        binding.tvMute.setOnTouchListener(this)
+        binding.tvSpeaker.setOnClickListener(this)
+        binding.tvSpeaker.setOnTouchListener(this)
 
         spaceViewModel = SpaceViewModel.instance
         callViewModel = CallViewModel.instance
+
+        PCObserverImpl.instance.add(this as PCObserver)
+        PCObserverImpl.instance.add(this as PCObserver.SDP)
+        PCObserverImpl.instance.add(this as PCObserver.ICE)
 
         spaceViewModel.isOffer.observe(this) {
             if (it != null) {
                 if (it) {
                     spaceViewModel.makeOffer()
+                    RTPManager.instance.startRTP(context = this, isOffer = true)
                 } else {
                     spaceViewModel.updateSpaceStatus(SpaceStatus.ACTIVE)
-                    spaceViewModel.makeAnswer()
+                    val sdp = spaceViewModel.makeAnswer()
+                    d(TAG, "remote SDP\n${sdp}")
+                    val remoteSDP = SessionDescription(SessionDescription.Type.OFFER, sdp)
+                    RTPManager.instance.startRTP(context = this, isOffer = false, remoteSdp = remoteSDP)
                 }
                 spaceViewModel.isOffer.value = null
             }
@@ -71,6 +86,20 @@ class CallActivity : BaseActivity(), OnClickListener, OnTouchListener, PCObserve
             }
             binding.tvCount.text = "$count"
         }
+        spaceViewModel.newSdp.observe(this) {
+            if (it != null) {
+                d(TAG, "newSdp.observe")
+                val remote = SessionDescription(SessionDescription.Type.OFFER, it)
+                RTPManager.instance.setRemoteDescription(remote)
+            }
+        }
+        spaceViewModel.newIce.observe(this) {
+            if (it != null) {
+                d(TAG, "newIce.observe")
+                val remote = IceCandidate("0", 0, it)
+                RTPManager.instance.addRemoteIceCandidate(remote)
+            }
+        }
         spaceViewModel.participants.observe(this) {
             if (it != null) {
                 d(TAG, "participants.observe $it")
@@ -81,21 +110,43 @@ class CallActivity : BaseActivity(), OnClickListener, OnTouchListener, PCObserve
                 d(TAG, "myCall.observe call id ${it.id.substring(0, 5)} userId ${it.userId}")
             }
         }
+        callViewModel.mute.observe(this) {
+            if (it != null) {
+                if (it) {
+                    binding.tvMute.text = getString(R.string.mute_off)
+                } else {
+                    binding.tvMute.text = getString(R.string.mute_on)
+                }
+            }
+        }
+        callViewModel.speaker.observe(this) {
+            if (it != null) {
+                if (it) {
+                    binding.tvSpeaker.text = getString(R.string.speaker_off)
+                } else {
+                    binding.tvSpeaker.text = getString(R.string.speaker_on)
+                }
+            }
+        }
     }
 
     override fun onDestroy() {
         super.onDestroy()
+        PCObserverImpl.instance.remove(this as PCObserver)
+        PCObserverImpl.instance.remove(this as PCObserver.SDP)
+        PCObserverImpl.instance.remove(this as PCObserver.ICE)
         endCall()
     }
 
     private fun endCall() {
         //update call to terminated
         d(TAG, "endCall")
+        stopService(Intent(this, CallService::class.java))
         callViewModel.endCall()
         var isTerminatedSpace = true
-        for (call in spaceViewModel.calls.value!!) {
+        for (call in spaceViewModel.getCalls()) {
             d(TAG, "endCall ${call.userId} terminated ${call.terminated}")
-            if (!call.terminated) {
+            if (!call.terminated && call.userId != MyDataViewModel.instance.getMyId()) {
                 isTerminatedSpace = false
             }
             if (call.userId != MyDataViewModel.instance.getMyId()) {
@@ -121,26 +172,63 @@ class CallActivity : BaseActivity(), OnClickListener, OnTouchListener, PCObserve
     override fun onClick(v: View?) {
         when (v!!.id) {
             R.id.tv_end -> { finish() }
+            R.id.tv_mute -> { mute() }
+            R.id.tv_speaker -> { speaker() }
         }
     }
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouch(v: View?, event: MotionEvent?): Boolean {
         when (v!!.id) {
-            R.id.tv_end -> { TouchEffect.alpha(v, event) }
+            R.id.tv_end, R.id.tv_speaker, R.id.tv_mute -> { TouchEffect.alpha(v, event) }
         }
         return super.onTouchEvent(event)
     }
 
+    private fun mute() {
+        RTPManager.instance.setMute(!callViewModel.getMute())
+        RTPManager.instance.setAudioEnable(callViewModel.getMute())
+        callViewModel.setMute()
+    }
+
+    private fun speaker() {
+        RTPManager.instance.setSpeaker(!callViewModel.getSpeaker())
+        callViewModel.setSpeaker()
+    }
+
     override fun onLocalDescription(sdp: SessionDescription?) {
         d(TAG, "onLocalDescription")
+        for (call in spaceViewModel.getCalls()) {
+            if (!call.terminated && call.userId != MyDataViewModel.instance.getMyId()) {
+                SendFCM.sendMessage(
+                    to = call.token!!,
+                    type = FCMType.Sdp,
+                    spaceId = call.spaceId,
+                    callId = call.id,
+                    sdp = sdp!!.description
+                )
+            }
+        }
+        runOnUiThread { CallViewModel.instance.updateSDP(sdp!!.description) }
     }
 
     override fun onICECandidate(candidate: IceCandidate?) {
         d(TAG, "onICECandidate")
+        for (call in spaceViewModel.getCalls()) {
+            if (!call.terminated && call.userId != MyDataViewModel.instance.getMyId()) {
+                SendFCM.sendMessage(
+                    to = call.token!!,
+                    type = FCMType.Ice,
+                    spaceId = call.spaceId,
+                    callId = call.id,
+                    sdp = candidate!!.sdp
+                )
+            }
+        }
+        runOnUiThread { CallViewModel.instance.updateCandidate(candidate!!.sdp) }
     }
 
-    override fun onICECandidatesRemoved(candidates: Array<out IceCandidate>?) {
+    override fun onICECandidatesRemoved(candidates: Array<out IceCandidate?>?) {
         d(TAG, "onICECandidatesRemoved")
     }
 

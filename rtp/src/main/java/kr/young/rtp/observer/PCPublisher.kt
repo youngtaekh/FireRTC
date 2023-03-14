@@ -14,7 +14,7 @@ interface PCPublisher {
 
     fun onLocalDescriptionObserver(sdp: SessionDescription?)
     fun onICECandidateObserver(candidate: IceCandidate?)
-    fun onICECandidatesRemovedObserver(candidates: Array<out IceCandidate>?)
+    fun onICECandidatesRemovedObserver(candidates: Array<out IceCandidate?>?)
     fun onICEConnectedObserver()
     fun onICEDisconnectedObserver()
     fun onPCConnectedObserver()

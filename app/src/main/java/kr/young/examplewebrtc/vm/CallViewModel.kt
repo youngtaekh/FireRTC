@@ -2,35 +2,23 @@ package kr.young.examplewebrtc.vm
 
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import com.google.android.gms.tasks.OnFailureListener
 import com.google.android.gms.tasks.OnSuccessListener
-import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.QuerySnapshot
 import com.google.firebase.firestore.ktx.toObject
-import com.google.gson.JsonObject
-import kr.young.common.Crypto
 import kr.young.common.DateUtil
 import kr.young.common.UtilLog.Companion.d
 import kr.young.common.UtilLog.Companion.e
-import kr.young.common.UtilLog.Companion.i
-import kr.young.common.UtilLog.Companion.w
-import kr.young.examplewebrtc.repo.AppSP
-import kr.young.examplewebrtc.fcm.ApiClient
 import kr.young.examplewebrtc.model.Call
-import kr.young.examplewebrtc.model.Call.CallDirection.Answer
-import kr.young.examplewebrtc.model.Call.CallDirection.Offer
-import kr.young.examplewebrtc.model.Space
-import kr.young.examplewebrtc.model.Space.SpaceStatus
 import kr.young.examplewebrtc.model.Space.SpaceStatus.INACTIVE
 import kr.young.examplewebrtc.model.Space.SpaceStatus.TERMINATED
+import kr.young.examplewebrtc.repo.AppSP
 import kr.young.examplewebrtc.repo.CallRepository
-import kr.young.examplewebrtc.repo.SpaceRepository
-import retrofit2.Callback
-import retrofit2.Response
 import java.lang.System.currentTimeMillis
 
 class CallViewModel: ViewModel() {
     val myCall = MutableLiveData<Call>()
+    val mute = MutableLiveData(false)
+    val speaker = MutableLiveData(false)
 
     //implementation fire store result interface
     private val checkLastParticipant = OnSuccessListener<QuerySnapshot> { documents ->
@@ -55,9 +43,43 @@ class CallViewModel: ViewModel() {
         this.myCall.value = call
     }
 
+    fun setMute() {
+        if (mute.value == null) {
+            mute.value = true
+        } else {
+            mute.value = !mute.value!!
+        }
+    }
+
+    fun getMute(): Boolean {
+        return if (mute.value == null) {
+            false
+        } else {
+            mute.value!!
+        }
+    }
+
+    fun setSpeaker() {
+        if (speaker.value == null) {
+            speaker.value = true
+        } else {
+            speaker.value = !speaker.value!!
+        }
+    }
+
+    fun getSpeaker(): Boolean {
+        return if (speaker.value == null) {
+            false
+        } else {
+            speaker.value!!
+        }
+    }
+
     fun release() {
         d(TAG, "release")
         myCall.value = null
+        mute.value = null
+        speaker.value = null
     }
 
     fun terminateSpace() {
@@ -99,6 +121,20 @@ class CallViewModel: ViewModel() {
     fun setCall(call: Call) {
         setMyCall(call)
         CallRepository.post(myCall.value!!)
+    }
+
+    fun updateSDP(sdp: String) {
+        val call = myCall.value!!
+        call.sdp = sdp
+        setMyCall(call)
+        CallRepository.updateSDP(call)
+    }
+
+    fun updateCandidate(candidate: String) {
+        val call = myCall.value!!
+        call.candidates.add(candidate)
+        setMyCall(call)
+        CallRepository.updateCandidates(call, candidate)
     }
 
     fun endCall() {

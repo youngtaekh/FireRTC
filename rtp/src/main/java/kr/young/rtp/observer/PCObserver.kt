@@ -11,7 +11,7 @@ interface PCObserver {
 
     interface ICE {
         fun onICECandidate(candidate: IceCandidate?)
-        fun onICECandidatesRemoved(candidates: Array<out IceCandidate>?)
+        fun onICECandidatesRemoved(candidates: Array<out IceCandidate?>?)
         fun onICEConnected()
         fun onICEDisconnected()
     }

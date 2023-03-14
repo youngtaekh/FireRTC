@@ -2,12 +2,15 @@ package kr.young.examplewebrtc.repo
 
 import com.google.android.gms.tasks.OnSuccessListener
 import com.google.firebase.firestore.DocumentSnapshot
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.QuerySnapshot
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import kr.young.common.UtilLog.Companion.d
 import kr.young.common.UtilLog.Companion.e
 import kr.young.examplewebrtc.model.Call
+import kr.young.examplewebrtc.util.Config.Companion.CANDIDATES
+import kr.young.examplewebrtc.util.Config.Companion.SDP
 import kr.young.examplewebrtc.util.Config.Companion.SPACE_ID
 import kr.young.examplewebrtc.util.Config.Companion.TERMINATED
 import kr.young.examplewebrtc.util.Config.Companion.TERMINATED_AT
@@ -48,11 +51,27 @@ class CallRepository {
                 .addOnFailureListener { e -> e(TAG, "post fail", e) }
         }
 
+        fun updateCandidates(call: Call, candidate: String) {
+            Firebase.firestore.collection(COLLECTION).document(call.id)
+                .update(CANDIDATES, FieldValue.arrayUnion(candidate))
+                .addOnSuccessListener { d(TAG, "updateCandidates success") }
+                .addOnFailureListener { e -> e(TAG, "updateCandidates failure", e) }
+        }
+
+        fun updateSDP(call: Call) {
+            Firebase.firestore.collection(COLLECTION).document(call.id)
+                .update(SDP, call.sdp)
+                .addOnSuccessListener { d(TAG, "updateSDP success") }
+                .addOnFailureListener { e -> e(TAG, "updateSDP failure", e) }
+        }
+
         fun updateTerminatedAt(call: Call) {
             d(TAG, "end call user ${call.userId}")
             val update = hashMapOf<String, Any> (
                 TERMINATED_AT to call.terminatedAt!!,
-                "terminated" to true
+                TERMINATED to true,
+//                SDP to "",
+//                CANDIDATES to mutableListOf<String>()
             )
             Firebase.firestore.collection(COLLECTION).document(call.id)
                 .update(update)
