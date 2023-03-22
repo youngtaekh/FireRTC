@@ -1,5 +1,7 @@
 package kr.young.examplewebrtc.vm
 
+import android.os.Handler
+import android.os.Looper
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.google.firebase.firestore.ktx.toObject
@@ -11,16 +13,23 @@ import kr.young.examplewebrtc.model.Call
 import kr.young.examplewebrtc.model.Space
 import kr.young.examplewebrtc.model.User
 import kr.young.examplewebrtc.repo.SpaceRepository
-import kr.young.rtp.RTPManager
+import kr.young.examplewebrtc.repo.SpaceRepository.Companion.SPACE_READ_SUCCESS
 import kr.young.rtp.util.SDPEditor
 
 class SpaceViewModel: ViewModel() {
     val isOffer = MutableLiveData<Boolean?>(null)
-    val space = MutableLiveData<Space>()
+    val space = MutableLiveData<Space?>()
     val participants = MutableLiveData<MutableMap<String, User>>(mutableMapOf())
     val calls = MutableLiveData<MutableList<Call>>(mutableListOf())
-    val newSdp = MutableLiveData<String>()
-    val newIce = MutableLiveData<String>()
+    val newSdp = MutableLiveData<String?>(null)
+    val newIce = MutableLiveData<String?>(null)
+
+    internal val responseCode = MutableLiveData<Int> ()
+
+    fun setResponseCode(value: Int) {
+        d(TAG, "setResponseCode $value")
+        Handler(Looper.getMainLooper()).post { responseCode.value = value }
+    }
 
     fun setOffer(isOffer: Boolean?) {
         this.isOffer.value = isOffer
@@ -69,22 +78,27 @@ class SpaceViewModel: ViewModel() {
         calls.value = mutableListOf()
     }
 
-    fun createSpace(name: String) {
+    private fun createSpace(name: String) {
         d(TAG, "createSpace")
-        setSpace(Space(name = name, createdBy = MyDataViewModel.instance.getMyId()))
-        SpaceRepository.post(space.value!!)
+        val space = Space(name = name, createdBy = MyDataViewModel.instance.getMyId())
+        setSpace(space)
+        SpaceRepository.post(space)
     }
 
     fun getSpace(id: String = space.value!!.id) {
         d(TAG, "getSpace")
-        SpaceRepository.getSpace(id) { document ->
-            setSpace(document.toObject<Space>()!!)
-        }
+        SpaceRepository.getSpace(
+            id = id,
+            success = { document ->
+                d(TAG, "getSpace success")
+                setResponseCode(SPACE_READ_SUCCESS)
+                setSpace(document.toObject<Space>()!!)
+            })
     }
 
     fun joinSpace(name: String) {
         d(TAG, "joinSpace")
-        SpaceRepository.getActiveSpace(name) { documents ->
+        SpaceRepository.getActiveSpace(name = name, success = { documents ->
             d(TAG, "getActiveSpaceSuccess")
             if (documents.isEmpty) {
                 createSpace(name)
@@ -93,7 +107,7 @@ class SpaceViewModel: ViewModel() {
                 setSpace(documents.documents[0].toObject())
                 CallViewModel.instance.getCallsBySpaceId(this.space.value!!.id)
             }
-        }
+        })
     }
 
     fun updateSpaceStatus(status: Space.SpaceStatus) {
@@ -106,11 +120,25 @@ class SpaceViewModel: ViewModel() {
         SpaceRepository.updateStatus(space)
     }
 
+    fun updateAnswerCall() {
+        val space = space.value!!
+        space.connected = true
+        setSpace(space)
+        SpaceRepository.updateStatus(space)
+    }
+
+    fun updateTerminatedCall() {
+        val space = space.value!!
+        space.terminated = true
+        setSpace(space)
+        SpaceRepository.updateStatus(space)
+    }
+
     fun makeOffer() {
         d(TAG, "makeOffer")
         val call = Call(
             userId = MyDataViewModel.instance.getMyId(),
-            token = MyDataViewModel.instance.myData.value!!.fcmToken,
+            fcmToken = MyDataViewModel.instance.myData!!.fcmToken,
             spaceId = space.value!!.id,
             direction = Call.CallDirection.Offer
         )
@@ -124,7 +152,7 @@ class SpaceViewModel: ViewModel() {
         d(TAG, "makeAnswer")
         val call = Call(
             userId = MyDataViewModel.instance.getMyId(),
-            token = MyDataViewModel.instance.myData.value!!.fcmToken,
+            fcmToken = MyDataViewModel.instance.myData!!.fcmToken,
             spaceId = space.value!!.id,
             direction = Call.CallDirection.Answer
         )
@@ -139,9 +167,9 @@ class SpaceViewModel: ViewModel() {
                 sdp = remoteCall.sdp!!
                 candidates = remoteCall.candidates
             }
-            if (remoteCall.userId != MyDataViewModel.instance.myData.value!!.id) {
+            if (remoteCall.userId != MyDataViewModel.instance.myData!!.id) {
                 SendFCM.sendMessage(
-                    to = remoteCall.token!!,
+                    to = remoteCall.fcmToken!!,
                     type = FCMType.New,
                     spaceId = remoteCall.spaceId,
                     callId = remoteCall.id
@@ -156,9 +184,18 @@ class SpaceViewModel: ViewModel() {
     }
 
     fun checkSpaceId(spaceId: String?) =
-                spaceId != null &&
+        spaceId != null &&
                 space.value != null &&
                 spaceId == space.value!!.id
+
+    init {
+        isOffer.value = null
+        space.value = null
+        participants.value = mutableMapOf()
+        calls.value = mutableListOf()
+        newSdp.value = null
+        newIce.value = null
+    }
 
     private object Holder {
         val INSTANCE = SpaceViewModel()

@@ -10,12 +10,15 @@ class Config {
         const val STATUS = "status"
         const val CALLS = "calls"
         const val FCM_TOKEN = "fcmToken"
-        const val TO = "to"
         const val TYPE = "type"
         const val CALL_ID = "callId"
         const val DATA = "data"
         const val SDP = "sdp"
         const val CANDIDATES = "candidates"
         const val USER_ID = "userId"
+
+        //relation
+        const val FROM = "from"
+        const val TO = "to"
     }
 }

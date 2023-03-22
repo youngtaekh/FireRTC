@@ -6,15 +6,17 @@ import kr.young.common.ApplicationUtil
 
 class AppSP private constructor() {
 
-    fun setSignIn(sign: Boolean) { setBoolean(SIGN_IN, sign) }
+    fun setSignIn(sign: Boolean) { setBoolean(SIGNED, sign) }
 
-    fun isSignIn() = getBoolean(SIGN_IN)
+    fun isSigned() = getBoolean(SIGNED)
 
     fun setUserId(userId: String) { setString(USER_ID, userId) }
+    fun setUserName(userName: String) { setString(USER_NAME, userName) }
     fun setUserPwd(userPwd: String) { setString(USER_PWD, userPwd) }
     fun setFCMToken(token: String) { setString(FCM_TOKEN, token) }
 
     fun getUserId() = getString(USER_ID)
+    fun getUserName() = getString(USER_NAME)
     fun getUserPwd() = getString(USER_PWD)
     fun getFCMToken() = getString(FCM_TOKEN)
 
@@ -54,9 +56,10 @@ class AppSP private constructor() {
         val instance: AppSP by lazy { Holder.INSTANCE }
         private lateinit var mPreferences: SharedPreferences
 
-        private const val SIGN_IN = "signIn"
+        private const val SIGNED = "signed"
 
         private const val USER_ID = "userId"
+        private const val USER_NAME = "userName"
         private const val USER_PWD = "userPassword"
         private const val FCM_TOKEN = "fcmToken"
     }

@@ -6,7 +6,7 @@
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        tools:context=".SignActivity">
+        tools:context=".activity.SignActivity">
 
         <EditText
             android:id="@+id/et_id"
@@ -39,7 +39,7 @@
             android:paddingEnd="0dp"
             android:paddingVertical="10dp"
             android:background="@drawable/text_box"
-            android:hint="@string/name"
+            android:hint="@string/pwd"
             android:textColor="@color/black"
             android:textSize="16sp"
             android:inputType="textPassword"
@@ -47,6 +47,30 @@
             app:layout_constraintTop_toBottomOf="@+id/et_id"
             app:layout_constraintLeft_toLeftOf="parent"
             app:layout_constraintRight_toRightOf="parent" />
+
+        <TextView
+            android:id="@+id/tv_warning"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:layout_marginStart="20dp"
+            android:textColor="@color/warning_text"
+            android:textSize="14sp"
+            app:layout_constraintTop_toBottomOf="@+id/et_password"
+            app:layout_constraintLeft_toLeftOf="parent" />
+
+        <TextView
+            android:id="@+id/tv_start"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:text="@string/start"
+            android:textColor="@color/black"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:paddingVertical="10dp"
+            android:layout_marginBottom="20dp"
+            app:layout_constraintBottom_toBottomOf="parent" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

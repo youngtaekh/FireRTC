@@ -4,6 +4,7 @@
     <string name="test_data">Test Data</string>
     <string name="user">User</string>
     <string name="id">ID</string>
+    <string name="pwd">Password</string>
     <string name="name">Name</string>
     <string name="send">Send</string>
     <string name="get">Get</string>
@@ -11,12 +12,26 @@
     <string name="join">Join</string>
     <string name="start">Start</string>
     <string name="stop">Stop</string>
-    <string name="empty_warn">Name can\'t be empty</string>
-    <string name="create_warn">Can\'t create</string>
-    <string name="duplicate_warn">Duplicate name</string>
     <string name="mute_on">Mute On</string>
     <string name="mute_off">Mute Off</string>
     <string name="speaker_on">Speaker On</string>
     <string name="speaker_off">Speaker Off</string>
     <string name="end">End</string>
+    <string name="sign_out">Sign Out</string>
+    <string name="add_contact">Add Contact</string>
+    <string name="empty">Empty</string>
+    <string name="find">Find</string>
+    <string name="add">Add</string>
+    <string name="confirm">Confirm</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+
+    <string name="empty_warn">%s can\'t be empty</string>
+    <string name="create_warn">Can\'t create</string>
+    <string name="duplicate_warn">Duplicate name</string>
+    <string name="no_user_warn">No User</string>
+    <string name="already_warn">Already Added</string>
+    <string name="mine_warn">This is mine</string>
+
+    <string name="delete_contact">Do u want to del this contact?</string>
 </resources>

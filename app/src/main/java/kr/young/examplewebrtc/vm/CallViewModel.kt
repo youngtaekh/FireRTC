@@ -1,8 +1,11 @@
 package kr.young.examplewebrtc.vm
 
+import android.os.Handler
+import android.os.Looper
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.google.android.gms.tasks.OnSuccessListener
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.QuerySnapshot
 import com.google.firebase.firestore.ktx.toObject
 import kr.young.common.DateUtil
@@ -13,6 +16,7 @@ import kr.young.examplewebrtc.model.Space.SpaceStatus.INACTIVE
 import kr.young.examplewebrtc.model.Space.SpaceStatus.TERMINATED
 import kr.young.examplewebrtc.repo.AppSP
 import kr.young.examplewebrtc.repo.CallRepository
+import kr.young.examplewebrtc.repo.CallRepository.Companion.CALL_READ_SUCCESS
 import java.lang.System.currentTimeMillis
 
 class CallViewModel: ViewModel() {
@@ -20,9 +24,17 @@ class CallViewModel: ViewModel() {
     val mute = MutableLiveData(false)
     val speaker = MutableLiveData(false)
 
+    internal val responseCode = MutableLiveData<Int> ()
+
+    fun setResponseCode(value: Int) {
+        d(TAG, "setResponseCode $value")
+        Handler(Looper.getMainLooper()).post { responseCode.value = value }
+    }
+
     //implementation fire store result interface
     private val checkLastParticipant = OnSuccessListener<QuerySnapshot> { documents ->
         d(TAG, "checkLastParticipant size - ${documents.size()}")
+        setResponseCode(CALL_READ_SUCCESS)
         if (documents.size() == 0) {
             SpaceViewModel.instance.updateSpaceStatus(TERMINATED)
         }
@@ -92,7 +104,8 @@ class CallViewModel: ViewModel() {
     }
 
     fun getCallsBySpaceId(id: String) {
-        CallRepository.getBySpaceId(id) { documents ->
+        CallRepository.getBySpaceId(id = id, success = { documents ->
+            setResponseCode(CALL_READ_SUCCESS)
             val callList = mutableListOf<Call>()
             d(TAG, "getCallsBySpaceIdSuccess documents.size ${documents.size()}")
             for (document in documents) {
@@ -102,11 +115,12 @@ class CallViewModel: ViewModel() {
             }
             SpaceViewModel.instance.setCalls(callList)
             SpaceViewModel.instance.setOffer(false)
-        }
+        })
     }
 
     fun refreshCalls(id: String) {
-        CallRepository.getBySpaceId(id) { documents ->
+        CallRepository.getBySpaceId(id = id, success =  { documents ->
+            setResponseCode(CALL_READ_SUCCESS)
             val callList = mutableListOf<Call>()
             d(TAG, "refreshCallsSuccess documents.size ${documents.size()}")
             for (document in documents) {
@@ -115,12 +129,12 @@ class CallViewModel: ViewModel() {
                 callList.add(call)
             }
             SpaceViewModel.instance.setCalls(callList)
-        }
+        })
     }
 
     fun setCall(call: Call) {
         setMyCall(call)
-        CallRepository.post(myCall.value!!)
+        CallRepository.post(call = myCall.value!!)
     }
 
     fun updateSDP(sdp: String) {
@@ -144,7 +158,6 @@ class CallViewModel: ViewModel() {
             return
         }
         val call = myCall.value!!
-        call.terminatedAt = DateUtil.toFormattedString(currentTimeMillis())
         call.terminated = true
         setMyCall(call)
         CallRepository.updateTerminatedAt(call)

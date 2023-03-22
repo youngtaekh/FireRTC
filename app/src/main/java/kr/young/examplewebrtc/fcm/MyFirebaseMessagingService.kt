@@ -14,7 +14,7 @@ import androidx.work.WorkerParameters
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import kr.young.common.UtilLog.Companion.d
-import kr.young.examplewebrtc.MainActivity
+import kr.young.examplewebrtc.activity.MainActivity
 import kr.young.examplewebrtc.R
 import kr.young.examplewebrtc.fcm.SendFCM.FCMType
 import kr.young.examplewebrtc.repo.AppSP
@@ -54,7 +54,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
     }
 
     override fun onNewToken(token: String) {
-        d(TAG, "Refreshed token: $token")
+        d(TAG, "Refreshed token $token")
 
         // If you want to send messages to this application instance or
         // manage this apps subscriptions on the server side, send the
