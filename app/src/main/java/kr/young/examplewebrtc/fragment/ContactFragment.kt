@@ -14,7 +14,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kr.young.common.UtilLog.Companion.d
 import kr.young.examplewebrtc.R
-import kr.young.examplewebrtc.activity.ProfileActivity
+import kr.young.examplewebrtc.ProfileActivity
 import kr.young.examplewebrtc.adapter.ContactAdapter
 import kr.young.examplewebrtc.model.Relation
 import kr.young.examplewebrtc.model.User

@@ -1,17 +1,20 @@
-package kr.young.examplewebrtc.activity
+package kr.young.examplewebrtc
 
 import android.annotation.SuppressLint
-import androidx.appcompat.app.AppCompatActivity
+import android.content.Intent
 import android.os.Bundle
 import android.view.MotionEvent
 import android.view.View
 import android.view.View.OnClickListener
 import android.view.View.OnTouchListener
+import androidx.appcompat.app.AppCompatActivity
 import androidx.databinding.DataBindingUtil
 import kr.young.common.TouchEffect
 import kr.young.common.UtilLog.Companion.d
-import kr.young.examplewebrtc.R
 import kr.young.examplewebrtc.databinding.ActivityProfileBinding
+import kr.young.examplewebrtc.fcm.SendFCM
+import kr.young.examplewebrtc.model.Call
+import kr.young.examplewebrtc.vm.AudioViewModel
 import kr.young.examplewebrtc.vm.UserViewModel
 
 class ProfileActivity : AppCompatActivity(), OnClickListener, OnTouchListener {
@@ -24,6 +27,8 @@ class ProfileActivity : AppCompatActivity(), OnClickListener, OnTouchListener {
         super.onCreate(savedInstanceState)
         binding = DataBindingUtil.setContentView(this, R.layout.activity_profile)
         binding.user = userViewModel.selectedProfile
+
+        binding.ivProfile.setImageResource(userViewModel.selectImage(userViewModel.selectedProfile!!.id))
 
         binding.ivCall.setOnTouchListener(this)
         binding.ivCall.setOnClickListener(this)
@@ -49,6 +54,22 @@ class ProfileActivity : AppCompatActivity(), OnClickListener, OnTouchListener {
 
     private fun call() {
         d(TAG, "audio call")
+        val audioVM = AudioViewModel.instance
+        audioVM.startOffer(counterpart = userViewModel.selectedProfile!!, type = Call.Type.AUDIO) {
+            audioVM.updateCallList()
+            val intent = Intent(this, AudioCallActivity::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            startActivity(intent)
+            startForegroundService(Intent(this, CallService::class.java))
+            SendFCM.sendMessage(
+                to = userViewModel.selectedProfile!!.fcmToken!!,
+                type = SendFCM.FCMType.Offer,
+                callType = Call.Type.AUDIO,
+                spaceId = audioVM.space!!.id,
+                callId = audioVM.call!!.id,
+                sdp = "test SDP"
+            )
+        }
     }
 
     private fun video() {

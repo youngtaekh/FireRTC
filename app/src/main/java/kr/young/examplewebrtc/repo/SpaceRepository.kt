@@ -22,14 +22,14 @@ class SpaceRepository {
     companion object {
         fun post(
             space: Space,
+            failure: OnFailureListener = OnFailureListener {
+                SpaceViewModel.instance.setResponseCode(SPACE_CREATE_FAILURE)
+                e(TAG, "post space failure", it)
+            },
             success: OnSuccessListener<Void> = OnSuccessListener {
                 SpaceViewModel.instance.setResponseCode(SPACE_CREATE_SUCCESS)
                 d(TAG, "post space success")
             },
-            failure: OnFailureListener = OnFailureListener {
-                SpaceViewModel.instance.setResponseCode(SPACE_CREATE_FAILURE)
-                e(TAG, "post space failure", it)
-            }
         ) {
             d(TAG, "post space name ${space.name}")
             Firebase.firestore.collection(COLLECTION)
@@ -41,13 +41,13 @@ class SpaceRepository {
 
         fun getSpace(
             id: String,
-            success: OnSuccessListener<DocumentSnapshot> = OnSuccessListener {
-                SpaceViewModel.instance.setResponseCode(SPACE_READ_SUCCESS)
-                d(TAG, "get space success")
-            },
             failure: OnFailureListener = OnFailureListener {
                 SpaceViewModel.instance.setResponseCode(SPACE_READ_FAILURE)
                 e(TAG, "get space by id fail", it)
+            },
+            success: OnSuccessListener<DocumentSnapshot> = OnSuccessListener {
+                SpaceViewModel.instance.setResponseCode(SPACE_READ_SUCCESS)
+                d(TAG, "get space success")
             }
         ) {
             d(TAG, "getSpaceById id ${id.substring(0, 5)}")
@@ -81,13 +81,14 @@ class SpaceRepository {
 
         fun updateStatus(
             space: Space,
-            success: OnSuccessListener<Void> = OnSuccessListener {
-                d(TAG, "update space status success")
-                SpaceViewModel.instance.setResponseCode(SPACE_UPDATE_SUCCESS)
-            },
+            reason: String = "Bye",
             failure: OnFailureListener = OnFailureListener {
                 e(TAG, "update space status failure", it)
                 SpaceViewModel.instance.setResponseCode(SPACE_UPDATE_FAILURE)
+            },
+            success: OnSuccessListener<Void> = OnSuccessListener {
+                d(TAG, "update space status success")
+                SpaceViewModel.instance.setResponseCode(SPACE_UPDATE_SUCCESS)
             }
         ) {
             d(TAG, "updateStatus space name ${space.name}")
@@ -95,7 +96,8 @@ class SpaceRepository {
                 val map = mapOf(
                     "terminated" to true,
                     "terminatedBy" to MyDataViewModel.instance.getMyId(),
-                    TERMINATED_AT to DateUtil.toFormattedString(System.currentTimeMillis())
+                    "terminatedReason" to reason,
+                    TERMINATED_AT to FieldValue.serverTimestamp()
                 )
                 Firebase.firestore.collection(COLLECTION)
                     .document(space.id)

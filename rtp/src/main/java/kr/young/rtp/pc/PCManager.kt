@@ -131,7 +131,7 @@ class PCManager(
 
         audioDeviceModule?.release()
 
-        Logging.enableLogToDebugOutput(Logging.Severity.LS_INFO)
+        Logging.enableLogToDebugOutput(Logging.Severity.LS_ERROR)
 
         return factory
     }

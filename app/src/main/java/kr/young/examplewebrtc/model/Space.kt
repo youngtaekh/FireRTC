@@ -5,19 +5,22 @@ import kr.young.common.Crypto
 import kr.young.common.DateUtil
 import kr.young.examplewebrtc.util.Config.Companion.NAME
 import kr.young.examplewebrtc.util.Config.Companion.STATUS
+import kr.young.examplewebrtc.vm.MyDataViewModel
 import java.util.*
 
 data class Space(
-    val name: String = "",
+    val name: String = MyDataViewModel.instance.getMyId(),
     val id: String = Crypto().getHash("$name${System.currentTimeMillis()}"),
     val maximum: Int = 2,
     var status: SpaceStatus = SpaceStatus.INACTIVE,
     val calls: MutableList<String> = mutableListOf(),
     var connected: Boolean = false,
     var terminated: Boolean = false,
-    val type: Type = Type.AUDIO,
-    val createdBy: String = "",
+    val type: Call.Type = Call.Type.AUDIO,
+    val createdBy: String = MyDataViewModel.instance.getMyId(),
     val createdAt: Date? = null,
+    val terminatedReason: String? = null,
+    val terminatedBy: String? = null,
     var terminatedAt: Date? = null
 ) {
     fun toMap(): Map<String, Any> {
@@ -41,13 +44,6 @@ data class Space(
         ACTIVE,
         INACTIVE,
         TERMINATED
-    }
-
-    enum class Type {
-        AUDIO,
-        VIDEO,
-        MESSAGE,
-        CONFERENCE
     }
 
     companion object {

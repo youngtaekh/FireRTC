@@ -11,6 +11,7 @@ class Config {
         const val CALLS = "calls"
         const val FCM_TOKEN = "fcmToken"
         const val TYPE = "type"
+        const val CALL_TYPE = "callType"
         const val CALL_ID = "callId"
         const val DATA = "data"
         const val SDP = "sdp"

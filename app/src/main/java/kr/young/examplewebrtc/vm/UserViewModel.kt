@@ -94,13 +94,13 @@ class UserViewModel: ViewModel() {
 
     fun readUser(userId: String) {
         d(TAG, "readUser($userId)")
-        UserRepository.getUser(userId, {
+        UserRepository.getUser(userId) {
             if (it.data == null) {
                 setResponseCode(NO_USER)
             } else {
                 setFoundUser(it.toObject<User>())
             }
-        })
+        }
     }
 
     fun createRelation(userId: String) {

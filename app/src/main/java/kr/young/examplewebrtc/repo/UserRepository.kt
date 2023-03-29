@@ -37,13 +37,13 @@ class UserRepository {
 
         fun getUser(
             id: String,
-            success: OnSuccessListener<DocumentSnapshot> = OnSuccessListener {
-                d(TAG, "get user success")
-                UserViewModel.instance.setResponseCode(USER_READ_SUCCESS)
-            },
             failure: OnFailureListener = OnFailureListener {
                 e(TAG, "get user by id is fail", it)
                 UserViewModel.instance.setResponseCode(USER_READ_FAILURE)
+            },
+            success: OnSuccessListener<DocumentSnapshot> = OnSuccessListener {
+                d(TAG, "get user success")
+                UserViewModel.instance.setResponseCode(USER_READ_SUCCESS)
             }
         ) {
             d(TAG, "get id $id")

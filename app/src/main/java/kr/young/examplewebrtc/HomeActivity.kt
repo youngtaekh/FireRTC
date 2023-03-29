@@ -1,4 +1,4 @@
-package kr.young.examplewebrtc.activity
+package kr.young.examplewebrtc
 
 import android.annotation.SuppressLint
 import android.content.Intent
@@ -13,12 +13,12 @@ import com.google.firebase.messaging.FirebaseMessaging
 import kr.young.common.TouchEffect
 import kr.young.common.UtilLog
 import kr.young.common.UtilLog.Companion.d
-import kr.young.examplewebrtc.R
 import kr.young.examplewebrtc.databinding.ActivityHomeBinding
 import kr.young.examplewebrtc.fragment.*
 import kr.young.examplewebrtc.repo.AppSP
 import kr.young.examplewebrtc.util.BaseActivity
 import kr.young.examplewebrtc.vm.MyDataViewModel
+import kotlin.random.Random
 
 class HomeActivity : BaseActivity(), OnClickListener, OnTouchListener {
 
@@ -63,7 +63,10 @@ class HomeActivity : BaseActivity(), OnClickListener, OnTouchListener {
 
             // Log and toast
 //            val msg = getString(R.string.msg_token_fmt, token)
-            AppSP.instance.setFCMToken(token)
+            if (token != AppSP.instance.getFCMToken()) {
+                AppSP.instance.setFCMToken(token)
+                myViewModel.updateFCMToken(token)
+            }
             d(TAG, "token $token")
         })
     }

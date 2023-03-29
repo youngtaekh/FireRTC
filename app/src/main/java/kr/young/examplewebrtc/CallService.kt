@@ -5,7 +5,12 @@ import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
 import android.os.IBinder
+import androidx.lifecycle.Observer
 import kr.young.common.UtilLog.Companion.d
+import kr.young.examplewebrtc.model.Call
+import kr.young.examplewebrtc.util.NotificationUtil
+import kr.young.examplewebrtc.util.NotificationUtil.Companion.CALL_NOTIFICATION_ID
+import kr.young.examplewebrtc.vm.CallVM
 import kr.young.rtp.RTPManager
 import kr.young.rtp.observer.PCObserver
 import kr.young.rtp.observer.PCObserverImpl
@@ -17,6 +22,7 @@ import java.io.FileDescriptor
 import java.io.PrintWriter
 
 class CallService : Service(), PCObserver, PCObserver.ICE, PCObserver.SDP {
+    private lateinit var viewModel: CallVM
 
     override fun attachBaseContext(newBase: Context?) {
         super.attachBaseContext(newBase)
@@ -41,9 +47,13 @@ class CallService : Service(), PCObserver, PCObserver.ICE, PCObserver.SDP {
     override fun onCreate() {
         super.onCreate()
         d(TAG, "onCreate")
+        viewModel = CallVM.instance
         PCObserverImpl.instance.add(this as PCObserver)
         PCObserverImpl.instance.add(this as PCObserver.SDP)
         PCObserverImpl.instance.add(this as PCObserver.ICE)
+
+        viewModel.responseCode.observeForever(responseCodeObserver)
+        viewModel.terminatedCall.observeForever(terminatedCallObserver)
     }
 
     @Suppress("DEPRECATION")
@@ -62,6 +72,8 @@ class CallService : Service(), PCObserver, PCObserver.ICE, PCObserver.SDP {
             enableStat = false,
             recordAudio = false
         )
+        val isReceive = CallVM.instance.callDirection == Call.Direction.Answer
+        startForeground(CALL_NOTIFICATION_ID, NotificationUtil.getCallNotification(context = this, isReceive = isReceive))
         return START_NOT_STICKY
     }
 
@@ -73,6 +85,8 @@ class CallService : Service(), PCObserver, PCObserver.ICE, PCObserver.SDP {
         PCObserverImpl.instance.remove(this as PCObserver)
         PCObserverImpl.instance.remove(this as PCObserver.SDP)
         PCObserverImpl.instance.remove(this as PCObserver.ICE)
+        viewModel.responseCode.removeObserver(responseCodeObserver)
+        viewModel.terminatedCall.removeObserver(terminatedCallObserver)
     }
 
     override fun onBind(intent: Intent?): IBinder? {
@@ -146,6 +160,17 @@ class CallService : Service(), PCObserver, PCObserver.ICE, PCObserver.SDP {
 
     override fun onMessage(message: String) {
         d(TAG, "onMessage")
+    }
+
+    private val responseCodeObserver = Observer<Int> {
+
+    }
+
+    private val terminatedCallObserver = Observer<Boolean> {
+        if (it != null && it) {
+            stopSelf()
+            viewModel.release()
+        }
     }
     
     companion object {

@@ -19,14 +19,14 @@ import kr.young.examplewebrtc.vm.CallViewModel
 
 class CallRepository {
     companion object {
-        fun getById(
+        fun getCall(
             id: String,
-            success: OnSuccessListener<DocumentSnapshot> = OnSuccessListener<DocumentSnapshot> {
-                CallViewModel.instance.setResponseCode(CALL_READ_SUCCESS)
-            },
             failure: OnFailureListener = OnFailureListener {
                 CallViewModel.instance.setResponseCode(CALL_READ_FAILURE)
                 e(TAG, "get call fail", it)
+            },
+            success: OnSuccessListener<DocumentSnapshot> = OnSuccessListener<DocumentSnapshot> {
+                CallViewModel.instance.setResponseCode(CALL_READ_SUCCESS)
             }
         ) {
             d(TAG, "getById")
@@ -75,13 +75,13 @@ class CallRepository {
 
         fun post(
             call: Call,
-            success: OnSuccessListener<Void> = OnSuccessListener {
-                CallViewModel.instance.setResponseCode(CALL_CREATE_SUCCESS)
-                d(TAG, "post call success")
-            },
             failure: OnFailureListener = OnFailureListener {
                 CallViewModel.instance.setResponseCode(CALL_CREATE_FAILURE)
                 e(TAG, "post fail", it)
+            },
+            success: OnSuccessListener<Void> = OnSuccessListener {
+                CallViewModel.instance.setResponseCode(CALL_CREATE_SUCCESS)
+                d(TAG, "post call success")
             }
         ) {
             d(TAG, "post call user ${call.userId}")
@@ -130,14 +130,14 @@ class CallRepository {
 
         fun updateTerminatedAt(
             call: Call,
+            failure: OnFailureListener = OnFailureListener {
+                CallViewModel.instance.setResponseCode(CALL_UPDATE_FAILURE)
+                e(TAG, "updateTerminatedAt failure", it)
+            },
             success: OnSuccessListener<Void> = OnSuccessListener {
                 CallViewModel.instance.setResponseCode(CALL_UPDATE_SUCCESS)
                 d(TAG, "updateTerminatedAt success")
             },
-            failure: OnFailureListener = OnFailureListener {
-                CallViewModel.instance.setResponseCode(CALL_UPDATE_FAILURE)
-                e(TAG, "updateTerminatedAt failure", it)
-            }
         ) {
             d(TAG, "end call user ${call.userId}")
             val update = hashMapOf(

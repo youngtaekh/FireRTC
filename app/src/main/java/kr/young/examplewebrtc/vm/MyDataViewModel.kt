@@ -40,12 +40,20 @@ class MyDataViewModel {
         })
     }
 
+    fun updateFCMToken(token: String) {
+        myData!!.fcmToken = token
+        UserRepository.updateFCMToken(myData!!)
+    }
+
     fun checkMyData(id: String, pwd: String) {
         val lowerId = id.lowercase()
         val cryptoPassword = Crypto().getHash(pwd)
         d(TAG, "lower $lowerId")
         d(TAG, "crypto $cryptoPassword")
-        UserRepository.getUser(lowerId, { document ->
+        UserRepository.getUser(lowerId, {
+            e(TAG, "checkMyData fail", it)
+            setResponseCode(USER_READ_FAILURE)
+        }, { document ->
             d(TAG, "get user success")
             setResponseCode(USER_READ_SUCCESS)
             if (document.data == null) {
@@ -62,9 +70,6 @@ class MyDataViewModel {
                     setResponseCode(WRONG_PASSWORD)
                 }
             }
-        }, { e ->
-            e(TAG, "checkMyData fail", e)
-            setResponseCode(USER_READ_FAILURE)
         })
     }
 

@@ -1,4 +1,4 @@
-package kr.young.examplewebrtc.activity
+package kr.young.examplewebrtc
 
 import android.annotation.SuppressLint
 import android.content.Intent
@@ -16,8 +16,6 @@ import kr.young.common.TouchEffect
 import kr.young.common.UtilLog.Companion.d
 import kr.young.common.UtilLog.Companion.i
 import kr.young.common.UtilLog.Companion.w
-import kr.young.examplewebrtc.CallService
-import kr.young.examplewebrtc.R
 import kr.young.examplewebrtc.databinding.ActivityMainBinding
 import kr.young.examplewebrtc.model.User
 import kr.young.examplewebrtc.repo.AppSP

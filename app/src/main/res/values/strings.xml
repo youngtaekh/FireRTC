@@ -34,4 +34,9 @@
     <string name="mine_warn">This is mine</string>
 
     <string name="delete_contact">Do u want to del this contact?</string>
+
+    <string name="receive_notification">Receive Call</string>
+    <string name="receive_notification_desc">Receive Call Notification Description</string>
+    <string name="call_notification">Call</string>
+    <string name="call_notification_desc">Call Notification Description</string>
 </resources>

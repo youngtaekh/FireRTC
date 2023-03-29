@@ -11,18 +11,27 @@ import androidx.work.OneTimeWorkRequest
 import androidx.work.WorkManager
 import androidx.work.Worker
 import androidx.work.WorkerParameters
+import com.google.firebase.firestore.ktx.toObject
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import kr.young.common.UtilLog.Companion.d
-import kr.young.examplewebrtc.activity.MainActivity
+import kr.young.examplewebrtc.MainActivity
 import kr.young.examplewebrtc.R
 import kr.young.examplewebrtc.fcm.SendFCM.FCMType
+import kr.young.examplewebrtc.model.Call
+import kr.young.examplewebrtc.model.Space
 import kr.young.examplewebrtc.repo.AppSP
+import kr.young.examplewebrtc.repo.CallRepository
+import kr.young.examplewebrtc.repo.SpaceRepository
 import kr.young.examplewebrtc.util.Config.Companion.CALL_ID
 import kr.young.examplewebrtc.util.Config.Companion.SDP
 import kr.young.examplewebrtc.util.Config.Companion.SPACE_ID
+import kr.young.examplewebrtc.util.Config.Companion.CALL_TYPE
 import kr.young.examplewebrtc.util.Config.Companion.TYPE
+import kr.young.examplewebrtc.util.Config.Companion.USER_ID
+import kr.young.examplewebrtc.vm.CallVM
 import kr.young.examplewebrtc.vm.CallViewModel
+import kr.young.examplewebrtc.vm.MyDataViewModel
 import kr.young.examplewebrtc.vm.SpaceViewModel
 import kr.young.rtp.RTPManager
 import org.webrtc.IceCandidate
@@ -34,14 +43,17 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             d(TAG, "Message data payload: ${remoteMessage.data}")
             val type = remoteMessage.data[TYPE]
             if (type != null) {
+                val data = remoteMessage.data
                 when (FCMType.valueOf(type)) {
                     FCMType.New, FCMType.Leave -> {
                         receivedSpaceMessage(
-                            remoteMessage.data[SPACE_ID],
-                            remoteMessage.data[CALL_ID])
+                            data[SPACE_ID],
+                            data[CALL_ID])
                     }
-                    FCMType.Sdp -> { receiveSDPMessage(remoteMessage.data[SDP]) }
-                    FCMType.Ice -> { receiveICEMessage(remoteMessage.data[SDP]) }
+                    FCMType.Sdp -> { receiveSDPMessage(data[SDP]) }
+                    FCMType.Ice -> { receiveICEMessage(data[SDP]) }
+                    FCMType.Offer -> { receiveOfferMessage(data[USER_ID], data[SPACE_ID], data[CALL_ID], data[CALL_TYPE]) }
+                    FCMType.Bye, FCMType.Cancel, FCMType.Decline, FCMType.Busy -> { receiveEndMessage() }
                     else ->{ sendNotification("else") }
                 }
             }
@@ -62,10 +74,37 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         sendRegistrationToServer(token)
     }
 
+    private fun receiveOfferMessage(userId: String?, spaceId: String?, callId: String?, type: String?) {
+        d(TAG, "receiveOfferMessage($userId, $spaceId, $type)")
+        if (CallVM.instance.space == null) {
+            CallRepository.getCall(id = callId!!) {
+                val call = it.toObject<Call>()!!
+                SendFCM.sendMessage(call.fcmToken!!, FCMType.Busy)
+            }
+            SpaceRepository.getSpace(spaceId!!) {
+                val space = it.toObject<Space>()!!
+                space.terminated = true
+                SpaceRepository.updateStatus(space, "Busy")
+            }
+            val call = Call(spaceId = spaceId, type = Call.Type.valueOf(type!!), direction = Call.Direction.Answer, terminated = true)
+            SpaceRepository.addCallList(spaceId, call.id)
+            CallRepository.post(call) {
+                CallRepository.updateTerminatedAt(call)
+            }
+        } else {
+            CallVM.instance.onIncomingCall(this, userId, spaceId, type)
+        }
+    }
+
+    private fun receiveEndMessage() {
+        d(TAG, "receiveEndMessage")
+        CallVM.instance.onTerminatedCall()
+    }
+
     private fun receivedSpaceMessage(spaceId: String?, callId: String?) {
         val spaceViewModel = SpaceViewModel.instance
         if (spaceViewModel.checkSpaceId(spaceId)) {
-            SpaceViewModel.instance.getSpace()
+            SpaceViewModel.instance.readSpace()
             CallViewModel.instance.refreshCalls(spaceId!!)
         }
     }
@@ -100,7 +139,10 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
     private fun sendRegistrationToServer(token: String?) {
         if (token != null) {
-            AppSP.instance.setFCMToken(token)
+            if (token != AppSP.instance.getFCMToken()) {
+                AppSP.instance.setFCMToken(token)
+                MyDataViewModel.instance.updateFCMToken(token)
+            }
         }
         d(TAG, "sendRegistrationTokenToServer($token)")
     }

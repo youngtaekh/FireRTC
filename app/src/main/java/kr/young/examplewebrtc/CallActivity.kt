@@ -1,4 +1,4 @@
-package kr.young.examplewebrtc.activity
+package kr.young.examplewebrtc
 
 import android.annotation.SuppressLint
 import android.content.Intent
@@ -10,8 +10,6 @@ import android.view.View.OnTouchListener
 import androidx.databinding.DataBindingUtil
 import kr.young.common.TouchEffect
 import kr.young.common.UtilLog.Companion.d
-import kr.young.examplewebrtc.CallService
-import kr.young.examplewebrtc.R
 import kr.young.examplewebrtc.databinding.ActivityCallBinding
 import kr.young.examplewebrtc.fcm.SendFCM
 import kr.young.examplewebrtc.fcm.SendFCM.FCMType
@@ -109,11 +107,6 @@ class CallActivity : BaseActivity(), OnClickListener, OnTouchListener, PCObserve
                 RTPManager.instance.addRemoteIceCandidate(remote)
             }
         }
-        spaceViewModel.participants.observe(this) {
-            if (it != null) {
-                d(TAG, "participants.observe $it")
-            }
-        }
         callViewModel.myCall.observe(this) {
             if (it != null) {
                 d(TAG, "myCall.observe call id ${it.id.substring(0, 5)} userId ${it.userId}")
@@ -162,6 +155,7 @@ class CallActivity : BaseActivity(), OnClickListener, OnTouchListener, PCObserve
                 SendFCM.sendMessage(
                     to = call.fcmToken!!,
                     type = FCMType.Leave,
+                    callType = call.type,
                     spaceId = call.spaceId,
                     callId = call.id
                 )
@@ -212,6 +206,7 @@ class CallActivity : BaseActivity(), OnClickListener, OnTouchListener, PCObserve
                 SendFCM.sendMessage(
                     to = call.fcmToken!!,
                     type = FCMType.Sdp,
+                    callType = call.type,
                     spaceId = call.spaceId,
                     callId = call.id,
                     sdp = sdp!!.description
@@ -228,6 +223,7 @@ class CallActivity : BaseActivity(), OnClickListener, OnTouchListener, PCObserve
                 SendFCM.sendMessage(
                     to = call.fcmToken!!,
                     type = FCMType.Ice,
+                    callType = call.type,
                     spaceId = call.spaceId,
                     callId = call.id,
                     sdp = candidate!!.sdp

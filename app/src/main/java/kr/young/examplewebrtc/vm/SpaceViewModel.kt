@@ -19,7 +19,8 @@ import kr.young.rtp.util.SDPEditor
 class SpaceViewModel: ViewModel() {
     val isOffer = MutableLiveData<Boolean?>(null)
     val space = MutableLiveData<Space?>()
-    val participants = MutableLiveData<MutableMap<String, User>>(mutableMapOf())
+    var counterpart: User? = null
+    var participants: MutableMap<String, User> = mutableMapOf()
     val calls = MutableLiveData<MutableList<Call>>(mutableListOf())
     val newSdp = MutableLiveData<String?>(null)
     val newIce = MutableLiveData<String?>(null)
@@ -32,14 +33,26 @@ class SpaceViewModel: ViewModel() {
     }
 
     fun setOffer(isOffer: Boolean?) {
-        this.isOffer.value = isOffer
+        Handler(Looper.getMainLooper()).post { this.isOffer.value = isOffer }
+    }
+
+    fun initCalls() {
+        Handler(Looper.getMainLooper()).post { this.calls.value = mutableListOf() }
     }
 
     private fun setSpace(space: Space?) {
         if (space != null) {
             d(TAG, "setSpace name ${space.name}")
-            this.space.value = space
+            Handler(Looper.getMainLooper()).post { this.space.value = space }
         }
+    }
+
+    fun setNewSdp(sdp: String?) {
+        Handler(Looper.getMainLooper()).post { newSdp.value = sdp }
+    }
+
+    fun setNewIce(ice: String?) {
+        Handler(Looper.getMainLooper()).post { newIce.value = ice }
     }
 
     private fun addCall(call: Call) {
@@ -56,36 +69,25 @@ class SpaceViewModel: ViewModel() {
 
     fun getCalls() = calls.value!!
 
-    fun setNewSdp(sdp: String) {
-        newSdp.value = sdp
-    }
-
-    fun setNewIce(ice: String) {
-        newIce.value = ice
-    }
-
     private fun addParticipants(user: User) {
         d(TAG, "addParticipants userId ${user.id}")
-        val participantList = participants.value!!
-        participantList[user.id] = user
-        participants.value = participantList
+        participants[user.id] = user
     }
 
     fun release() {
         d(TAG, "release")
-        space.value = null
-        participants.value = mutableMapOf()
-        calls.value = mutableListOf()
+        setSpace(null)
+        participants = mutableMapOf()
+        initCalls()
     }
 
-    private fun createSpace(name: String) {
+    private fun createSpace(name: String?, space: Space = Space(name = name!!)) {
         d(TAG, "createSpace")
-        val space = Space(name = name, createdBy = MyDataViewModel.instance.getMyId())
         setSpace(space)
         SpaceRepository.post(space)
     }
 
-    fun getSpace(id: String = space.value!!.id) {
+    fun readSpace(id: String = space.value!!.id) {
         d(TAG, "getSpace")
         SpaceRepository.getSpace(
             id = id,
@@ -137,10 +139,8 @@ class SpaceViewModel: ViewModel() {
     fun makeOffer() {
         d(TAG, "makeOffer")
         val call = Call(
-            userId = MyDataViewModel.instance.getMyId(),
-            fcmToken = MyDataViewModel.instance.myData!!.fcmToken,
             spaceId = space.value!!.id,
-            direction = Call.CallDirection.Offer
+            direction = Call.Direction.Offer
         )
 
         CallViewModel.instance.setCall(call)
@@ -151,10 +151,8 @@ class SpaceViewModel: ViewModel() {
     fun makeAnswer(): String {
         d(TAG, "makeAnswer")
         val call = Call(
-            userId = MyDataViewModel.instance.getMyId(),
-            fcmToken = MyDataViewModel.instance.myData!!.fcmToken,
             spaceId = space.value!!.id,
-            direction = Call.CallDirection.Answer
+            direction = Call.Direction.Answer
         )
 
         var sdp = ""
@@ -162,7 +160,7 @@ class SpaceViewModel: ViewModel() {
         for (remoteCall in getCalls()) {
             i(TAG, "makeAnswer() call-${remoteCall.userId}, direction-${remoteCall.direction}")
 //            CallViewModel.instance.getCall(callSimple.id)
-            if (remoteCall.direction == Call.CallDirection.Offer) {
+            if (remoteCall.direction == Call.Direction.Offer) {
                 d(TAG, "Find Offer Call!!!!!!!!!!!")
                 sdp = remoteCall.sdp!!
                 candidates = remoteCall.candidates
@@ -171,6 +169,7 @@ class SpaceViewModel: ViewModel() {
                 SendFCM.sendMessage(
                     to = remoteCall.fcmToken!!,
                     type = FCMType.New,
+                    callType = call.type,
                     spaceId = remoteCall.spaceId,
                     callId = remoteCall.id
                 )
@@ -189,12 +188,12 @@ class SpaceViewModel: ViewModel() {
                 spaceId == space.value!!.id
 
     init {
-        isOffer.value = null
-        space.value = null
-        participants.value = mutableMapOf()
-        calls.value = mutableListOf()
-        newSdp.value = null
-        newIce.value = null
+        setOffer(null)
+        setSpace(null)
+        participants = mutableMapOf()
+        initCalls()
+        setNewSdp(null)
+        setNewIce(null)
     }
 
     private object Holder {

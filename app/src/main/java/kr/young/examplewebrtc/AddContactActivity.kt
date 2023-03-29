@@ -1,4 +1,4 @@
-package kr.young.examplewebrtc.activity
+package kr.young.examplewebrtc
 
 import android.annotation.SuppressLint
 import androidx.appcompat.app.AppCompatActivity
@@ -8,7 +8,6 @@ import android.view.View
 import android.view.View.*
 import androidx.databinding.DataBindingUtil
 import kr.young.common.TouchEffect
-import kr.young.examplewebrtc.R
 import kr.young.examplewebrtc.databinding.ActivityAddContactBinding
 import kr.young.examplewebrtc.repo.RelationRepository.Companion.RELATION_CREATE_SUCCESS
 import kr.young.examplewebrtc.util.ResponseCode.Companion.NO_USER

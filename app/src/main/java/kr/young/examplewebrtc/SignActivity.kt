@@ -1,4 +1,4 @@
-package kr.young.examplewebrtc.activity
+package kr.young.examplewebrtc
 
 import android.annotation.SuppressLint
 import android.os.Bundle
@@ -10,7 +10,6 @@ import android.view.inputmethod.EditorInfo
 import androidx.databinding.DataBindingUtil
 import androidx.lifecycle.Observer
 import kr.young.common.TouchEffect
-import kr.young.examplewebrtc.R
 import kr.young.examplewebrtc.databinding.ActivitySignBinding
 import kr.young.examplewebrtc.repo.AppSP
 import kr.young.examplewebrtc.util.BaseActivity
