@@ -124,7 +124,7 @@ class UserViewModel: ViewModel() {
         RelationRepository.remove(to)
     }
 
-    fun selectImage(id: String): Int {
+    fun selectImage(id: String?): Int {
         return when (Random.nextInt(7)) {
             0 -> R.drawable.outline_sentiment_very_satisfied_24
             1 -> R.drawable.outline_mood_24

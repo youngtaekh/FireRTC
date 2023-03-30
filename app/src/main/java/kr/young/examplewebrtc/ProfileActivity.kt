@@ -28,7 +28,7 @@ class ProfileActivity : AppCompatActivity(), OnClickListener, OnTouchListener {
         binding = DataBindingUtil.setContentView(this, R.layout.activity_profile)
         binding.user = userViewModel.selectedProfile
 
-        binding.ivProfile.setImageResource(userViewModel.selectImage(userViewModel.selectedProfile!!.id))
+        binding.ivProfile.setImageResource(userViewModel.selectImage(userViewModel.selectedProfile?.id))
 
         binding.ivCall.setOnTouchListener(this)
         binding.ivCall.setOnClickListener(this)
@@ -61,14 +61,6 @@ class ProfileActivity : AppCompatActivity(), OnClickListener, OnTouchListener {
             intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
             startActivity(intent)
             startForegroundService(Intent(this, CallService::class.java))
-            SendFCM.sendMessage(
-                to = userViewModel.selectedProfile!!.fcmToken!!,
-                type = SendFCM.FCMType.Offer,
-                callType = Call.Type.AUDIO,
-                spaceId = audioVM.space!!.id,
-                callId = audioVM.call!!.id,
-                sdp = "test SDP"
-            )
         }
     }
 

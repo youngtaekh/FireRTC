@@ -79,6 +79,25 @@ class SpaceRepository {
                 .addOnFailureListener(failure)
         }
 
+        fun update(
+            id: String,
+            map: Map<String, Any>,
+            failure: OnFailureListener = OnFailureListener {
+                e(TAG, "update space failure", it)
+                SpaceViewModel.instance.setResponseCode(SPACE_UPDATE_FAILURE)
+            },
+            success: OnSuccessListener<Void> = OnSuccessListener {
+                d(TAG, "update space success")
+                SpaceViewModel.instance.setResponseCode(SPACE_UPDATE_SUCCESS)
+            }
+        ) {
+            Firebase.firestore.collection(COLLECTION)
+                .document(id)
+                .update(map)
+                .addOnSuccessListener(success)
+                .addOnFailureListener(failure)
+        }
+
         fun updateStatus(
             space: Space,
             reason: String = "Bye",

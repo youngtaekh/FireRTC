@@ -48,6 +48,8 @@ class RTPManager: PCObserver, PCObserver.SDP, PCObserver.ICE {
 
     private var executor: ExecutorService? = null
 
+    var isInit = false
+    var isCreatedPCFactory = false
     /** Options related RTP(PeerConnection) */
     private var isOffer = false
     private var isAudio = true
@@ -93,6 +95,7 @@ class RTPManager: PCObserver, PCObserver.SDP, PCObserver.ICE {
              enableStat: Boolean = this.enableStat,
              recordAudio: Boolean = this.recordAudio) {
         i(TAG, "init")
+        this.isInit = true
         this.remoteSinks = arrayListOf()
         this.localVideoSink = ProxyVideoSink()
         this.statParser = StatParser()
@@ -157,6 +160,7 @@ class RTPManager: PCObserver, PCObserver.SDP, PCObserver.ICE {
             this.pcManager = null
             this.eglBase?.release()
             this.eglBase = null
+            this.isCreatedPCFactory = false
         }
 
         this.rtcAudioManager?.stop()
@@ -245,6 +249,7 @@ class RTPManager: PCObserver, PCObserver.SDP, PCObserver.ICE {
             pcManager =
                 PCManager(context, pcParameters!!)
             pcManager!!.createPeerConnectionFactory(context, eglBase!!, executor!!, recordAudio)
+            this.isCreatedPCFactory = true
         }
     }
 

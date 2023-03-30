@@ -1,6 +1,7 @@
 package kr.young.examplewebrtc
 
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.os.Bundle
 import android.view.MotionEvent
 import android.view.View
@@ -14,6 +15,7 @@ import kr.young.examplewebrtc.databinding.ActivityReceiveBinding
 import kr.young.examplewebrtc.fcm.SendFCM
 import kr.young.examplewebrtc.vm.CallVM
 import kr.young.examplewebrtc.vm.UserViewModel
+import kr.young.rtp.RTPManager
 
 class ReceiveActivity : AppCompatActivity(), OnClickListener, OnTouchListener {
     private lateinit var binding: ActivityReceiveBinding
@@ -56,6 +58,9 @@ class ReceiveActivity : AppCompatActivity(), OnClickListener, OnTouchListener {
 
     private fun answer() {
         d(TAG, "answer")
+        RTPManager.instance.startRTP(this, isOffer = false, remoteSdp = vm.remoteSDP, remoteICE = vm.remoteIce)
+        finish()
+        startActivity(Intent(this, AudioCallActivity::class.java))
     }
 
     private fun end() {

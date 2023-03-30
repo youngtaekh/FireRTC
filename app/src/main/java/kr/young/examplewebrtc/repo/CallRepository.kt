@@ -91,17 +91,35 @@ class CallRepository {
                 .addOnFailureListener(failure)
         }
 
+        fun update(
+            id: String,
+            map: Map<String, Any>,
+            failure: OnFailureListener = OnFailureListener {
+                CallViewModel.instance.setResponseCode(CALL_UPDATE_FAILURE)
+                e(TAG, "update call failure", it)
+            },
+            success: OnSuccessListener<Void> = OnSuccessListener {
+                CallViewModel.instance.setResponseCode(CALL_UPDATE_SUCCESS)
+                d(TAG, "update call success")
+            },
+        ) {
+            Firebase.firestore.collection(COLLECTION).document(id)
+                .update(map)
+                .addOnFailureListener(failure)
+                .addOnSuccessListener(success)
+        }
+
         fun updateCandidates(
             call: Call,
             candidate: String,
+            failure: OnFailureListener = OnFailureListener {
+                CallViewModel.instance.setResponseCode(CALL_UPDATE_FAILURE)
+                e(TAG, "updateCandidates failure", it)
+            },
             success: OnSuccessListener<Void> = OnSuccessListener {
                 CallViewModel.instance.setResponseCode(CALL_UPDATE_SUCCESS)
                 d(TAG, "updateCandidates success")
             },
-            failure: OnFailureListener = OnFailureListener {
-                CallViewModel.instance.setResponseCode(CALL_UPDATE_FAILURE)
-                e(TAG, "updateCandidates failure", it)
-            }
         ) {
             d(TAG, "updateCandidates")
             Firebase.firestore.collection(COLLECTION).document(call.id)
@@ -112,13 +130,13 @@ class CallRepository {
 
         fun updateSDP(
             call: Call,
-            success: OnSuccessListener<Void> = OnSuccessListener {
-                CallViewModel.instance.setResponseCode(CALL_UPDATE_SUCCESS)
-                d(TAG, "updateSDP success")
-            },
             failure: OnFailureListener = OnFailureListener {
                 CallViewModel.instance.setResponseCode(CALL_UPDATE_FAILURE)
                 e(TAG, "updateSDP failure", it)
+            },
+            success: OnSuccessListener<Void> = OnSuccessListener {
+                CallViewModel.instance.setResponseCode(CALL_UPDATE_SUCCESS)
+                d(TAG, "updateSDP success")
             }
         ) {
             d(TAG, "updateSDP")

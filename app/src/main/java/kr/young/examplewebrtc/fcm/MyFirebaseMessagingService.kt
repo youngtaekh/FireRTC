@@ -52,7 +52,8 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
                     }
                     FCMType.Sdp -> { receiveSDPMessage(data[SDP]) }
                     FCMType.Ice -> { receiveICEMessage(data[SDP]) }
-                    FCMType.Offer -> { receiveOfferMessage(data[USER_ID], data[SPACE_ID], data[CALL_ID], data[CALL_TYPE]) }
+                    FCMType.Offer -> { receiveOfferMessage(data[USER_ID], data[SPACE_ID], data[CALL_ID], data[CALL_TYPE], data[SDP]) }
+                    FCMType.Answer -> { receiveAnswerMessage(data[SDP]) }
                     FCMType.Bye, FCMType.Cancel, FCMType.Decline, FCMType.Busy -> { receiveEndMessage() }
                     else ->{ sendNotification("else") }
                 }
@@ -74,9 +75,9 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         sendRegistrationToServer(token)
     }
 
-    private fun receiveOfferMessage(userId: String?, spaceId: String?, callId: String?, type: String?) {
+    private fun receiveOfferMessage(userId: String?, spaceId: String?, callId: String?, type: String?, sdp: String?) {
         d(TAG, "receiveOfferMessage($userId, $spaceId, $type)")
-        if (CallVM.instance.space == null) {
+        if (CallVM.instance.space != null) {
             CallRepository.getCall(id = callId!!) {
                 val call = it.toObject<Call>()!!
                 SendFCM.sendMessage(call.fcmToken!!, FCMType.Busy)
@@ -92,8 +93,13 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
                 CallRepository.updateTerminatedAt(call)
             }
         } else {
-            CallVM.instance.onIncomingCall(this, userId, spaceId, type)
+            CallVM.instance.onIncomingCall(this, userId, spaceId, type, sdp)
         }
+    }
+
+    private fun receiveAnswerMessage(sdp: String?) {
+        d(TAG, "receiveAnswerMessage")
+        CallVM.instance.onAnswerCall(sdp)
     }
 
     private fun receiveEndMessage() {
@@ -118,8 +124,16 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
     private fun receiveICEMessage(sdp: String?) {
         if (sdp != null) {
-            val remote = IceCandidate("0", 0, sdp)
-            RTPManager.instance.addRemoteIceCandidate(remote)
+            if (RTPManager.instance.isInit && RTPManager.instance.isCreatedPCFactory) {
+                val remote = IceCandidate("0", 0, sdp)
+                RTPManager.instance.addRemoteIceCandidate(remote)
+            } else {
+                if (CallVM.instance.remoteIce == null) {
+                    CallVM.instance.remoteIce = sdp
+                } else {
+                    CallVM.instance.remoteIce += ";$sdp"
+                }
+            }
         }
     }
 

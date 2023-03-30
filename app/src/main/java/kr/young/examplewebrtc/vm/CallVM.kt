@@ -2,6 +2,8 @@ package kr.young.examplewebrtc.vm
 
 import android.content.Context
 import android.content.Intent
+import android.media.AudioManager
+import android.media.AudioManager.MODE_IN_COMMUNICATION
 import android.os.Handler
 import android.os.Looper
 import androidx.core.content.ContextCompat.startForegroundService
@@ -19,6 +21,8 @@ import kr.young.examplewebrtc.repo.CallRepository
 import kr.young.examplewebrtc.repo.SpaceRepository
 import kr.young.examplewebrtc.repo.SpaceRepository.Companion.SPACE_READ_SUCCESS
 import kr.young.examplewebrtc.repo.UserRepository
+import kr.young.rtp.RTPManager
+import org.webrtc.SessionDescription
 
 open class CallVM internal constructor(): ViewModel() {
     var space: Space? = null
@@ -31,6 +35,11 @@ open class CallVM internal constructor(): ViewModel() {
 
     val responseCode = MutableLiveData<Int>()
     val terminatedCall = MutableLiveData<Boolean>()
+    val mute = MutableLiveData<Boolean>()
+    val speaker = MutableLiveData<Boolean>()
+
+    var remoteSDP: SessionDescription? = null
+    var remoteIce: String? = null
 
     internal fun setResponseCode(value: Int) {
         Handler(Looper.getMainLooper()).post { responseCode.value = value }
@@ -40,6 +49,21 @@ open class CallVM internal constructor(): ViewModel() {
         Handler(Looper.getMainLooper()).post { terminatedCall.value = value }
     }
 
+    fun mute() {
+        RTPManager.instance.setMute(!mute.value!!)
+        RTPManager.instance.setAudioEnable(mute.value!!)
+        Handler(Looper.getMainLooper()).post { mute.value = !mute.value!! }
+    }
+
+    fun speaker(audioManager: AudioManager) {
+        audioManager.stopBluetoothSco()
+        audioManager.isBluetoothScoOn = false
+        audioManager.isSpeakerphoneOn = !speaker.value!!
+        audioManager.mode = MODE_IN_COMMUNICATION
+//        RTPManager.instance.setSpeaker(!speaker.value!!)
+        Handler(Looper.getMainLooper()).post { speaker.value = !speaker.value!! }
+    }
+
     open fun release() {
         d(TAG, "release()")
         space = null
@@ -47,6 +71,8 @@ open class CallVM internal constructor(): ViewModel() {
         counterpart = null
         setResponseCode(0)
         setTerminatedCall(false)
+        Handler(Looper.getMainLooper()).post { mute.value = false }
+        Handler(Looper.getMainLooper()).post { speaker.value = false }
     }
 
     open fun startOffer(counterpart: User, type: Call.Type, callCreateSuccess: OnSuccessListener<Void>) {
@@ -62,8 +88,34 @@ open class CallVM internal constructor(): ViewModel() {
         }
     }
 
+    fun sendOffer(sdp: String) {
+        call!!.sdp = sdp
+        CallRepository.updateSDP(call!!)
+        SendFCM.sendMessage(
+            to = counterpart!!.fcmToken!!,
+            type = SendFCM.FCMType.Offer,
+            callType = Call.Type.AUDIO,
+            spaceId = space!!.id,
+            callId = call!!.id,
+            sdp = sdp
+        )
+    }
+
     open fun startAnswer() {
         d(TAG, "startAnswer")
+    }
+
+    fun sendAnswer(sdp: String) {
+        call!!.sdp = sdp
+        CallRepository.updateSDP(call!!)
+        SendFCM.sendMessage(
+            to = counterpart!!.fcmToken!!,
+            type = SendFCM.FCMType.Answer,
+            callType = Call.Type.AUDIO,
+            spaceId = space!!.id,
+            callId = call!!.id,
+            sdp = sdp
+        )
     }
 
     open fun updateCallList() {
@@ -85,7 +137,7 @@ open class CallVM internal constructor(): ViewModel() {
         onTerminatedCall()
     }
 
-    open fun onIncomingCall(context: Context, userId: String?, spaceId: String?, type: String?) {
+    open fun onIncomingCall(context: Context, userId: String?, spaceId: String?, type: String?, sdp: String?) {
         d(TAG, "onIncomingCall")
         if (spaceId == null || type == null) {
             return
@@ -93,6 +145,7 @@ open class CallVM internal constructor(): ViewModel() {
 
         callType = Call.Type.valueOf(type)
         callDirection = Call.Direction.Answer
+        remoteSDP = SessionDescription(SessionDescription.Type.OFFER, sdp!!)
         SpaceRepository.getSpace(id = spaceId, success = {
             d(TAG, "get space success")
             this.space = it.toObject<Space>()!!
@@ -110,8 +163,30 @@ open class CallVM internal constructor(): ViewModel() {
         })
     }
 
-    open fun onAnswerCall() {
+    open fun onAnswerCall(sdp: String?) {
         d(TAG, "onAnswerCall")
+        space!!.connected = true
+        SpaceRepository.update(space!!.id, mapOf<String, Any>("connected" to true))
+        RTPManager.instance.setRemoteDescription(SessionDescription(SessionDescription.Type.ANSWER, sdp!!))
+    }
+
+    fun onIceCandidate(ice: String?) {
+        if (ice == null) return
+        call!!.candidates.add(ice)
+        CallRepository.updateCandidates(call!!, ice)
+        SendFCM.sendMessage(
+            to = counterpart!!.fcmToken!!,
+            type = SendFCM.FCMType.Ice,
+            callType = call!!.type,
+            spaceId = call!!.spaceId,
+            callId = call!!.id,
+            sdp = ice
+        )
+    }
+
+    fun onPCConnected() {
+        call!!.connected = true
+        CallRepository.update(call!!.id, mapOf("connected" to true))
     }
 
     open fun onTerminatedCall() {
@@ -124,6 +199,8 @@ open class CallVM internal constructor(): ViewModel() {
     init {
         setResponseCode(0)
         setTerminatedCall(false)
+        Handler(Looper.getMainLooper()).post { mute.value = false }
+        Handler(Looper.getMainLooper()).post { speaker.value = false }
     }
 
     private object Holder {

@@ -4,10 +4,14 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
+import android.media.AudioManager
+import android.media.AudioManager.MODE_NORMAL
 import android.os.IBinder
 import androidx.lifecycle.Observer
 import kr.young.common.UtilLog.Companion.d
+import kr.young.examplewebrtc.fcm.SendFCM
 import kr.young.examplewebrtc.model.Call
+import kr.young.examplewebrtc.repo.CallRepository
 import kr.young.examplewebrtc.util.NotificationUtil
 import kr.young.examplewebrtc.util.NotificationUtil.Companion.CALL_NOTIFICATION_ID
 import kr.young.examplewebrtc.vm.CallVM
@@ -72,14 +76,21 @@ class CallService : Service(), PCObserver, PCObserver.ICE, PCObserver.SDP {
             enableStat = false,
             recordAudio = false
         )
-        val isReceive = CallVM.instance.callDirection == Call.Direction.Answer
+        val isReceive = viewModel.callDirection == Call.Direction.Answer
         startForeground(CALL_NOTIFICATION_ID, NotificationUtil.getCallNotification(context = this, isReceive = isReceive))
+
+        if (!isReceive) {
+            RTPManager.instance.startRTP(context = this, isOffer = true)
+        }
+
         return START_NOT_STICKY
     }
 
     override fun onDestroy() {
         super.onDestroy()
         NetworkMonitor.getInstance().stopMonitoring()
+        val audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
+        audioManager.mode = MODE_NORMAL
         RTPManager.instance.release()
         d(TAG, "onDestroy")
         PCObserverImpl.instance.remove(this as PCObserver)
@@ -116,10 +127,16 @@ class CallService : Service(), PCObserver, PCObserver.ICE, PCObserver.SDP {
 
     override fun onLocalDescription(sdp: SessionDescription?) {
         d(TAG, "onLocalDescription")
+        if (viewModel.callDirection == Call.Direction.Offer) {
+            viewModel.sendOffer(sdp!!.description)
+        } else {
+            viewModel.sendAnswer(sdp!!.description)
+        }
     }
 
     override fun onICECandidate(candidate: IceCandidate?) {
         d(TAG, "onICECandidate")
+        viewModel.onIceCandidate(candidate!!.sdp)
     }
 
     override fun onICECandidatesRemoved(candidates: Array<out IceCandidate?>?) {
@@ -136,6 +153,7 @@ class CallService : Service(), PCObserver, PCObserver.ICE, PCObserver.SDP {
 
     override fun onPCConnected() {
         d(TAG, "onPCConnected")
+        viewModel.onPCConnected()
     }
 
     override fun onPCDisconnected() {

@@ -1,6 +1,7 @@
 package kr.young.examplewebrtc.vm
 
 import android.content.Context
+import android.media.AudioManager
 import androidx.lifecycle.ViewModel
 import com.google.android.gms.tasks.OnSuccessListener
 import kr.young.common.UtilLog.Companion.d
@@ -21,6 +22,8 @@ class AudioViewModel private constructor(): ViewModel() {
 
     val responseCode = vm.responseCode
     val terminatedCall = vm.terminatedCall
+    val mute = vm.mute
+    val speaker = vm.speaker
 
     fun release() {
         vm.release()
@@ -38,6 +41,14 @@ class AudioViewModel private constructor(): ViewModel() {
         vm.updateCallList()
     }
 
+    fun mute() {
+        vm.mute()
+    }
+
+    fun speaker(audioManager: AudioManager) {
+        vm.speaker(audioManager)
+    }
+
     fun end(fcmType: SendFCM.FCMType = SendFCM.FCMType.Bye) {
         vm.end(fcmType)
     }
@@ -46,13 +57,14 @@ class AudioViewModel private constructor(): ViewModel() {
         context: Context,
         userId: String?,
         spaceId: String?,
-        type: String?
+        type: String?,
+        sdp: String?
     ) {
-        vm.onIncomingCall(context, userId, spaceId, type)
+        vm.onIncomingCall(context, userId, spaceId, type, sdp)
     }
 
-    fun onAnswerCall() {
-        vm.onAnswerCall()
+    fun onAnswerCall(sdp: String?) {
+        vm.onAnswerCall(sdp)
     }
 
     fun onTerminatedCall() {

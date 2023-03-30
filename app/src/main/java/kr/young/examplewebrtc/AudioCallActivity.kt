@@ -2,6 +2,7 @@ package kr.young.examplewebrtc
 
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.media.AudioManager
 import android.os.Bundle
 import android.view.MotionEvent
 import android.view.View
@@ -39,6 +40,24 @@ class AudioCallActivity : AppCompatActivity(), OnClickListener, OnTouchListener 
                 finish()
             }
         }
+        audioViewModel.mute.observe(this) {
+            if (it != null) {
+                if (it) {
+                    binding.ivMute.setImageResource(R.drawable.round_mute_off_24)
+                } else {
+                    binding.ivMute.setImageResource(R.drawable.round_mute_24)
+                }
+            }
+        }
+        audioViewModel.speaker.observe(this) {
+            if (it != null) {
+                if (it) {
+                    binding.ivSpeaker.setImageResource(R.drawable.round_speaker_off_24)
+                } else {
+                    binding.ivSpeaker.setImageResource(R.drawable.round_speaker_24)
+                }
+            }
+        }
     }
 
     override fun onClick(v: View?) {
@@ -57,10 +76,13 @@ class AudioCallActivity : AppCompatActivity(), OnClickListener, OnTouchListener 
 
     private fun mute() {
         d(TAG, "mute")
+        audioViewModel.mute()
     }
 
     private fun speaker() {
         d(TAG, "speaker")
+        val audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
+        audioViewModel.speaker(audioManager)
     }
 
     private fun end() {
