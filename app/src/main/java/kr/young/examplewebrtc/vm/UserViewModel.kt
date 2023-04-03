@@ -4,6 +4,8 @@ import android.os.Handler
 import android.os.Looper
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import com.google.android.gms.tasks.OnSuccessListener
+import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.ktx.toObject
 import kr.young.common.UtilLog.Companion.d
 import kr.young.examplewebrtc.R
@@ -92,15 +94,15 @@ class UserViewModel: ViewModel() {
         return sourcePage == destinationPage
     }
 
-    fun readUser(userId: String) {
-        d(TAG, "readUser($userId)")
-        UserRepository.getUser(userId) {
-            if (it.data == null) {
-                setResponseCode(NO_USER)
-            } else {
-                setFoundUser(it.toObject<User>())
-            }
+    fun readUser(userId: String, success: OnSuccessListener<DocumentSnapshot> = OnSuccessListener {
+        if (it.data == null) {
+            setResponseCode(NO_USER)
+        } else {
+            setFoundUser(it.toObject<User>())
         }
+    }) {
+        d(TAG, "readUser($userId)")
+        UserRepository.getUser(id = userId, success = success)
     }
 
     fun createRelation(userId: String) {

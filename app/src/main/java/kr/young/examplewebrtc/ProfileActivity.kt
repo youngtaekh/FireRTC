@@ -57,6 +57,7 @@ class ProfileActivity : AppCompatActivity(), OnClickListener, OnTouchListener {
         val audioVM = AudioViewModel.instance
         audioVM.startOffer(counterpart = userViewModel.selectedProfile!!, type = Call.Type.AUDIO) {
             audioVM.updateCallList()
+            audioVM.updateParticipantList()
             val intent = Intent(this, AudioCallActivity::class.java)
             intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
             startActivity(intent)

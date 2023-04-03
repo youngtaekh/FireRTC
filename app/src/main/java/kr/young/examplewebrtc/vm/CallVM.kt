@@ -10,7 +10,9 @@ import androidx.core.content.ContextCompat.startForegroundService
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.google.android.gms.tasks.OnSuccessListener
+import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.ktx.toObject
+import kr.young.common.DateUtil
 import kr.young.common.UtilLog.Companion.d
 import kr.young.examplewebrtc.CallService
 import kr.young.examplewebrtc.fcm.SendFCM
@@ -18,11 +20,13 @@ import kr.young.examplewebrtc.model.Call
 import kr.young.examplewebrtc.model.Space
 import kr.young.examplewebrtc.model.User
 import kr.young.examplewebrtc.repo.CallRepository
+import kr.young.examplewebrtc.repo.CallRepository.Companion.CALL_READ_SUCCESS
 import kr.young.examplewebrtc.repo.SpaceRepository
 import kr.young.examplewebrtc.repo.SpaceRepository.Companion.SPACE_READ_SUCCESS
 import kr.young.examplewebrtc.repo.UserRepository
 import kr.young.rtp.RTPManager
 import org.webrtc.SessionDescription
+import java.util.*
 
 open class CallVM internal constructor(): ViewModel() {
     var space: Space? = null
@@ -32,6 +36,8 @@ open class CallVM internal constructor(): ViewModel() {
         get() { return field ?: Call.Type.AUDIO }
     var callDirection: Call.Direction? = null
         get() { return field ?: Call.Direction.Offer }
+    var historyList = mutableListOf<Call>()
+    var selectedCall: Call? = null
 
     val responseCode = MutableLiveData<Int>()
     val terminatedCall = MutableLiveData<Boolean>()
@@ -81,7 +87,7 @@ open class CallVM internal constructor(): ViewModel() {
         space = Space()
         SpaceRepository.post(space!!) {
             d(TAG, "create space success")
-            call = Call(spaceId = space!!.id, type = type, direction = Call.Direction.Offer)
+            call = Call(spaceId = space!!.id, type = type, direction = Call.Direction.Offer, counterpartName = counterpart.name)
             CallRepository.post(call!!, {
                 setResponseCode(CallRepository.CALL_CREATE_FAILURE)
             }, callCreateSuccess)
@@ -123,6 +129,24 @@ open class CallVM internal constructor(): ViewModel() {
         SpaceRepository.addCallList(space!!.id, call!!.id)
     }
 
+    open fun updateParticipantList() {
+        val userId = MyDataViewModel.instance.getMyId()
+        space!!.participants.add(userId)
+        SpaceRepository.addParticipantList(space!!.id, userId)
+    }
+
+    open fun updateLeaveList() {
+        val userId = MyDataViewModel.instance.getMyId()
+        space!!.leaves.add(userId)
+        SpaceRepository.addLeaveList(space!!.id, userId)
+    }
+
+    open fun busy(space: Space) {
+        space.terminated = true
+        SpaceRepository.updateStatus(space, "Busy")
+        SpaceRepository.addLeaveList(space.id, MyDataViewModel.instance.getMyId())
+    }
+
     open fun end(fcmType: SendFCM.FCMType = SendFCM.FCMType.Bye) {
         d(TAG, "end")
         space!!.terminated = true
@@ -150,15 +174,16 @@ open class CallVM internal constructor(): ViewModel() {
             d(TAG, "get space success")
             this.space = it.toObject<Space>()!!
             setResponseCode(SPACE_READ_SUCCESS)
-            call = Call(spaceId = space!!.id, type = callType!!, direction = Call.Direction.Answer)
-            d(TAG, "call id ${call!!.id}")
             UserRepository.getUser(id = userId!!) { user ->
                 counterpart = user.toObject<User>()
-            }
-            CallRepository.post(call!!) {
-                d(TAG, "call post success")
-                updateCallList()
-                startForegroundService(context, Intent(context, CallService::class.java))
+                call = Call(spaceId = space!!.id, type = callType!!, direction = Call.Direction.Answer, counterpartName = counterpart!!.name)
+                d(TAG, "call id ${call!!.id}")
+                CallRepository.post(call!!) {
+                    d(TAG, "call post success")
+                    updateCallList()
+                    updateParticipantList()
+                    startForegroundService(context, Intent(context, CallService::class.java))
+                }
             }
         })
     }
@@ -191,9 +216,36 @@ open class CallVM internal constructor(): ViewModel() {
 
     open fun onTerminatedCall() {
         d(TAG, "onTerminatedCall")
+        updateLeaveList()
         setTerminatedCall(true)
-        call!!.terminated = true
-        CallRepository.updateTerminatedAt(call!!)
+        if (call != null) {
+            call!!.terminated = true
+            CallRepository.updateTerminatedAt(call!!)
+        }
+    }
+
+    fun getSpace(id: String, success: OnSuccessListener<DocumentSnapshot>) {
+        SpaceRepository.getSpace(id = id, success = success)
+    }
+
+    fun getHistory() {
+        if (MyDataViewModel.instance.myData != null) {
+            CallRepository.getByUserId(MyDataViewModel.instance.getMyId()) {
+                d(TAG, "getHistory success size ${it.size()}")
+                var savedDate = ""
+                for (i in it) {
+                    val call = i.toObject<Call>()
+                    val newDate = DateUtil.toFormattedString(call.createdAt!!, "yy.MM.dd", TimeZone.getDefault())
+                    if (savedDate != newDate) {
+                        val header = Call(isHeader = true, createdAt = call.createdAt)
+                        historyList.add(header)
+                        savedDate = newDate
+                    }
+                    historyList.add(call)
+                }
+                setResponseCode(CALL_READ_SUCCESS)
+            }
+        }
     }
 
     init {

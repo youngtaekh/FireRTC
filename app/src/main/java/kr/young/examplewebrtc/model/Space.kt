@@ -2,9 +2,7 @@ package kr.young.examplewebrtc.model
 
 import com.google.firebase.firestore.FieldValue
 import kr.young.common.Crypto
-import kr.young.common.DateUtil
 import kr.young.examplewebrtc.util.Config.Companion.NAME
-import kr.young.examplewebrtc.util.Config.Companion.STATUS
 import kr.young.examplewebrtc.vm.MyDataViewModel
 import java.util.*
 
@@ -13,10 +11,12 @@ data class Space(
     val id: String = Crypto().getHash("$name${System.currentTimeMillis()}"),
     val maximum: Int = 2,
     var status: SpaceStatus = SpaceStatus.INACTIVE,
-    val calls: MutableList<String> = mutableListOf(),
     var connected: Boolean = false,
     var terminated: Boolean = false,
-    val type: Call.Type = Call.Type.AUDIO,
+    val calls: MutableList<String> = mutableListOf(),
+    val participants: MutableList<String> = mutableListOf(),
+    val leaves: MutableList<String> = mutableListOf(),
+    val callType: Call.Type = Call.Type.AUDIO,
     val createdBy: String = MyDataViewModel.instance.getMyId(),
     val createdAt: Date? = null,
     val terminatedReason: String? = null,
@@ -31,6 +31,9 @@ data class Space(
         map["connected"] = connected
         map["terminated"] = terminated
         map["calls"] = calls
+        map["participants"] = participants
+        map["leaves"] = leaves
+        map["callType"] = callType
         map["createdBy"] = createdBy
         map["createdAt"] = createdAt ?: FieldValue.serverTimestamp()
         return map

@@ -44,6 +44,13 @@ class HomeActivity : BaseActivity(), OnClickListener, OnTouchListener {
         binding.rlHistory.setOnClickListener(this)
         binding.rlSetting.setOnClickListener(this)
 
+        print(Random.nextInt(5)+1)
+        print("jo ")
+        for (i in 0 .. 5) {
+            print(Random.nextInt(10))
+        }
+        println("")
+
         myViewModel.isSigned.observe(this) {
             if (!it) {
                 val intent = Intent(this, SignActivity::class.java)

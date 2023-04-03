@@ -84,8 +84,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             }
             SpaceRepository.getSpace(spaceId!!) {
                 val space = it.toObject<Space>()!!
-                space.terminated = true
-                SpaceRepository.updateStatus(space, "Busy")
+                CallVM.instance.busy(space)
             }
             val call = Call(spaceId = spaceId, type = Call.Type.valueOf(type!!), direction = Call.Direction.Answer, terminated = true)
             SpaceRepository.addCallList(spaceId, call.id)

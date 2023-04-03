@@ -136,16 +136,55 @@ class SpaceRepository {
             spaceId: String,
             callId: String,
             success: OnSuccessListener<Void> = OnSuccessListener {
-                SpaceViewModel.instance.setResponseCode(SPACE_UPDATE_SUCCESS)
                 d(TAG, "update call list success")
+                SpaceViewModel.instance.setResponseCode(SPACE_UPDATE_SUCCESS)
             },
             failure: OnFailureListener = OnFailureListener {
+                d(TAG, "update call list failure")
                 SpaceViewModel.instance.setResponseCode(SPACE_UPDATE_FAILURE)
             }
         ) {
             d(TAG, "updateCallList")
             Firebase.firestore.collection(COLLECTION).document(spaceId)
                 .update(CALLS, FieldValue.arrayUnion(callId))
+                .addOnSuccessListener(success)
+                .addOnFailureListener(failure)
+        }
+
+        fun addParticipantList(
+            spaceId: String,
+            userId: String,
+            success: OnSuccessListener<Void> = OnSuccessListener {
+                d(TAG, "update participant list success")
+                SpaceViewModel.instance.setResponseCode(SPACE_UPDATE_SUCCESS)
+            },
+            failure: OnFailureListener = OnFailureListener {
+                d(TAG, "update participant list failure")
+                SpaceViewModel.instance.setResponseCode(SPACE_UPDATE_FAILURE)
+            }
+        ) {
+            d(TAG, "addParticipantList")
+            Firebase.firestore.collection(COLLECTION).document(spaceId)
+                .update("participants", FieldValue.arrayUnion(userId))
+                .addOnSuccessListener(success)
+                .addOnFailureListener(failure)
+        }
+
+        fun addLeaveList(
+            spaceId: String,
+            userId: String,
+            success: OnSuccessListener<Void> = OnSuccessListener {
+                d(TAG, "update leave list success")
+                SpaceViewModel.instance.setResponseCode(SPACE_UPDATE_SUCCESS)
+            },
+            failure: OnFailureListener = OnFailureListener {
+                d(TAG, "update leave list failure")
+                SpaceViewModel.instance.setResponseCode(SPACE_UPDATE_FAILURE)
+            }
+        ) {
+            d(TAG, "addLeaveList")
+            Firebase.firestore.collection(COLLECTION).document(spaceId)
+                .update("leaves", FieldValue.arrayUnion(userId))
                 .addOnSuccessListener(success)
                 .addOnFailureListener(failure)
         }

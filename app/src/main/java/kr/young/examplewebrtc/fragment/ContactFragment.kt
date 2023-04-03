@@ -12,6 +12,7 @@ import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import kr.young.common.UtilLog.Companion.d
 import kr.young.examplewebrtc.R
 import kr.young.examplewebrtc.ProfileActivity
@@ -32,8 +33,15 @@ class ContactFragment : Fragment() {
         savedInstanceState: Bundle?
     ): View? {
         val layout = inflater.inflate(R.layout.fragment_home, container, false)
+        val swipe = layout.findViewById<SwipeRefreshLayout>(R.id.swipe)
         val recyclerView = layout.findViewById<RecyclerView>(R.id.recycler_view)
         val tvEmpty = layout.findViewById<TextView>(R.id.tv_empty)
+
+        swipe.setOnRefreshListener {
+            d(TAG, "contacts swipe refresh")
+            userViewModel.readAllRelation()
+            swipe.isRefreshing = false
+        }
 
         contactList = userViewModel.contacts
         contactAdapter = ContactAdapter(contactList)

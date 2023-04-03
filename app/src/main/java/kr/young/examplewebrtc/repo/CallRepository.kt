@@ -4,6 +4,7 @@ import com.google.android.gms.tasks.OnFailureListener
 import com.google.android.gms.tasks.OnSuccessListener
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.QuerySnapshot
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
@@ -15,6 +16,7 @@ import kr.young.examplewebrtc.util.Config.Companion.SDP
 import kr.young.examplewebrtc.util.Config.Companion.SPACE_ID
 import kr.young.examplewebrtc.util.Config.Companion.TERMINATED
 import kr.young.examplewebrtc.util.Config.Companion.TERMINATED_AT
+import kr.young.examplewebrtc.util.Config.Companion.USER_ID
 import kr.young.examplewebrtc.vm.CallViewModel
 
 class CallRepository {
@@ -49,6 +51,26 @@ class CallRepository {
             d(TAG, "getsBySpaceId")
             Firebase.firestore.collection(COLLECTION)
                 .whereEqualTo(SPACE_ID, id)
+                .get()
+                .addOnSuccessListener(success)
+                .addOnFailureListener(failure)
+        }
+
+        fun getByUserId(
+            userId: String,
+            failure: OnFailureListener = OnFailureListener {
+                CallViewModel.instance.setResponseCode(CALL_READ_FAILURE)
+                e(TAG, "get call by user id is failed")
+            },
+            success: OnSuccessListener<QuerySnapshot> = OnSuccessListener {
+                CallViewModel.instance.setResponseCode(CALL_READ_SUCCESS)
+                d(TAG, "get calls by user id is success")
+            }
+        ) {
+            d(TAG, "getByUserId")
+            Firebase.firestore.collection(COLLECTION)
+                .whereEqualTo(USER_ID, userId)
+                .orderBy("createdAt", Query.Direction.DESCENDING)
                 .get()
                 .addOnSuccessListener(success)
                 .addOnFailureListener(failure)

@@ -20,12 +20,14 @@ data class Call(
     val id: String = Crypto().getHash("$userId$spaceId${currentTimeMillis()}"),
     var type: Type = Type.AUDIO,
     var direction: Direction? = null,
+    var counterpartName: String? = null,
     var connected: Boolean = false,
     var terminated: Boolean = false,
     var sdp: String? = null,
     var candidates: MutableList<String> = mutableListOf(),
     val createdAt: Date? = null,
-    var terminatedAt: Date? = null
+    var terminatedAt: Date? = null,
+    var isHeader: Boolean = false,
 ) {
     fun toMap(): Map<String, Any> {
         val map = mutableMapOf<String, Any>()
@@ -34,6 +36,7 @@ data class Call(
         map[TERMINATED] = terminated
         map[USER_ID] = userId
         if (spaceId != null) map[SPACE_ID] = spaceId
+        if (counterpartName != null) map["counterpartName"] = counterpartName!!
         if (fcmToken != null) map[FCM_TOKEN] = fcmToken
         if (direction != null) map[DIRECTION] = direction!!
         if (sdp != null) map[SDP] = sdp!!

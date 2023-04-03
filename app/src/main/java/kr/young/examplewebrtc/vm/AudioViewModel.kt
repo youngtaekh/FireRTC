@@ -41,6 +41,10 @@ class AudioViewModel private constructor(): ViewModel() {
         vm.updateCallList()
     }
 
+    fun updateParticipantList() {
+        vm.updateParticipantList()
+    }
+
     fun mute() {
         vm.mute()
     }
