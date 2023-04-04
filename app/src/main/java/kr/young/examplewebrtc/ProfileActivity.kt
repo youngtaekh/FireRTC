@@ -7,17 +7,16 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.View.OnClickListener
 import android.view.View.OnTouchListener
-import androidx.appcompat.app.AppCompatActivity
 import androidx.databinding.DataBindingUtil
 import kr.young.common.TouchEffect
 import kr.young.common.UtilLog.Companion.d
 import kr.young.examplewebrtc.databinding.ActivityProfileBinding
-import kr.young.examplewebrtc.fcm.SendFCM
 import kr.young.examplewebrtc.model.Call
+import kr.young.examplewebrtc.util.BaseActivity
 import kr.young.examplewebrtc.vm.AudioViewModel
 import kr.young.examplewebrtc.vm.UserViewModel
 
-class ProfileActivity : AppCompatActivity(), OnClickListener, OnTouchListener {
+class ProfileActivity : BaseActivity(), OnClickListener, OnTouchListener {
 
     private lateinit var binding: ActivityProfileBinding
     private val userViewModel = UserViewModel.instance

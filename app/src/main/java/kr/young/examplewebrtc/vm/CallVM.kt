@@ -19,6 +19,7 @@ import kr.young.examplewebrtc.fcm.SendFCM
 import kr.young.examplewebrtc.model.Call
 import kr.young.examplewebrtc.model.Space
 import kr.young.examplewebrtc.model.User
+import kr.young.examplewebrtc.observer.CallSignalImpl
 import kr.young.examplewebrtc.repo.CallRepository
 import kr.young.examplewebrtc.repo.CallRepository.Companion.CALL_READ_SUCCESS
 import kr.young.examplewebrtc.repo.SpaceRepository
@@ -183,6 +184,7 @@ open class CallVM internal constructor(): ViewModel() {
                     updateCallList()
                     updateParticipantList()
                     startForegroundService(context, Intent(context, CallService::class.java))
+                    CallSignalImpl.instance.onIncomingObserver()
                 }
             }
         })

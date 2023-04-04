@@ -1,7 +1,6 @@
 package kr.young.examplewebrtc
 
 import android.annotation.SuppressLint
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.MotionEvent
 import android.view.View
@@ -10,11 +9,12 @@ import androidx.databinding.DataBindingUtil
 import kr.young.common.TouchEffect
 import kr.young.examplewebrtc.databinding.ActivityAddContactBinding
 import kr.young.examplewebrtc.repo.RelationRepository.Companion.RELATION_CREATE_SUCCESS
+import kr.young.examplewebrtc.util.BaseActivity
 import kr.young.examplewebrtc.util.ResponseCode.Companion.NO_USER
 import kr.young.examplewebrtc.vm.MyDataViewModel
 import kr.young.examplewebrtc.vm.UserViewModel
 
-class AddContactActivity : AppCompatActivity(), OnClickListener, OnTouchListener {
+class AddContactActivity : BaseActivity(), OnClickListener, OnTouchListener {
 
     private lateinit var binding: ActivityAddContactBinding
     private val userViewModel = UserViewModel.instance

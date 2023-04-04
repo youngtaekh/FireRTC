@@ -2,7 +2,6 @@ package kr.young.examplewebrtc
 
 import android.annotation.SuppressLint
 import android.content.Intent
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.MotionEvent
 import android.view.View
@@ -16,13 +15,14 @@ import kr.young.examplewebrtc.databinding.ActivityCallDetailBinding
 import kr.young.examplewebrtc.model.Call
 import kr.young.examplewebrtc.model.Space
 import kr.young.examplewebrtc.model.User
+import kr.young.examplewebrtc.util.BaseActivity
 import kr.young.examplewebrtc.vm.AudioViewModel
 import kr.young.examplewebrtc.vm.CallVM
 import kr.young.examplewebrtc.vm.MyDataViewModel
 import kr.young.examplewebrtc.vm.UserViewModel
 import java.util.*
 
-class CallDetailActivity : AppCompatActivity(), OnClickListener, OnTouchListener {
+class CallDetailActivity : BaseActivity(), OnClickListener, OnTouchListener {
     private lateinit var binding: ActivityCallDetailBinding
     private val callVM = CallVM.instance
     private val call = callVM.selectedCall
