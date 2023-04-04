@@ -7,9 +7,38 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:848941921163:android:728c463f7405aed204f58e",
+        "mobilesdk_app_id": "1:848941921163:android:4713b0b09aea670a04f58e",
         "android_client_info": {
-          "package_name": "kr.young.examplewebrtc"
+          "package_name": "com.peoplev.webrtcmodule"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "848941921163-qq0ifo5avbfo6rg6jl59gpdqhe5enhch.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBqEYl1ULmrvs9CQxee_OriqPcEDnfbtzc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "848941921163-qq0ifo5avbfo6rg6jl59gpdqhe5enhch.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:848941921163:android:b339759c2ebe22e804f58e",
+        "android_client_info": {
+          "package_name": "kr.young.firertc"
         }
       },
       "oauth_client": [

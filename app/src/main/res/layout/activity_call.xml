@@ -7,7 +7,7 @@
     <data>
         <variable
             name="space"
-            type="kr.young.examplewebrtc.model.Space" />
+            type="kr.young.firertc.model.Space" />
     </data>
 
     <androidx.constraintlayout.widget.ConstraintLayout

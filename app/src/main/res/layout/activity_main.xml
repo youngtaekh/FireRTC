@@ -7,7 +7,7 @@
         <import type="android.view.View" />
         <variable
             name="user"
-            type="kr.young.examplewebrtc.model.User" />
+            type="kr.young.firertc.model.User" />
     </data>
 
     <androidx.constraintlayout.widget.ConstraintLayout

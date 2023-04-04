@@ -14,7 +14,7 @@ dependencyResolutionManagement {
         jcenter()
     }
 }
-rootProject.name = "ExampleWebRTC"
+rootProject.name = "FireRTC"
 include ':app'
 include ':common'
 project(':common').projectDir = file("../../AndroidUtil/common")

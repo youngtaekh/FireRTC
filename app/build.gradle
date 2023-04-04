@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace 'kr.young.examplewebrtc'
+    namespace 'kr.young.firertc'
     compileSdk rootProject.ext.compileSdkVersion
 
     defaultConfig {
-        applicationId "kr.young.examplewebrtc"
+        applicationId "kr.young.firertc"
         minSdk rootProject.ext.minSdkVersion
         targetSdk rootProject.ext.targetSdkVersion
         versionCode 1
