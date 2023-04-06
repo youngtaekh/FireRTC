@@ -91,6 +91,7 @@ class RTPManager: PCObserver, PCObserver.SDP, PCObserver.ICE {
     fun init(context: Context,
              isAudio: Boolean = this.isAudio,
              isVideo: Boolean = this.isVideo,
+             isScreen: Boolean = this.isScreen,
              isDataChannel: Boolean = this.isDataChannel,
              enableStat: Boolean = this.enableStat,
              recordAudio: Boolean = this.recordAudio) {
@@ -103,6 +104,7 @@ class RTPManager: PCObserver, PCObserver.SDP, PCObserver.ICE {
 
         this.isAudio = isAudio
         this.isVideo = isVideo
+        this.isScreen = isScreen
         this.isDataChannel = isDataChannel
         this.enableStat = enableStat
         this.recordAudio = recordAudio
@@ -148,7 +150,7 @@ class RTPManager: PCObserver, PCObserver.SDP, PCObserver.ICE {
         this.fullRenderer?.release()
         this.fullRenderer = null
 
-        this.executor!!.execute {
+        this.executor?.execute {
             d(TAG, "Release audio.")
             this.audioMedia?.release()
             d(TAG, "Release video.")
@@ -261,7 +263,6 @@ class RTPManager: PCObserver, PCObserver.SDP, PCObserver.ICE {
                                      data: Intent?) {
         i(TAG, "createPeerConnection()")
         i(TAG, "createPeerConnection - $iceServers")
-        this.isScreen = data!=null
 
         executor!!.execute {
 
@@ -277,7 +278,7 @@ class RTPManager: PCObserver, PCObserver.SDP, PCObserver.ICE {
             }
             if (isVideo) {
                 videoMedia = VideoMedia()
-                videoMedia!!.createVideoCapturer(context, isScreen, data)
+                videoMedia!!.createVideoCapturer(context, isScreen && isOffer, data)
                 val localVideoTrack = videoMedia!!.createVideoTrack(
                     context,
                     localVideoSink!!,
@@ -362,10 +363,21 @@ class RTPManager: PCObserver, PCObserver.SDP, PCObserver.ICE {
     fun setSwappedFeeds(isSwappedFeeds: Boolean) {
         d(TAG, "setSwappedFeeds: $isSwappedFeeds")
         this.isSwappedFeeds = isSwappedFeeds
-        localVideoSink?.setTarget(if (isSwappedFeeds) fullRenderer else pipRenderer)
-        remoteRenderer.setTarget(if (isSwappedFeeds) pipRenderer else fullRenderer)
-        fullRenderer?.setMirror(isSwappedFeeds)
-        pipRenderer?.setMirror(!isSwappedFeeds)
+        if (isScreen) {
+            if (isOffer) {
+                localVideoSink?.setTarget(null)
+                remoteRenderer.setTarget(null)
+            } else {
+                localVideoSink?.setTarget(null)
+                remoteRenderer.setTarget(fullRenderer)
+            }
+            fullRenderer?.setMirror(false)
+        } else {
+            localVideoSink?.setTarget(if (isSwappedFeeds) fullRenderer else pipRenderer)
+            remoteRenderer.setTarget(if (isSwappedFeeds) pipRenderer else fullRenderer)
+            fullRenderer?.setMirror(isSwappedFeeds)
+            pipRenderer?.setMirror(!isSwappedFeeds)
+        }
     }
 
     fun switchCamera() {
@@ -408,25 +420,21 @@ class RTPManager: PCObserver, PCObserver.SDP, PCObserver.ICE {
     }
 
     fun setVideoEnable(enable: Boolean) {
-        executor!!.execute {
+        executor?.execute {
             i(TAG, "setVideoEnable(enable $enable)")
             videoMedia?.setEnable(enable)
         }
     }
 
     fun startVideoSource() {
-        executor!!.execute {
-            if (!isScreen) {
-                videoMedia?.startVideoSource()
-            }
+        executor?.execute {
+            videoMedia?.startVideoSource()
         }
     }
 
     fun stopVideoSource() {
-        executor!!.execute {
-            if (!isScreen) {
-                videoMedia?.stopVideoSource()
-            }
+        executor?.execute {
+            videoMedia?.stopVideoSource()
         }
     }
 

@@ -16,10 +16,7 @@ import kr.young.firertc.model.Call
 import kr.young.firertc.model.Space
 import kr.young.firertc.model.User
 import kr.young.firertc.util.BaseActivity
-import kr.young.firertc.vm.AudioViewModel
-import kr.young.firertc.vm.CallVM
-import kr.young.firertc.vm.MyDataViewModel
-import kr.young.firertc.vm.UserViewModel
+import kr.young.firertc.vm.*
 import java.util.*
 
 class CallDetailActivity : BaseActivity(), OnClickListener, OnTouchListener {
@@ -36,16 +33,30 @@ class CallDetailActivity : BaseActivity(), OnClickListener, OnTouchListener {
         binding = DataBindingUtil.setContentView(this, R.layout.activity_call_detail)
 
         binding.tvTitle.text = call!!.counterpartName
-        binding.tvCategory.text = when (call.type) {
-            Call.Type.VIDEO -> { Call.Type.VIDEO.toString() }
-            Call.Type.MESSAGE -> { Call.Type.MESSAGE.toString() }
-            Call.Type.CONFERENCE -> { Call.Type.CONFERENCE.toString() }
-            else -> { Call.Type.AUDIO.toString() }
+        when (call.type) {
+            Call.Type.VIDEO -> {
+                binding.ivCategory.setImageResource(R.drawable.round_videocam_24)
+                binding.tvCategory.text = Call.Type.VIDEO.toString()
+            } Call.Type.SCREEN -> {
+                binding.ivCategory.setImageResource(R.drawable.round_mobile_screen_share_24)
+                binding.tvCategory.text = Call.Type.SCREEN.toString()
+            } Call.Type.MESSAGE -> {
+                binding.ivCategory.setImageResource(R.drawable.round_chat_bubble_24)
+                binding.tvCategory.text = Call.Type.MESSAGE.toString()
+            } Call.Type.CONFERENCE -> {
+                binding.ivCategory.setImageResource(R.drawable.round_meeting_room_24)
+                binding.tvCategory.text = Call.Type.CONFERENCE.toString()
+            } else -> {
+                binding.ivCategory.setImageResource(R.drawable.round_call_24)
+                binding.tvCategory.text = Call.Type.AUDIO.toString()
+            }
         }
-        binding.tvDirection.text = if (call.direction == Call.Direction.Offer) {
-            Call.Direction.Offer.toString()
+        if (call.direction == Call.Direction.Offer) {
+            binding.ivDirection.setImageResource(R.drawable.round_call_made_24)
+            binding.tvDirection.text = Call.Direction.Offer.toString()
         } else {
-            Call.Direction.Answer.toString()
+            binding.ivDirection.setImageResource(R.drawable.round_call_received_24)
+            binding.tvDirection.text = Call.Direction.Answer.toString()
         }
         binding.tvDate.text = DateUtil.toFormattedString(call.createdAt!!, "yyyy-MM-dd hh:mm:ss")
         if (call.connected) {
@@ -60,14 +71,16 @@ class CallDetailActivity : BaseActivity(), OnClickListener, OnTouchListener {
             binding.tvTime.text = time
         }
 
-        binding.ivBack.setOnClickListener(this)
-        binding.ivBack.setOnTouchListener(this)
+        binding.ivClose.setOnClickListener(this)
+        binding.ivClose.setOnTouchListener(this)
         binding.ivCall.setOnClickListener(this)
         binding.ivCall.setOnTouchListener(this)
         binding.ivChat.setOnClickListener(this)
         binding.ivChat.setOnTouchListener(this)
         binding.ivVideo.setOnClickListener(this)
         binding.ivVideo.setOnTouchListener(this)
+        binding.ivScreen.setOnClickListener(this)
+        binding.ivScreen.setOnTouchListener(this)
 
         callVM.getSpace(this.call.spaceId!!) {
             d(TAG, "get space success")
@@ -108,10 +121,11 @@ class CallDetailActivity : BaseActivity(), OnClickListener, OnTouchListener {
 
     override fun onClick(v: View?) {
         when (v?.id) {
-            R.id.iv_back -> { finish() }
+            R.id.iv_close -> { finish() }
             R.id.iv_call -> { call() }
             R.id.iv_chat -> { chat() }
             R.id.iv_video -> { video() }
+            R.id.iv_screen -> { screen() }
         }
     }
 
@@ -142,6 +156,32 @@ class CallDetailActivity : BaseActivity(), OnClickListener, OnTouchListener {
 
     private fun video() {
         d(TAG, "video call")
+        if (counterpart != null) {
+            val videoVM = VideoViewModel.instance
+            videoVM.startOffer(counterpart!!, Call.Type.VIDEO) {
+                videoVM.updateCallList()
+                videoVM.updateParticipantList()
+                startForegroundService(Intent(this, CallService::class.java))
+                val intent = Intent(this, VideoCallActivity::class.java)
+                intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                startActivity(intent)
+            }
+        }
+    }
+
+    private fun screen() {
+        d(TAG, "screen call")
+        if (counterpart != null) {
+            val videoVM = VideoViewModel.instance
+            videoVM.startOffer(counterpart!!, Call.Type.SCREEN) {
+                videoVM.updateCallList()
+                videoVM.updateParticipantList()
+                startForegroundService(Intent(this, CallService::class.java))
+                val intent = Intent(this, VideoCallActivity::class.java)
+                intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                startActivity(intent)
+            }
+        }
     }
 
     companion object {

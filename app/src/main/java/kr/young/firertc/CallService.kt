@@ -67,19 +67,8 @@ class CallService : Service(), PCObserver, PCObserver.ICE, PCObserver.SDP {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         d(TAG, "onStartCommand")
-        RTPManager.instance.init(this,
-            isAudio = true,
-            isVideo = false,
-            isDataChannel = false,
-            enableStat = false,
-            recordAudio = false
-        )
         val isReceive = viewModel.callDirection == Call.Direction.Answer
         startForeground(CALL_NOTIFICATION_ID, NotificationUtil.getCallNotification(context = this, isReceive = isReceive))
-
-        if (!isReceive) {
-            RTPManager.instance.startRTP(context = this, isOffer = true)
-        }
 
         return START_NOT_STICKY
     }

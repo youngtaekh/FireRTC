@@ -98,8 +98,8 @@
                     android:id="@+id/iv_conference"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:src="@drawable/round_meeting_room_24"
                     android:layout_centerInParent="true"
+                    android:src="@drawable/round_meeting_room_24"
                     app:tint="@color/white" />
 
             </RelativeLayout>

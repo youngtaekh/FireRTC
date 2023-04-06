@@ -38,10 +38,16 @@ class HistoryAdapter(private val calls: MutableList<Call>): Adapter<ViewHolder>(
             } else {
                 holder.ivStatus.setImageResource(R.drawable.round_call_missed_24)
             }
-            if (call.type == Call.Type.AUDIO) {
-                holder.ivCategory.setImageResource(R.drawable.round_call_24)
-            } else {
-                holder.ivCategory.setImageResource(R.drawable.round_videocam_24)
+            when (call.type) {
+                Call.Type.AUDIO -> {
+                    holder.ivCategory.setImageResource(R.drawable.round_call_24)
+                }
+                Call.Type.SCREEN -> {
+                    holder.ivCategory.setImageResource(R.drawable.round_mobile_screen_share_24)
+                }
+                else -> {
+                    holder.ivCategory.setImageResource(R.drawable.round_videocam_24)
+                }
             }
         }
     }

@@ -15,6 +15,7 @@ import kr.young.firertc.model.Call
 import kr.young.firertc.util.BaseActivity
 import kr.young.firertc.vm.AudioViewModel
 import kr.young.firertc.vm.UserViewModel
+import kr.young.firertc.vm.VideoViewModel
 
 class ProfileActivity : BaseActivity(), OnClickListener, OnTouchListener {
 
@@ -30,10 +31,14 @@ class ProfileActivity : BaseActivity(), OnClickListener, OnTouchListener {
 
         binding.ivProfile.setImageResource(userViewModel.selectImage(userViewModel.selectedProfile?.id))
 
+        binding.ivClose.setOnTouchListener(this)
+        binding.ivClose.setOnClickListener(this)
         binding.ivCall.setOnTouchListener(this)
         binding.ivCall.setOnClickListener(this)
         binding.ivVideo.setOnTouchListener(this)
         binding.ivVideo.setOnClickListener(this)
+        binding.ivScreen.setOnTouchListener(this)
+        binding.ivScreen.setOnClickListener(this)
         binding.ivChat.setOnTouchListener(this)
         binding.ivChat.setOnClickListener(this)
     }
@@ -46,8 +51,10 @@ class ProfileActivity : BaseActivity(), OnClickListener, OnTouchListener {
 
     override fun onClick(v: View?) {
         when (v?.id) {
+            R.id.iv_close -> { finish() }
             R.id.iv_call -> { call() }
             R.id.iv_video -> { video() }
+            R.id.iv_screen -> { screen() }
             R.id.iv_chat -> { chat() }
         }
     }
@@ -67,6 +74,28 @@ class ProfileActivity : BaseActivity(), OnClickListener, OnTouchListener {
 
     private fun video() {
         d(TAG, "video call")
+        val videoVM = VideoViewModel.instance
+        videoVM.startOffer(userViewModel.selectedProfile!!, Call.Type.VIDEO) {
+            videoVM.updateCallList()
+            videoVM.updateParticipantList()
+            startForegroundService(Intent(this, CallService::class.java))
+            val intent = Intent(this, VideoCallActivity::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            startActivity(intent)
+        }
+    }
+
+    private fun screen() {
+        d(TAG, "screen call")
+        val videoVM = VideoViewModel.instance
+        videoVM.startOffer(userViewModel.selectedProfile!!, Call.Type.SCREEN) {
+            videoVM.updateCallList()
+            videoVM.updateParticipantList()
+            startForegroundService(Intent(this, CallService::class.java))
+            val intent = Intent(this, VideoCallActivity::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            startActivity(intent)
+        }
     }
 
     private fun chat() {

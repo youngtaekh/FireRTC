@@ -13,6 +13,7 @@ import kr.young.common.TouchEffect
 import kr.young.common.UtilLog.Companion.d
 import kr.young.firertc.databinding.ActivityReceiveBinding
 import kr.young.firertc.fcm.SendFCM
+import kr.young.firertc.model.Call
 import kr.young.firertc.vm.CallVM
 import kr.young.firertc.vm.UserViewModel
 import kr.young.rtp.RTPManager
@@ -34,6 +35,14 @@ class ReceiveActivity : AppCompatActivity(), OnClickListener, OnTouchListener {
             if (it != null && it) {
                 finish()
             }
+        }
+
+        if (vm.call!!.type == Call.Type.VIDEO) {
+            binding.ivAnswer.setImageResource(R.drawable.round_videocam_24)
+        } else if (vm.call!!.type == Call.Type.SCREEN) {
+            binding.ivAnswer.setImageResource(R.drawable.round_mobile_screen_share_24)
+        } else {
+            binding.ivAnswer.setImageResource(R.drawable.round_call_24)
         }
 
         binding.ivProfile.setImageResource(UserViewModel.instance.selectImage(""))
@@ -58,9 +67,12 @@ class ReceiveActivity : AppCompatActivity(), OnClickListener, OnTouchListener {
 
     private fun answer() {
         d(TAG, "answer")
-        RTPManager.instance.startRTP(this, isOffer = false, remoteSdp = vm.remoteSDP, remoteICE = vm.remoteIce)
         finish()
-        startActivity(Intent(this, AudioCallActivity::class.java))
+        if (vm.call!!.type == Call.Type.VIDEO || vm.call!!.type == Call.Type.SCREEN) {
+            startActivity(Intent(this, VideoCallActivity::class.java))
+        } else {
+            startActivity(Intent(this, AudioCallActivity::class.java))
+        }
     }
 
     private fun end() {

@@ -25,7 +25,7 @@ class HomeActivity : BaseActivity(), OnClickListener, OnTouchListener {
     private lateinit var binding: ActivityHomeBinding
     private lateinit var myViewModel: MyDataViewModel
 
-    private var currentFragment = CONTACT
+    private var currentFragment = AppSP.instance.getFragmentIndex()
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -130,6 +130,7 @@ class HomeActivity : BaseActivity(), OnClickListener, OnTouchListener {
     }
 
     private fun replaceFragment(fragmentNumber: Int) {
+        AppSP.instance.setFragmentIndex(fragmentNumber)
         val fragment = when (fragmentNumber) {
             CHAT -> { ChatFragment() }
             CONFERENCE -> { ConferenceFragment() }

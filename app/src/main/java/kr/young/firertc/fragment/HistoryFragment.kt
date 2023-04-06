@@ -23,7 +23,6 @@ import kr.young.firertc.adapter.StickyHeaderItemDecoration
 import kr.young.firertc.model.Call
 import kr.young.firertc.repo.CallRepository.Companion.CALL_READ_SUCCESS
 import kr.young.firertc.vm.CallVM
-import java.util.*
 
 class HistoryFragment : Fragment() {
     private val callViewModel = CallVM.instance
@@ -51,23 +50,42 @@ class HistoryFragment : Fragment() {
         historyAdapter = HistoryAdapter(historyList)
         historyAdapter.setOnItemClickListener(clickListener, longClickListener)
         recyclerView.adapter = historyAdapter
-//        recyclerView.addItemDecoration(DividerItemDecoration(context, VERTICAL))
 
         val layoutManager = LinearLayoutManager(context)
         layoutManager.orientation = VERTICAL
         recyclerView.layoutManager = layoutManager
 
-//        recyclerView.addItemDecoration(StickyHeaderItemDecoration(getSectionCallback()))
-
         callViewModel.responseCode.observe(viewLifecycleOwner) {
             if (it != null && it == CALL_READ_SUCCESS) {
-                val size = historyList.size
-                historyList.removeAll { true }
-                historyAdapter.notifyItemRangeRemoved(0, size)
-//                adapter.notifyItemRangeRemoved(0, size)
-                historyList.addAll(callViewModel.historyList)
-                historyAdapter.notifyItemRangeInserted(0, historyList.size)
-//                adapter.notifyItemRangeInserted(0, historyList.size)
+                if (historyList.isEmpty()) {
+                    historyList.addAll(callViewModel.historyList)
+                    historyAdapter.notifyItemRangeInserted(0, historyList.size)
+                } else if (historyList.size < callViewModel.historyList.size) {
+                    var idx = 0
+                    var flag = true
+                    while (flag) {
+                        val pCall = historyList[idx]
+                        val nCall = callViewModel.historyList[idx]
+                        if (pCall.isHeader && nCall.isHeader) {
+                            historyList.removeAt(idx)
+                            historyList.add(idx, nCall)
+                            historyAdapter.notifyItemChanged(idx)
+                            idx += 1
+                        } else if (pCall == nCall) {
+                            flag = false
+                        } else {
+                            historyList.add(idx, nCall)
+                            historyAdapter.notifyItemInserted(idx)
+                            idx += 1
+                        }
+                    }
+                } else if (historyList.size > callViewModel.historyList.size) {
+                    val size = historyList.size
+                    historyList.removeAll { true }
+                    historyAdapter.notifyItemRangeRemoved(0, size)
+                    historyList.addAll(callViewModel.historyList)
+                    historyAdapter.notifyItemRangeInserted(0, historyList.size)
+                }
                 if (historyList.isEmpty()) {
                     tvEmpty.visibility = VISIBLE
                 } else {

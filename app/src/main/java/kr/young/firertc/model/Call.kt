@@ -35,6 +35,7 @@ data class Call(
         map["connected"] = connected
         map[TERMINATED] = terminated
         map[USER_ID] = userId
+        map["type"] = type
         if (spaceId != null) map[SPACE_ID] = spaceId
         if (counterpartName != null) map["counterpartName"] = counterpartName!!
         if (fcmToken != null) map[FCM_TOKEN] = fcmToken
@@ -91,6 +92,7 @@ data class Call(
     enum class Type {
         AUDIO,
         VIDEO,
+        SCREEN,
         MESSAGE,
         CONFERENCE
     }

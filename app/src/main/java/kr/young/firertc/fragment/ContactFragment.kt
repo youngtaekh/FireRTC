@@ -69,6 +69,8 @@ class ContactFragment : Fragment() {
             }
         }
 
+        userViewModel.readAllRelation()
+
         // Inflate the layout for this fragment
         return layout
     }
@@ -76,8 +78,6 @@ class ContactFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         d(TAG, "onResume")
-
-        userViewModel.readAllRelation()
     }
 
     private fun removeContact(pos: Int) {

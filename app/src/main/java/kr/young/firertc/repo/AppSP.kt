@@ -10,6 +10,10 @@ class AppSP private constructor() {
 
     fun isSigned() = getBoolean(SIGNED)
 
+    fun setFragmentIndex(index: Int) { setInt(FRAGMENT_INDEX, index) }
+
+    fun getFragmentIndex() = getInt(FRAGMENT_INDEX)
+
     fun setUserId(userId: String) { setString(USER_ID, userId) }
     fun setUserName(userName: String) { setString(USER_NAME, userName) }
     fun setUserPwd(userPwd: String) { setString(USER_PWD, userPwd) }
@@ -28,6 +32,16 @@ class AppSP private constructor() {
 
     private fun getBoolean(key: String): Boolean {
         return mPreferences.getBoolean(key, false)
+    }
+
+    private fun setInt(key: String, value: Int) {
+        val editor = mPreferences.edit()
+        editor.putInt(key, value)
+        editor.apply()
+    }
+
+    private fun getInt(key: String): Int {
+        return mPreferences.getInt(key, 0)
     }
 
     private fun setString(key: String, value: String) {
@@ -57,6 +71,8 @@ class AppSP private constructor() {
         private lateinit var mPreferences: SharedPreferences
 
         private const val SIGNED = "signed"
+
+        private const val FRAGMENT_INDEX = "fragmentIndex"
 
         private const val USER_ID = "userId"
         private const val USER_NAME = "userName"

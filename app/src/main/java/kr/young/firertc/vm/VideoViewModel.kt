@@ -10,7 +10,7 @@ import kr.young.firertc.model.Space
 import kr.young.firertc.model.User
 import org.webrtc.SessionDescription
 
-class AudioViewModel private constructor(): ViewModel() {
+class VideoViewModel private constructor(): ViewModel() {
     var remoteCall: Call? = null
     val vm = CallVM.instance
     val counterpart: User? get() { return vm.counterpart }
@@ -21,6 +21,11 @@ class AudioViewModel private constructor(): ViewModel() {
     val terminatedCall = vm.terminatedCall
     val mute = vm.mute
     val speaker = vm.speaker
+
+    val cameraMute = vm.cameraMute
+    val sd = vm.sd
+    val scaleType = vm.scaleType
+    val swapScreen = vm.swapScreen
 
     val remoteSDP: SessionDescription? get() { return vm.remoteSDP }
     val remoteIce: String? get() { return vm.remoteIce }
@@ -49,8 +54,28 @@ class AudioViewModel private constructor(): ViewModel() {
         vm.mute()
     }
 
-    fun speaker(audioManager: AudioManager) {
-        vm.speaker(audioManager, !speaker.value!!)
+    fun speaker(audioManager: AudioManager, value: Boolean = !speaker.value!!) {
+        vm.speaker(audioManager, value)
+    }
+
+    fun cameraMute(value: Boolean) {
+        vm.cameraMute(value)
+    }
+
+    fun cameraSwitch() {
+        vm.cameraSwitch()
+    }
+
+    fun changeDefinition() {
+        vm.changeDefinition()
+    }
+
+    fun changeScalingType() {
+        vm.changeScalingType()
+    }
+
+    fun setSwappedFeeds(value: Boolean) {
+        vm.setSwappedFeeds(value)
     }
 
     fun end(fcmType: SendFCM.FCMType = SendFCM.FCMType.Bye) {
@@ -76,11 +101,11 @@ class AudioViewModel private constructor(): ViewModel() {
     }
 
     private object Holder {
-        val INSTANCE = AudioViewModel()
+        val INSTANCE = VideoViewModel()
     }
 
     companion object {
-        private const val TAG = "AudioViewModel"
-        val instance: AudioViewModel by lazy { Holder.INSTANCE }
+        private const val TAG = "VideoViewModel"
+        val instance: VideoViewModel by lazy { Holder.INSTANCE }
     }
 }

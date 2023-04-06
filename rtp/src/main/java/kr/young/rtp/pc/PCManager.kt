@@ -131,7 +131,7 @@ class PCManager(
 
         audioDeviceModule?.release()
 
-        Logging.enableLogToDebugOutput(Logging.Severity.LS_ERROR)
+        Logging.enableLogToDebugOutput(Logging.Severity.LS_INFO)
 
         return factory
     }
@@ -143,7 +143,7 @@ class PCManager(
      * set peer connection event listener
      */
     fun createPeerConnection(isOffer: Boolean, iceServers: List<PeerConnection.IceServer>?): PeerConnection? {
-        createMediaConstraintsInternal()
+        createMediaConstraintsInternal(isOffer)
         this.peerConnection = factory!!.createPeerConnection(getRTCConfig(iceServers), pcListener)
         this.sdpListener = SDPListener(
             isOffer,
@@ -196,7 +196,7 @@ class PCManager(
      * Set video width/height/fps
      * receive audio/video or not
      */
-    private fun createMediaConstraintsInternal() {
+    private fun createMediaConstraintsInternal(isOffer: Boolean) {
         if (pcParameters.isVideo) {
             if (videoWidth == 0 || videoHeight == 0) {
                 videoWidth =
@@ -216,8 +216,10 @@ class PCManager(
         sdpMediaConstraints!!.mandatory.add(
             MediaConstraints.KeyValuePair("OfferToReceiveAudio", pcParameters.isAudio.toString())
         )
+//        val receiveVideo = pcParameters.isVideo && !(pcParameters.isScreen && isOffer)
+        val receiveVideo = pcParameters.isVideo
         sdpMediaConstraints!!.mandatory.add(
-            MediaConstraints.KeyValuePair("OfferToReceiveVideo", pcParameters.isVideo.toString())
+            MediaConstraints.KeyValuePair("OfferToReceiveVideo", receiveVideo.toString())
         )
     }
 
@@ -239,7 +241,7 @@ class PCManager(
             PeerConnection.ContinualGatheringPolicy.GATHER_CONTINUALLY
         rtcConfig.keyType = PeerConnection.KeyType.ECDSA
         rtcConfig.enableDtlsSrtp = !isLoopback
-        rtcConfig.sdpSemantics = PeerConnection.SdpSemantics.PLAN_B
+        rtcConfig.sdpSemantics = PeerConnection.SdpSemantics.UNIFIED_PLAN
         return rtcConfig
     }
 
@@ -268,7 +270,8 @@ class PCManager(
             if (sdpListener != null) {
                 d(TAG, "sdpListener!!.addCandidate")
                 sdpListener!!.addCandidate(candidate!!)
-            } else {
+            }
+            if (peerConnection != null) {
                 d(TAG, "peerConnection!!.addIceCandidate")
                 peerConnection!!.addIceCandidate(candidate)
             }

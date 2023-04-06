@@ -26,6 +26,7 @@ import kr.young.firertc.repo.SpaceRepository
 import kr.young.firertc.repo.SpaceRepository.Companion.SPACE_READ_SUCCESS
 import kr.young.firertc.repo.UserRepository
 import kr.young.rtp.RTPManager
+import org.webrtc.RendererCommon.ScalingType
 import org.webrtc.SessionDescription
 import java.util.*
 
@@ -45,6 +46,13 @@ open class CallVM internal constructor(): ViewModel() {
     val mute = MutableLiveData<Boolean>()
     val speaker = MutableLiveData<Boolean>()
 
+    val cameraMute = MutableLiveData<Boolean>()
+    val sd = MutableLiveData<Boolean>()
+    val scaleType = MutableLiveData<ScalingType>()
+    val swapScreen = MutableLiveData<Boolean> ()
+
+    val rtpManager = RTPManager.instance
+
     var remoteSDP: SessionDescription? = null
     var remoteIce: String? = null
 
@@ -57,18 +65,56 @@ open class CallVM internal constructor(): ViewModel() {
     }
 
     fun mute() {
-        RTPManager.instance.setMute(!mute.value!!)
-        RTPManager.instance.setAudioEnable(mute.value!!)
+        rtpManager.setMute(!mute.value!!)
+        rtpManager.setAudioEnable(mute.value!!)
         Handler(Looper.getMainLooper()).post { mute.value = !mute.value!! }
     }
 
-    fun speaker(audioManager: AudioManager) {
+    fun speaker(audioManager: AudioManager, value: Boolean) {
         audioManager.stopBluetoothSco()
         audioManager.isBluetoothScoOn = false
-        audioManager.isSpeakerphoneOn = !speaker.value!!
+        audioManager.isSpeakerphoneOn = value
         audioManager.mode = MODE_IN_COMMUNICATION
-//        RTPManager.instance.setSpeaker(!speaker.value!!)
-        Handler(Looper.getMainLooper()).post { speaker.value = !speaker.value!! }
+//        rtpManager.setSpeaker(!speaker.value!!)
+        Handler(Looper.getMainLooper()).post { speaker.value = value }
+    }
+
+    fun cameraMute(value: Boolean) {
+        if (value) {
+//            rtpManager.setVideoEnable(false)
+            rtpManager.stopVideoSource()
+        } else {
+//            rtpManager.setVideoEnable(true)
+            rtpManager.startVideoSource()
+        }
+        Handler(Looper.getMainLooper()).post { cameraMute.value = value }
+    }
+
+    fun cameraSwitch() {
+        rtpManager.switchCamera()
+    }
+
+    fun changeDefinition() {
+        if (sd.value!!) {
+            rtpManager.captureFormatChange(720, 1280, 30)
+        } else {
+            rtpManager.captureFormatChange(360, 360, 10)
+        }
+        Handler(Looper.getMainLooper()).post { sd.value = !sd.value!! }
+    }
+
+    fun changeScalingType() {
+        scaleType.value = when (scaleType.value!!) {
+            ScalingType.SCALE_ASPECT_FIT -> ScalingType.SCALE_ASPECT_FILL
+            ScalingType.SCALE_ASPECT_FILL -> ScalingType.SCALE_ASPECT_BALANCED
+            ScalingType.SCALE_ASPECT_BALANCED -> ScalingType.SCALE_ASPECT_FIT
+        }
+        rtpManager.setScaleType(scaleType.value!!)
+    }
+
+    fun setSwappedFeeds(value: Boolean) {
+        rtpManager.setSwappedFeeds(value)
+        Handler(Looper.getMainLooper()).post { swapScreen.value = value }
     }
 
     open fun release() {
@@ -80,13 +126,18 @@ open class CallVM internal constructor(): ViewModel() {
         setTerminatedCall(false)
         Handler(Looper.getMainLooper()).post { mute.value = false }
         Handler(Looper.getMainLooper()).post { speaker.value = false }
+
+        Handler(Looper.getMainLooper()).post { cameraMute.value = false }
+        Handler(Looper.getMainLooper()).post { sd.value = false }
+        Handler(Looper.getMainLooper()).post { scaleType.value = ScalingType.SCALE_ASPECT_FILL }
+        Handler(Looper.getMainLooper()).post { swapScreen.value = false }
     }
 
     open fun startOffer(counterpart: User, type: Call.Type, callCreateSuccess: OnSuccessListener<Void>) {
         d(TAG, "startOffer")
         callDirection = Call.Direction.Offer
         this.counterpart = counterpart
-        space = Space()
+        space = Space(callType = type)
         SpaceRepository.post(space!!) {
             d(TAG, "create space success")
             call = Call(spaceId = space!!.id, type = type, direction = Call.Direction.Offer, counterpartName = counterpart.name)
@@ -102,7 +153,7 @@ open class CallVM internal constructor(): ViewModel() {
         SendFCM.sendMessage(
             to = counterpart!!.fcmToken!!,
             type = SendFCM.FCMType.Offer,
-            callType = Call.Type.AUDIO,
+            callType = call!!.type,
             spaceId = space!!.id,
             callId = call!!.id,
             sdp = sdp
@@ -119,7 +170,7 @@ open class CallVM internal constructor(): ViewModel() {
         SendFCM.sendMessage(
             to = counterpart!!.fcmToken!!,
             type = SendFCM.FCMType.Answer,
-            callType = Call.Type.AUDIO,
+            callType = call!!.type,
             spaceId = space!!.id,
             callId = call!!.id,
             sdp = sdp
@@ -197,7 +248,7 @@ open class CallVM internal constructor(): ViewModel() {
         d(TAG, "onAnswerCall")
         space!!.connected = true
         SpaceRepository.update(space!!.id, mapOf<String, Any>("connected" to true))
-        RTPManager.instance.setRemoteDescription(SessionDescription(SessionDescription.Type.ANSWER, sdp!!))
+        rtpManager.setRemoteDescription(SessionDescription(SessionDescription.Type.ANSWER, sdp!!))
     }
 
     fun onIceCandidate(ice: String?) {
@@ -261,6 +312,11 @@ open class CallVM internal constructor(): ViewModel() {
         setTerminatedCall(false)
         Handler(Looper.getMainLooper()).post { mute.value = false }
         Handler(Looper.getMainLooper()).post { speaker.value = false }
+
+        Handler(Looper.getMainLooper()).post { cameraMute.value = false }
+        Handler(Looper.getMainLooper()).post { sd.value = false }
+        Handler(Looper.getMainLooper()).post { scaleType.value = ScalingType.SCALE_ASPECT_FILL }
+        Handler(Looper.getMainLooper()).post { swapScreen.value = false }
     }
 
     private object Holder {
