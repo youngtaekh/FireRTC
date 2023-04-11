@@ -12,6 +12,7 @@ import kr.young.common.UtilLog.Companion.d
 import kr.young.common.UtilLog.Companion.e
 import kr.young.firertc.model.Call
 import kr.young.firertc.util.Config.Companion.CANDIDATES
+import kr.young.firertc.util.Config.Companion.CREATED_AT
 import kr.young.firertc.util.Config.Companion.SDP
 import kr.young.firertc.util.Config.Companion.SPACE_ID
 import kr.young.firertc.util.Config.Companion.TERMINATED
@@ -70,7 +71,7 @@ class CallRepository {
             d(TAG, "getByUserId")
             Firebase.firestore.collection(COLLECTION)
                 .whereEqualTo(USER_ID, userId)
-                .orderBy("createdAt", Query.Direction.DESCENDING)
+                .orderBy(CREATED_AT, Query.Direction.DESCENDING)
                 .get()
                 .addOnSuccessListener(success)
                 .addOnFailureListener(failure)

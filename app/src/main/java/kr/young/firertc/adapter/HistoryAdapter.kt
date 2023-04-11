@@ -45,6 +45,9 @@ class HistoryAdapter(private val calls: MutableList<Call>): Adapter<ViewHolder>(
                 Call.Type.SCREEN -> {
                     holder.ivCategory.setImageResource(R.drawable.round_mobile_screen_share_24)
                 }
+                Call.Type.MESSAGE -> {
+                    holder.ivCategory.setImageResource(R.drawable.round_chat_bubble_24)
+                }
                 else -> {
                     holder.ivCategory.setImageResource(R.drawable.round_videocam_24)
                 }

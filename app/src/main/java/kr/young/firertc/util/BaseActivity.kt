@@ -31,11 +31,7 @@ open class BaseActivity: AppCompatActivity(), CallSignal.Observer {
         super.onResume()
         d(TAG, "onResume")
         CallSignalImpl.instance.add(this)
-        val call = CallVM.instance.call
-        if (call != null && call.direction == Call.Direction.Answer && !call.connected && !call.terminated) {
-            d(TAG, "receive call")
-            startActivity(Intent(this, ReceiveActivity::class.java))
-        }
+        launchReceiveActivity()
         if (!requesting) {
             checkPermission()
         } else {
@@ -63,6 +59,16 @@ open class BaseActivity: AppCompatActivity(), CallSignal.Observer {
                     break
                 }
             }
+        }
+    }
+
+    private fun launchReceiveActivity() {
+        d(TAG, "launchReceiveActivity")
+        val call = CallVM.instance.call
+        if (call != null && call.direction == Call.Direction.Answer && !call.connected && !call.terminated) {
+            val intent = Intent(this, ReceiveActivity::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            startActivity(intent)
         }
     }
 
@@ -101,7 +107,7 @@ open class BaseActivity: AppCompatActivity(), CallSignal.Observer {
 
     override fun onIncomingCall() {
         d(TAG, "onIncomingCall")
-        startActivity(Intent(this, ReceiveActivity::class.java))
+        launchReceiveActivity()
     }
 
     override fun onAnswerCall(sdp: String) {

@@ -51,7 +51,8 @@ data class Call(
         else 1
         return "($USER_ID=${userId}\n" +
                 "$SPACE_ID=${spaceId?.substring(0,5)}\n" +
-                "state=$direction\nterminated=${terminated}\n" +
+                "direction=$direction\n" +
+                "connected=$connected\nterminated=${terminated}\n" +
                 "createAt=$createdAt\nid=${id.substring(0,5)}\n" +
                 "sdp=$s\ncandidates=${candidates.size})"
     }

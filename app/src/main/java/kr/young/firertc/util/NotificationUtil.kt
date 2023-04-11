@@ -13,9 +13,8 @@ import android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationCompat.Builder
 import androidx.core.app.NotificationCompat.CATEGORY_CALL
-import kr.young.firertc.MainActivity
-import kr.young.firertc.R
-import kr.young.firertc.ReceiveActivity
+import kr.young.firertc.*
+import kr.young.firertc.model.Call
 import kr.young.firertc.vm.CallVM
 
 class NotificationUtil {
@@ -24,8 +23,10 @@ class NotificationUtil {
             val intent = Intent()
             if (isReceive) {
                 intent.setClass(context, ReceiveActivity::class.java)
+            } else if (CallVM.instance.callType == Call.Type.AUDIO) {
+                intent.setClass(context, AudioCallActivity::class.java)
             } else {
-                intent.setClass(context, MainActivity::class.java)
+                intent.setClass(context, VideoCallActivity::class.java)
             }
             intent.flags = FLAG_ACTIVITY_CLEAR_TOP or FLAG_ACTIVITY_SINGLE_TOP
             val pendingIntent = PendingIntent.getActivity(context, 0, intent, FLAG_UPDATE_CURRENT or FLAG_IMMUTABLE)

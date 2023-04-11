@@ -3,6 +3,8 @@ package kr.young.firertc
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
+import android.view.KeyEvent
+import android.view.KeyEvent.KEYCODE_BACK
 import android.view.MotionEvent
 import android.view.View
 import android.view.View.OnClickListener
@@ -41,6 +43,8 @@ class ReceiveActivity : AppCompatActivity(), OnClickListener, OnTouchListener {
             binding.ivAnswer.setImageResource(R.drawable.round_videocam_24)
         } else if (vm.call!!.type == Call.Type.SCREEN) {
             binding.ivAnswer.setImageResource(R.drawable.round_mobile_screen_share_24)
+        } else if (vm.call!!.type == Call.Type.MESSAGE) {
+            binding.ivAnswer.setImageResource(R.drawable.round_chat_bubble_24)
         } else {
             binding.ivAnswer.setImageResource(R.drawable.round_call_24)
         }
@@ -65,13 +69,26 @@ class ReceiveActivity : AppCompatActivity(), OnClickListener, OnTouchListener {
         return super.onTouchEvent(event)
     }
 
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        if (keyCode == KEYCODE_BACK) {
+            return false
+        }
+        return super.onKeyDown(keyCode, event)
+    }
+
     private fun answer() {
         d(TAG, "answer")
         finish()
-        if (vm.call!!.type == Call.Type.VIDEO || vm.call!!.type == Call.Type.SCREEN) {
-            startActivity(Intent(this, VideoCallActivity::class.java))
-        } else {
-            startActivity(Intent(this, AudioCallActivity::class.java))
+        when (vm.call!!.type) {
+            Call.Type.AUDIO -> {
+                startActivity(Intent(this, AudioCallActivity::class.java))
+            }
+            Call.Type.MESSAGE -> {
+                startActivity(Intent(this, MessageActivity::class.java))
+            }
+            else -> {
+                startActivity(Intent(this, VideoCallActivity::class.java))
+            }
         }
     }
 

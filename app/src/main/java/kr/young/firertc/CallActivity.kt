@@ -7,6 +7,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.View.OnClickListener
 import android.view.View.OnTouchListener
+import androidx.appcompat.app.AppCompatActivity
 import androidx.databinding.DataBindingUtil
 import kr.young.common.TouchEffect
 import kr.young.common.UtilLog.Companion.d
@@ -27,7 +28,7 @@ import org.webrtc.SessionDescription
 import org.webrtc.StatsReport
 import java.util.*
 
-class CallActivity : BaseActivity(), OnClickListener, OnTouchListener, PCObserver.SDP, PCObserver.ICE, PCObserver {
+class CallActivity : AppCompatActivity(), OnClickListener, OnTouchListener, PCObserver.SDP, PCObserver.ICE, PCObserver {
     private lateinit var binding: ActivityCallBinding
     private lateinit var spaceViewModel: SpaceViewModel
     private lateinit var callViewModel: CallViewModel

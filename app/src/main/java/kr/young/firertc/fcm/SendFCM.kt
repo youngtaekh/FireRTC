@@ -24,8 +24,9 @@ class SendFCM {
             spaceId: String? = null,
             callId: String? = null,
             sdp: String? = null,
+            message: String? = null
         ) {
-            ApiClient.getApiService().sendNotification(payload = fcmPayload(to, type, callType, spaceId, callId, sdp))?.enqueue(object:
+            ApiClient.getApiService().sendNotification(payload = fcmPayload(to, type, callType, spaceId, callId, sdp, message))?.enqueue(object:
                 Callback<JsonObject?> {
                 override fun onResponse(
                     call: retrofit2.Call<JsonObject?>,
@@ -50,7 +51,8 @@ class SendFCM {
             callType: Call.Type,
             spaceId: String?,
             callId: String?,
-            sdp: String?
+            sdp: String?,
+            message: String?
         ): JsonObject {
             val payload = JsonObject()
             payload.addProperty(TO, to)
@@ -66,6 +68,9 @@ class SendFCM {
             }
             if (sdp != null) {
                 data.addProperty(SDP, sdp)
+            }
+            if (message != null) {
+                data.addProperty("message", message)
             }
             payload.add(DATA, data)
             return payload
@@ -85,6 +90,7 @@ class SendFCM {
         Leave,
         Sdp,
         Ice,
+        Message,
         Else
     }
 }

@@ -14,6 +14,7 @@ import kr.young.firertc.databinding.ActivityProfileBinding
 import kr.young.firertc.model.Call
 import kr.young.firertc.util.BaseActivity
 import kr.young.firertc.vm.AudioViewModel
+import kr.young.firertc.vm.MessageViewModel
 import kr.young.firertc.vm.UserViewModel
 import kr.young.firertc.vm.VideoViewModel
 
@@ -100,6 +101,15 @@ class ProfileActivity : BaseActivity(), OnClickListener, OnTouchListener {
 
     private fun chat() {
         d(TAG, "chat")
+        val messageVM = MessageViewModel.instance
+        messageVM.startOffer(userViewModel.selectedProfile!!, Call.Type.MESSAGE) {
+            messageVM.updateCallList()
+            messageVM.updateParticipantList()
+            startService(Intent(this, CallService::class.java))
+            val intent = Intent(this, MessageActivity::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            startActivity(intent)
+        }
     }
 
     companion object {

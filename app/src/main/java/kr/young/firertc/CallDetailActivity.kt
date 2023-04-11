@@ -93,11 +93,13 @@ class CallDetailActivity : BaseActivity(), OnClickListener, OnTouchListener {
             if (space!!.callType == Call.Type.CONFERENCE) {
                 binding.ivCall.visibility = INVISIBLE
                 binding.ivVideo.visibility = INVISIBLE
+                binding.ivScreen.visibility = INVISIBLE
                 binding.ivChat.visibility = INVISIBLE
             } else {
                 if (space!!.participants.size >= 2) {
                     binding.ivCall.visibility = VISIBLE
                     binding.ivVideo.visibility = VISIBLE
+                    binding.ivScreen.visibility = VISIBLE
                     binding.ivChat.visibility = VISIBLE
                     for (id in space!!.participants) {
                         if (id != MyDataViewModel.instance.getMyId()) {
@@ -152,6 +154,17 @@ class CallDetailActivity : BaseActivity(), OnClickListener, OnTouchListener {
 
     private fun chat() {
         d(TAG, "chat()")
+        if (counterpart != null) {
+            val messageVM = MessageViewModel.instance
+            messageVM.startOffer(counterpart!!, Call.Type.MESSAGE) {
+                messageVM.updateCallList()
+                messageVM.updateParticipantList()
+                startService(Intent(this, CallService::class.java))
+                val intent = Intent(this, MessageActivity::class.java)
+                intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                startActivity(intent)
+            }
+        }
     }
 
     private fun video() {

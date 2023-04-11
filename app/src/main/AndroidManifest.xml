@@ -23,6 +23,13 @@
         android:theme="@style/Theme.FireRTC"
         tools:targetApi="31">
         <activity
+            android:name=".MessageActivity"
+            android:exported="false">
+            <meta-data
+                android:name="android.app.lib_name"
+                android:value="" />
+        </activity>
+        <activity
             android:name=".VideoCallActivity"
             android:exported="false">
             <meta-data
@@ -80,9 +87,9 @@
 
         <service
             android:name=".CallService"
-            android:foregroundServiceType="mediaProjection|phoneCall"
             android:enabled="true"
-            android:exported="false" />
+            android:exported="false"
+            android:foregroundServiceType="mediaProjection|phoneCall" />
 
         <activity
             android:name=".CallActivity"

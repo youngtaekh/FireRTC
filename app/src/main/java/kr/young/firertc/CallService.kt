@@ -67,8 +67,13 @@ class CallService : Service(), PCObserver, PCObserver.ICE, PCObserver.SDP {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         d(TAG, "onStartCommand")
-        val isReceive = viewModel.callDirection == Call.Direction.Answer
-        startForeground(CALL_NOTIFICATION_ID, NotificationUtil.getCallNotification(context = this, isReceive = isReceive))
+        if (viewModel.call!!.type != Call.Type.MESSAGE) {
+            val isReceive = viewModel.callDirection == Call.Direction.Answer
+            startForeground(
+                CALL_NOTIFICATION_ID,
+                NotificationUtil.getCallNotification(context = this, isReceive = isReceive)
+            )
+        }
 
         return START_NOT_STICKY
     }
@@ -132,6 +137,7 @@ class CallService : Service(), PCObserver, PCObserver.ICE, PCObserver.SDP {
 
     override fun onICEConnected() {
         d(TAG, "onICEConnected")
+
     }
 
     override fun onICEDisconnected() {
@@ -140,6 +146,10 @@ class CallService : Service(), PCObserver, PCObserver.ICE, PCObserver.SDP {
 
     override fun onPCConnected() {
         d(TAG, "onPCConnected")
+        startForeground(
+            CALL_NOTIFICATION_ID,
+            NotificationUtil.getCallNotification(context = this, isReceive = false)
+        )
         viewModel.onPCConnected()
     }
 

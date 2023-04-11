@@ -237,7 +237,11 @@ open class CallVM internal constructor(): ViewModel() {
                     d(TAG, "call post success")
                     updateCallList()
                     updateParticipantList()
-                    startForegroundService(context, Intent(context, CallService::class.java))
+                    if (callType == Call.Type.MESSAGE) {
+                        context.startService(Intent(context, CallService::class.java))
+                    } else {
+                        startForegroundService(context, Intent(context, CallService::class.java))
+                    }
                     CallSignalImpl.instance.onIncomingObserver()
                 }
             }

@@ -4,6 +4,7 @@ class Config {
     companion object {
         const val DIRECTION = "direction"
         const val SPACE_ID = "spaceId"
+        const val CREATED_AT = "createdAt"
         const val TERMINATED_AT = "terminatedAt"
         const val TERMINATED = "terminated"
         const val NAME = "name"
