@@ -3,6 +3,7 @@ package kr.young.firertc.repo
 import com.google.android.gms.tasks.OnFailureListener
 import com.google.android.gms.tasks.OnSuccessListener
 import com.google.firebase.firestore.QuerySnapshot
+import com.google.firebase.firestore.Source
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.firestore.ktx.toObject
 import com.google.firebase.ktx.Firebase
@@ -36,6 +37,7 @@ class RelationRepository {
         }
 
         fun getAll(
+            source: Source,
             success: OnSuccessListener<QuerySnapshot> = OnSuccessListener {
                 d(TAG, "getAll success")
                 UserViewModel.instance.setResponseCode(RELATION_READ_SUCCESS)
@@ -48,7 +50,7 @@ class RelationRepository {
                     UserViewModel.instance.removeAllContact()
                     UserViewModel.instance.setRefreshContacts()
                 } else {
-                    UserRepository.getUsers(list)
+                    UserRepository.getUsers(source, list)
                 }
             },
             failure: OnFailureListener = OnFailureListener {
@@ -60,7 +62,7 @@ class RelationRepository {
             Firebase.firestore.collection(COLLECTION)
                 .whereEqualTo(FROM, MyDataViewModel.instance.getMyId())
                 .orderBy(TO)
-                .get()
+                .get(source)
                 .addOnSuccessListener(success)
                 .addOnFailureListener(failure)
         }

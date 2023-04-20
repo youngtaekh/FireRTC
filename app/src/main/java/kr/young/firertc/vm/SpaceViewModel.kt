@@ -167,7 +167,7 @@ class SpaceViewModel: ViewModel() {
             }
             if (remoteCall.userId != MyDataViewModel.instance.myData!!.id) {
                 SendFCM.sendMessage(
-                    to = remoteCall.fcmToken!!,
+                    toToken = remoteCall.fcmToken!!,
                     type = FCMType.New,
                     callType = call.type,
                     spaceId = remoteCall.spaceId,

@@ -4,6 +4,7 @@ import com.google.android.gms.tasks.OnFailureListener
 import com.google.android.gms.tasks.OnSuccessListener
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.QuerySnapshot
+import com.google.firebase.firestore.Source
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.firestore.ktx.toObject
 import com.google.firebase.ktx.Firebase
@@ -54,6 +55,7 @@ class UserRepository {
         }
 
         fun getUsers(
+            source: Source,
             list: List<String>,
             success: OnSuccessListener<QuerySnapshot> = OnSuccessListener {
                 d(TAG, "get users success")
@@ -87,7 +89,7 @@ class UserRepository {
                 start = end
                 Firebase.firestore.collection(COLLECTION)
                     .whereIn("id", subList)
-                    .get()
+                    .get(source)
                     .addOnSuccessListener(success)
                     .addOnFailureListener(failure)
             }

@@ -1,14 +1,13 @@
 package kr.young.firertc
 
 import android.annotation.SuppressLint
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.MotionEvent
 import android.view.View
 import android.view.View.*
-import android.view.inputmethod.EditorInfo
+import androidx.appcompat.app.AppCompatActivity
 import androidx.databinding.DataBindingUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -18,35 +17,35 @@ import kr.young.common.UtilLog.Companion.d
 import kr.young.firertc.adapter.MessageAdapter
 import kr.young.firertc.databinding.ActivityMessageBinding
 import kr.young.firertc.fcm.SendFCM
-import kr.young.firertc.model.Call
 import kr.young.firertc.model.Message
+import kr.young.firertc.repo.UserRepository.Companion.USER_READ_SUCCESS
+import kr.young.firertc.vm.ChatViewModel
 import kr.young.firertc.vm.MessageViewModel
 import kr.young.firertc.vm.MyDataViewModel
 import kr.young.rtp.RTPManager
 import kr.young.rtp.observer.PCObserver
 import kr.young.rtp.observer.PCObserverImpl
+import org.webrtc.IceCandidate
+import org.webrtc.SessionDescription
 import org.webrtc.StatsReport
 import java.lang.System.currentTimeMillis
 import java.util.*
 
-class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, PCObserver {
+class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, PCObserver, PCObserver.ICE, PCObserver.SDP {
     private lateinit var binding: ActivityMessageBinding
     private val viewModel = MessageViewModel.instance
     private val rtpManager = RTPManager.instance
 
     private val counterpart = viewModel.counterpart!!
 
-    private val messageList = mutableListOf<Message>()
     private lateinit var messageAdapter: MessageAdapter
-
-    private var rtpConnected = false
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = DataBindingUtil.setContentView(this, R.layout.activity_message)
 
-        messageAdapter = MessageAdapter(messageList)
+        messageAdapter = MessageAdapter(viewModel.messageList)
         binding.recyclerView.adapter = messageAdapter
         val layoutManager = LinearLayoutManager(this)
         layoutManager.orientation = RecyclerView.VERTICAL
@@ -72,28 +71,35 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
             override fun afterTextChanged(s: Editable?) {}
         })
 
-        val participants = mutableListOf(MyDataViewModel.instance.getMyId())
-        participants.add(counterpart.id)
-        participants.sort()
+        PCObserverImpl.instance.add(this as PCObserver)
+        PCObserverImpl.instance.add(this as PCObserver.SDP)
+        PCObserverImpl.instance.add(this as PCObserver.ICE)
+
+        viewModel.responseCode.observe(this) {
+            if (it != null) {
+                if (it == USER_READ_SUCCESS) {
+                    startCall()
+                }
+            }
+        }
 
         binding.tvTitle.text = counterpart.name
 
         startCall()
-
-        PCObserverImpl.instance.add(this)
     }
 
     override fun onDestroy() {
         super.onDestroy()
         d(TAG, "onDestroy")
-        if (viewModel.call != null) {
-            if (viewModel.call!!.connected) {
-                viewModel.end(SendFCM.FCMType.Bye)
-            } else {
-                viewModel.end(SendFCM.FCMType.Cancel)
-            }
+        if (viewModel.rtpConnected) {
+            viewModel.end(SendFCM.FCMType.Bye)
+        } else {
+            viewModel.end(SendFCM.FCMType.Cancel)
         }
-        PCObserverImpl.instance.remove(this)
+        viewModel.release()
+        PCObserverImpl.instance.remove(this as PCObserver)
+        PCObserverImpl.instance.remove(this as PCObserver.SDP)
+        PCObserverImpl.instance.remove(this as PCObserver.ICE)
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -111,30 +117,42 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
 
     private fun send() {
         val msg = binding.etMessage.text.toString()
-        setMessage(msg, MyDataViewModel.instance.getMyId())
-        if (rtpConnected) {
+        val message = Message(MyDataViewModel.instance.getMyId(), viewModel.chat!!.id!!, body = msg, createdAt = Date(currentTimeMillis()))
+        setMessage(message)
+        if (viewModel.rtpConnected) {
             rtpManager.sendData(msg)
         } else {
-            SendFCM.sendMessage(counterpart.fcmToken!!, SendFCM.FCMType.Message, message = msg)
+            SendFCM.sendMessage(
+                counterpart.fcmToken!!,
+                SendFCM.FCMType.Message,
+                chatId = viewModel.chat!!.id,
+                messageId = message.id,
+                message = msg,
+                myId = message.from,
+                name = MyDataViewModel.instance.myData!!.name
+            )
         }
         binding.etMessage.setText("")
         binding.ivSend.visibility = INVISIBLE
+        ChatViewModel.instance.selectedChat!!.lastMessage = msg
+        ChatViewModel.instance.updateChatLastMessage()
     }
 
-    private fun setMessage(msg: String, sender: String) {
+    private fun setMessage(message: Message) {
         runOnUiThread {
-            val lastMsg = messageList.last()
-            val lastDate = DateUtil.toFormattedString(lastMsg.createdAt!!, "aa hh:mm")
-            val newMsg = Message(sender, "", body = msg, createdAt = Date(currentTimeMillis()))
-            if (
-                lastDate == DateUtil.toFormattedString(newMsg.createdAt!!, "aa hh:mm") &&
-                lastMsg.from == newMsg.from
-            ) {
-                messageList.last().timeFlag = false
-                messageAdapter.notifyItemChanged(messageList.size - 1)
+            if (viewModel.messageList.isNotEmpty()) {
+                val lastMsg = viewModel.messageList.last()
+                val lastDate = DateUtil.toFormattedString(lastMsg.createdAt!!, "aa hh:mm")
+                if (
+                    lastDate == DateUtil.toFormattedString(message.createdAt!!, "aa hh:mm") &&
+                    lastMsg.from == message.from
+                ) {
+                    viewModel.messageList.last().timeFlag = false
+                    messageAdapter.notifyItemChanged(viewModel.messageList.size - 1)
+                }
             }
-            messageList.add(newMsg)
-            messageAdapter.notifyItemInserted(messageList.size - 1)
+            viewModel.messageMap[viewModel.chat!!.id!!]?.add(message)
+            messageAdapter.notifyItemInserted(viewModel.messageList.size - 1)
             binding.recyclerView.post {
                 binding.recyclerView.scrollToPosition(messageAdapter.itemCount - 1)
             }
@@ -142,7 +160,6 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
     }
 
     private fun startCall() {
-        if (viewModel.call == null) return
         rtpManager.init(this,
             isAudio = false,
             isVideo = false,
@@ -151,8 +168,7 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
             recordAudio = false
         )
 
-        val isOffer =viewModel.call!!.direction == Call.Direction.Offer
-        rtpManager.startRTP(context = this, data = null, isOffer = isOffer, viewModel.remoteSDP, viewModel.remoteIce)
+        rtpManager.startRTP(context = this, data = null, isOffer = viewModel.isOffer, viewModel.remoteSDP, viewModel.remoteIce)
     }
 
     companion object {
@@ -161,7 +177,7 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
 
     override fun onPCConnected() {
         d(TAG, "onPCConnected")
-        rtpConnected = true
+        viewModel.onPCConnected()
     }
 
     override fun onPCDisconnected() {
@@ -174,7 +190,7 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
 
     override fun onPCClosed() {
         d(TAG, "onPCClosed")
-        rtpConnected = false
+        viewModel.onPCClosed()
     }
 
     override fun onPCStatsReady(reports: Array<StatsReport?>?) {
@@ -186,7 +202,34 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
     }
 
     override fun onMessage(message: String) {
-        d(TAG, "onMessage $message")
-        setMessage(message, counterpart.id)
+        d(TAG, "onMessage ${counterpart.id} $message")
+        val msg = Message(counterpart.id, viewModel.chat!!.id!!, body = message, createdAt = Date(currentTimeMillis()))
+        setMessage(msg)
+    }
+
+    override fun onLocalDescription(sdp: SessionDescription?) {
+        d(TAG, "onLocalDescription")
+        if (viewModel.isOffer) {
+            viewModel.sendOffer(sdp!!.description)
+        } else {
+            viewModel.sendAnswer(sdp!!.description)
+        }
+    }
+
+    override fun onICECandidate(candidate: IceCandidate?) {
+        d(TAG, "onICECandidate")
+        viewModel.onIceCandidate(candidate!!.sdp)
+    }
+
+    override fun onICECandidatesRemoved(candidates: Array<out IceCandidate?>?) {
+        d(TAG, "onICECandidatesRemoved")
+    }
+
+    override fun onICEConnected() {
+        d(TAG, "onICEConnected")
+    }
+
+    override fun onICEDisconnected() {
+        d(TAG, "onICEDisconnected")
     }
 }

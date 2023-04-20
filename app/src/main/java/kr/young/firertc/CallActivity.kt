@@ -15,7 +15,6 @@ import kr.young.firertc.databinding.ActivityCallBinding
 import kr.young.firertc.fcm.SendFCM
 import kr.young.firertc.fcm.SendFCM.FCMType
 import kr.young.firertc.model.Space.SpaceStatus
-import kr.young.firertc.util.BaseActivity
 import kr.young.firertc.vm.CallViewModel
 import kr.young.firertc.vm.MyDataViewModel
 import kr.young.firertc.vm.SpaceViewModel
@@ -86,7 +85,7 @@ class CallActivity : AppCompatActivity(), OnClickListener, OnTouchListener, PCOb
                 d(TAG, "calls.observe call id ${call.id.substring(0, 5)} userId ${call.userId}")
                 if (!call.terminated) {
                     if (call.userId != MyDataViewModel.instance.getMyId()) {
-                        userList.add(call.userId!!)
+                        userList.add(call.userId)
                     }
                     count++
                 }
@@ -154,7 +153,7 @@ class CallActivity : AppCompatActivity(), OnClickListener, OnTouchListener, PCOb
             }
             if (call.userId != MyDataViewModel.instance.getMyId()) {
                 SendFCM.sendMessage(
-                    to = call.fcmToken!!,
+                    toToken = call.fcmToken!!,
                     type = FCMType.Leave,
                     callType = call.type,
                     spaceId = call.spaceId,
@@ -205,7 +204,7 @@ class CallActivity : AppCompatActivity(), OnClickListener, OnTouchListener, PCOb
         for (call in spaceViewModel.getCalls()) {
             if (!call.terminated && call.userId != MyDataViewModel.instance.getMyId()) {
                 SendFCM.sendMessage(
-                    to = call.fcmToken!!,
+                    toToken = call.fcmToken!!,
                     type = FCMType.Sdp,
                     callType = call.type,
                     spaceId = call.spaceId,
@@ -222,7 +221,7 @@ class CallActivity : AppCompatActivity(), OnClickListener, OnTouchListener, PCOb
         for (call in spaceViewModel.getCalls()) {
             if (!call.terminated && call.userId != MyDataViewModel.instance.getMyId()) {
                 SendFCM.sendMessage(
-                    to = call.fcmToken!!,
+                    toToken = call.fcmToken!!,
                     type = FCMType.Ice,
                     callType = call.type,
                     spaceId = call.spaceId,

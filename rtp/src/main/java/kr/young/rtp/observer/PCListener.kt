@@ -70,21 +70,11 @@ class PCListener(private val pcObserverImpl: PCObserverImpl): PeerConnection.Obs
                 PeerConnection.IceConnectionState.DISCONNECTED -> {
                     pcObserverImpl.onICEDisconnectedObserver()
                 }
-                PeerConnection.IceConnectionState.FAILED -> {
-                    e(TAG, "ICE connection FAILED.")
-                }
-                PeerConnection.IceConnectionState.NEW -> {
-                    i(TAG, "ICE connection NEW.")
-                }
-                PeerConnection.IceConnectionState.CHECKING -> {
-                    i(TAG, "ICE connection CHECKING.")
-                }
-                PeerConnection.IceConnectionState.COMPLETED -> {
-                    i(TAG, "ICE connection COMPLETED.")
-                }
-                PeerConnection.IceConnectionState.CLOSED -> {
-                    i(TAG, "ICE connection CLOSED.")
-                }
+                PeerConnection.IceConnectionState.FAILED -> {}
+                PeerConnection.IceConnectionState.NEW -> {}
+                PeerConnection.IceConnectionState.CHECKING -> {}
+                PeerConnection.IceConnectionState.COMPLETED -> {}
+                PeerConnection.IceConnectionState.CLOSED -> {}
                 else -> { i(TAG, "ICE connection else.") }
             }
         }
@@ -112,17 +102,13 @@ class PCListener(private val pcObserverImpl: PCObserverImpl): PeerConnection.Obs
                     pcObserverImpl.onPCDisconnectedObserver()
                 }
                 PeerConnection.PeerConnectionState.FAILED -> {
-                    e(TAG, "ICE connection FAILED.")
                     pcObserverImpl.onPCFailedObserver()
                 }
                 PeerConnection.PeerConnectionState.NEW -> {
-                    i(TAG, "ICE connection NEW.")
                 }
                 PeerConnection.PeerConnectionState.CONNECTING -> {
-                    i(TAG, "ICE connection CONNECTING.")
                 }
                 PeerConnection.PeerConnectionState.CLOSED -> {
-                    i(TAG, "ICE connection CLOSED.")
                     pcObserverImpl.onPCClosedObserver()
                 }
                 else -> { i(TAG, "ICE Connection else") }

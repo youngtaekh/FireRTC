@@ -2,6 +2,8 @@ package kr.young.rtp
 
 import android.content.Context
 import android.content.Intent
+import android.os.Handler
+import android.os.Looper
 import kr.young.common.UtilLog.Companion.d
 import kr.young.common.UtilLog.Companion.i
 import kr.young.rtp.observer.PCObserver
@@ -165,7 +167,7 @@ class RTPManager: PCObserver, PCObserver.SDP, PCObserver.ICE {
             this.isCreatedPCFactory = false
         }
 
-        this.rtcAudioManager?.stop()
+        Handler(Looper.getMainLooper()).post { this.rtcAudioManager?.stop() }
         this.rtcAudioManager = null
     }
 

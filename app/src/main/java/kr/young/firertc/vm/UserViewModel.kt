@@ -6,6 +6,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.google.android.gms.tasks.OnSuccessListener
 import com.google.firebase.firestore.DocumentSnapshot
+import com.google.firebase.firestore.Source
 import com.google.firebase.firestore.ktx.toObject
 import kr.young.common.UtilLog.Companion.d
 import kr.young.firertc.R
@@ -69,9 +70,19 @@ class UserViewModel: ViewModel() {
         }
     }
 
+    fun getLocalUser(id: String): User? {
+        for (contact in contacts) {
+            if (contact.id == id) {
+                return contact
+            }
+        }
+        return null
+    }
+
     fun readUsers(list: List<String>) {
         d(TAG, "readUsers(${list.size})")
         UserRepository.getUsers(
+            source = Source.SERVER,
             list = list,
             success = {
                 d(TAG, "readUsers Success")
@@ -114,10 +125,10 @@ class UserViewModel: ViewModel() {
         RelationRepository.post(relation)
     }
 
-    fun readAllRelation() {
+    fun readAllRelation(source: Source = Source.SERVER) {
         d(TAG, "readAllRelation")
         if (MyDataViewModel.instance.myData != null) {
-            RelationRepository.getAll()
+            RelationRepository.getAll(source)
         }
     }
 

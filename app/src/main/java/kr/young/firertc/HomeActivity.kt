@@ -9,6 +9,8 @@ import android.view.View.*
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.databinding.DataBindingUtil
 import com.google.android.gms.tasks.OnCompleteListener
+import com.google.firebase.firestore.Source
+import com.google.firebase.firestore.ktx.toObject
 import com.google.firebase.messaging.FirebaseMessaging
 import kr.young.common.TouchEffect
 import kr.young.common.UtilLog
@@ -17,7 +19,11 @@ import kr.young.firertc.databinding.ActivityHomeBinding
 import kr.young.firertc.fragment.*
 import kr.young.firertc.repo.AppSP
 import kr.young.firertc.util.BaseActivity
+import kr.young.firertc.util.Config.Companion.CHAT_ID
+import kr.young.firertc.vm.ChatViewModel
+import kr.young.firertc.vm.MessageViewModel
 import kr.young.firertc.vm.MyDataViewModel
+import kr.young.firertc.vm.UserViewModel
 import kotlin.random.Random
 
 class HomeActivity : BaseActivity(), OnClickListener, OnTouchListener {
@@ -32,6 +38,8 @@ class HomeActivity : BaseActivity(), OnClickListener, OnTouchListener {
         super.onCreate(savedInstanceState)
         binding = DataBindingUtil.setContentView(this, R.layout.activity_home)
         myViewModel = MyDataViewModel.instance
+
+        UserViewModel.instance.readAllRelation(Source.CACHE)
 
         replaceFragment(currentFragment)
         switchIcon(currentFragment)
@@ -76,6 +84,8 @@ class HomeActivity : BaseActivity(), OnClickListener, OnTouchListener {
             }
             d(TAG, "token $token")
         })
+
+        getChat(intent.getStringExtra(CHAT_ID))
     }
 
     override fun onResume() {
@@ -89,6 +99,11 @@ class HomeActivity : BaseActivity(), OnClickListener, OnTouchListener {
             intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
             signLauncher.launch(intent)
         }
+    }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        getChat(intent!!.getStringExtra(CHAT_ID))
     }
 
     override fun onClick(v: View?) {
@@ -127,6 +142,35 @@ class HomeActivity : BaseActivity(), OnClickListener, OnTouchListener {
             R.id.iv_menu -> { TouchEffect.iv(v, event) }
         }
         return super.onTouchEvent(event)
+    }
+
+    private fun getChat(chatId: String?) {
+        if (!chatId.isNullOrEmpty()) {
+            d(TAG, "getChat($chatId)")
+            ChatViewModel.instance.getChat(chatId) {
+                val vm = MessageViewModel.instance
+                vm.chat = it.toObject()
+                if (vm.chat == null) return@getChat
+
+                var counterpartId: String? = null
+                for (p in vm.chat!!.participants) {
+                    if (p != myViewModel.getMyId()) {
+                        counterpartId = p
+                        break
+                    }
+                }
+
+                UserViewModel.instance.readUser(counterpartId!!) { userDocument ->
+                    vm.counterpart = userDocument.toObject()
+                    if (vm.counterpart != null) {
+                        val intent = Intent(this, MessageActivity::class.java)
+                        intent.flags =
+                            Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                        startActivity(intent)
+                    }
+                }
+            }
+        }
     }
 
     private fun replaceFragment(fragmentNumber: Int) {

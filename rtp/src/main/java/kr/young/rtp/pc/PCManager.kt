@@ -131,7 +131,7 @@ class PCManager(
 
         audioDeviceModule?.release()
 
-        Logging.enableLogToDebugOutput(Logging.Severity.LS_INFO)
+        Logging.enableLogToDebugOutput(Logging.Severity.LS_NONE)
 
         return factory
     }
@@ -187,7 +187,7 @@ class PCManager(
         factory = null
 
         d(TAG, "Closing peer connection done.")
-        pcObserverImpl!!.onPCClosedObserver()
+//        pcObserverImpl!!.onPCClosedObserver()
         PeerConnectionFactory.stopInternalTracingCapture()
         PeerConnectionFactory.shutdownInternalTracer()
     }

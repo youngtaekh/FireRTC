@@ -122,6 +122,8 @@ open class CallVM internal constructor(): ViewModel() {
         space = null
         call = null
         counterpart = null
+        remoteIce = null
+        remoteSDP = null
         setResponseCode(0)
         setTerminatedCall(false)
         Handler(Looper.getMainLooper()).post { mute.value = false }
@@ -151,7 +153,7 @@ open class CallVM internal constructor(): ViewModel() {
         call!!.sdp = sdp
         CallRepository.updateSDP(call!!)
         SendFCM.sendMessage(
-            to = counterpart!!.fcmToken!!,
+            toToken = counterpart!!.fcmToken!!,
             type = SendFCM.FCMType.Offer,
             callType = call!!.type,
             spaceId = space!!.id,
@@ -168,7 +170,7 @@ open class CallVM internal constructor(): ViewModel() {
         call!!.sdp = sdp
         CallRepository.updateSDP(call!!)
         SendFCM.sendMessage(
-            to = counterpart!!.fcmToken!!,
+            toToken = counterpart!!.fcmToken!!,
             type = SendFCM.FCMType.Answer,
             callType = call!!.type,
             spaceId = space!!.id,
@@ -207,7 +209,7 @@ open class CallVM internal constructor(): ViewModel() {
         space!!.terminated = true
         SpaceRepository.updateStatus(space!!, fcmType.toString())
         SendFCM.sendMessage(
-            to = counterpart!!.fcmToken!!,
+            toToken = counterpart!!.fcmToken!!,
             type = fcmType,
             callType = call!!.type,
             spaceId = space!!.id,
@@ -218,9 +220,7 @@ open class CallVM internal constructor(): ViewModel() {
 
     open fun onIncomingCall(context: Context, userId: String?, spaceId: String?, type: String?, sdp: String?) {
         d(TAG, "onIncomingCall")
-        if (spaceId == null || type == null) {
-            return
-        }
+        if (spaceId == null || type == null) { return }
 
         callType = Call.Type.valueOf(type)
         callDirection = Call.Direction.Answer
@@ -260,7 +260,7 @@ open class CallVM internal constructor(): ViewModel() {
         call!!.candidates.add(ice)
         CallRepository.updateCandidates(call!!, ice)
         SendFCM.sendMessage(
-            to = counterpart!!.fcmToken!!,
+            toToken = counterpart!!.fcmToken!!,
             type = SendFCM.FCMType.Ice,
             callType = call!!.type,
             spaceId = call!!.spaceId,
