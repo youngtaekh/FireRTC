@@ -111,6 +111,7 @@ class HomeActivity : BaseActivity(), OnClickListener, OnTouchListener {
             R.id.iv_menu -> {
                 when (currentFragment) {
                     CONTACT -> { startActivity(Intent(this, AddContactActivity::class.java)) }
+                    CHAT -> { startActivity(Intent(this, AddChatActivity::class.java)) }
                 }
             }
             R.id.rl_contact -> {
@@ -197,6 +198,7 @@ class HomeActivity : BaseActivity(), OnClickListener, OnTouchListener {
                 binding.ivHistory.setColorFilter(getColor(R.color.white))
                 binding.ivSetting.setColorFilter(getColor(R.color.white))
 
+                binding.ivMenu.setImageResource(R.drawable.outline_person_add_24)
                 binding.ivMenu.visibility = VISIBLE
             }
             CHAT -> {
@@ -206,7 +208,8 @@ class HomeActivity : BaseActivity(), OnClickListener, OnTouchListener {
                 binding.ivHistory.setColorFilter(getColor(R.color.white))
                 binding.ivSetting.setColorFilter(getColor(R.color.white))
 
-                binding.ivMenu.visibility = GONE
+                binding.ivMenu.setImageResource(R.drawable.round_add_24)
+                binding.ivMenu.visibility = VISIBLE
             }
             CONFERENCE -> {
                 binding.ivContact.setColorFilter(getColor(R.color.white))

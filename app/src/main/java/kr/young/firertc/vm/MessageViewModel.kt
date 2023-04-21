@@ -156,6 +156,7 @@ class MessageViewModel private constructor(): ViewModel() {
 
     fun onAnswerCall(sdp: String?) {
         RTPManager.instance.setRemoteDescription(SessionDescription(SessionDescription.Type.ANSWER, sdp!!))
+        handler?.removeCallbacks(cancelRunnable)
     }
 
     fun onIceCandidate(ice: String?) {

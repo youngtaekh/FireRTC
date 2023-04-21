@@ -6,17 +6,21 @@ import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.View.INVISIBLE
+import android.view.View.OnClickListener
 import android.view.View.VISIBLE
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.firebase.firestore.ktx.toObject
 import kr.young.common.UtilLog.Companion.d
+import kr.young.firertc.AddChatActivity
 import kr.young.firertc.MessageActivity
 import kr.young.firertc.R
 import kr.young.firertc.adapter.ChatAdapter
+import kr.young.firertc.model.Chat
 import kr.young.firertc.model.User
 import kr.young.firertc.repo.ChatRepository.Companion.CHAT_READ_SUCCESS
 import kr.young.firertc.vm.ChatViewModel
@@ -24,10 +28,10 @@ import kr.young.firertc.vm.MessageViewModel
 import kr.young.firertc.vm.MyDataViewModel
 import kr.young.firertc.vm.UserViewModel
 
-class ChatFragment : Fragment() {
+class ChatFragment : Fragment(), OnClickListener {
     private val chatViewModel = ChatViewModel.instance
     private lateinit var chatAdapter: ChatAdapter
-    private var itemCount = 0
+    private lateinit var itemList :MutableList<Chat>
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -38,11 +42,13 @@ class ChatFragment : Fragment() {
         val swipe = layout.findViewById<SwipeRefreshLayout>(R.id.swipe)
         val recyclerView: RecyclerView = layout.findViewById(R.id.recycler_view)
         val tvEmpty: TextView = layout.findViewById(R.id.tv_empty)
+        val fabAdd: FloatingActionButton = layout.findViewById(R.id.fab_add)
+        fabAdd.setOnClickListener(this)
 
         chatAdapter = ChatAdapter()
         chatAdapter.setOnItemClickListener(listener, longListener)
         recyclerView.adapter = chatAdapter
-        itemCount = chatViewModel.chatList.size
+        itemList = chatViewModel.chatList
 
         val layoutManager = LinearLayoutManager(context)
         layoutManager.orientation = RecyclerView.VERTICAL
@@ -60,20 +66,40 @@ class ChatFragment : Fragment() {
                     d(TAG, "response code CHAT_READ_SUCCESS")
                     if (chatViewModel.chatList.isEmpty()) {
                         tvEmpty.visibility = VISIBLE
-                        chatAdapter.notifyItemRangeRemoved(0, itemCount)
+                        chatAdapter.notifyItemRangeRemoved(0, itemList.size)
                     } else {
                         tvEmpty.visibility = INVISIBLE
-                        chatAdapter.notifyItemRangeRemoved(0, itemCount)
-                        chatAdapter.notifyItemRangeInserted(0, chatViewModel.chatList.size)
+                        if (itemList.size != chatViewModel.chatList.size) {
+                            chatAdapter.notifyItemRangeRemoved(0, itemList.size)
+                            chatAdapter.notifyItemRangeInserted(0, chatViewModel.chatList.size)
+                        } else {
+                            for (i in chatViewModel.chatList.indices) {
+                                if (itemList[i] != chatViewModel.chatList[i]) {
+                                    d(TAG, "$i different")
+                                    chatAdapter.notifyItemChanged(i)
+                                } else {
+                                    d(TAG, "$i same")
+                                }
+                            }
+                        }
                     }
-                    itemCount = chatViewModel.chatList.size
+                    itemList = chatViewModel.chatList
                 }
             }
         }
 
-        chatViewModel.getChats()
-
         return layout
+    }
+
+    override fun onResume() {
+        super.onResume()
+        chatViewModel.getChats()
+    }
+
+    override fun onClick(v: View?) {
+        when (v?.id) {
+            R.id.fab_add -> { startActivity(Intent(context, AddChatActivity::class.java)) }
+        }
     }
 
     private val listener = { it: Int ->

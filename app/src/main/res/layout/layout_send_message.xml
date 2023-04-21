@@ -4,7 +4,8 @@
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:paddingBottom="5dp">
 
         <TextView
             android:id="@+id/tv_message"
@@ -13,7 +14,7 @@
             android:padding="10dp"
             android:maxWidth="250dp"
             android:layout_marginEnd="16dp"
-            android:layout_marginTop="10dp"
+            android:layout_marginTop="5dp"
             android:background="@drawable/send_text_box"
             android:ellipsize="end"
             android:maxLines="5"

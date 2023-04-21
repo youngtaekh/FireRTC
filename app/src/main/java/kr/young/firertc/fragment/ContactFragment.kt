@@ -2,27 +2,28 @@ package kr.young.firertc.fragment
 
 import android.content.Intent
 import android.os.Bundle
-import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
-import android.view.View.INVISIBLE
-import android.view.View.VISIBLE
+import android.view.View.*
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
+import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 import kr.young.common.UtilLog.Companion.d
-import kr.young.firertc.R
+import kr.young.firertc.AddContactActivity
 import kr.young.firertc.ProfileActivity
+import kr.young.firertc.R
 import kr.young.firertc.adapter.ContactAdapter
 import kr.young.firertc.model.Relation
 import kr.young.firertc.model.User
 import kr.young.firertc.repo.RelationRepository
 import kr.young.firertc.vm.UserViewModel
 
-class ContactFragment : Fragment() {
+class ContactFragment : Fragment(), OnClickListener {
 
     private val userViewModel = UserViewModel.instance
     private lateinit var contactList: MutableList<User>
@@ -36,6 +37,8 @@ class ContactFragment : Fragment() {
         val swipe = layout.findViewById<SwipeRefreshLayout>(R.id.swipe)
         val recyclerView = layout.findViewById<RecyclerView>(R.id.recycler_view)
         val tvEmpty = layout.findViewById<TextView>(R.id.tv_empty)
+        val fabAdd: FloatingActionButton = layout.findViewById(R.id.fab_add)
+        fabAdd.setOnClickListener(this)
 
         swipe.setOnRefreshListener {
             d(TAG, "contacts swipe refresh")
@@ -78,6 +81,12 @@ class ContactFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         d(TAG, "onResume")
+    }
+
+    override fun onClick(v: View?) {
+        when (v?.id) {
+            R.id.fab_add -> { startActivity(Intent(context, AddContactActivity::class.java)) }
+        }
     }
 
     private fun removeContact(pos: Int) {

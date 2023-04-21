@@ -11,6 +11,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.databinding.DataBindingUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.RecyclerView.OnScrollListener
 import kr.young.common.DateUtil
 import kr.young.common.TouchEffect
 import kr.young.common.UtilLog.Companion.d
@@ -39,22 +40,36 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
     private val counterpart = viewModel.counterpart!!
 
     private lateinit var messageAdapter: MessageAdapter
+    private lateinit var layoutManager: LinearLayoutManager
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = DataBindingUtil.setContentView(this, R.layout.activity_message)
 
+        for (i in 0 until 99) {
+            val message = if (i % 3 == 0) {
+                Message(MyDataViewModel.instance.getMyId(), viewModel.chat!!.id!!, body = "msg$i", createdAt = Date(currentTimeMillis()))
+            } else {
+                Message("test00", viewModel.chat!!.id!!, body = "msg$i", createdAt = Date(currentTimeMillis()))
+            }
+            viewModel.messageList.add(message)
+        }
         messageAdapter = MessageAdapter(viewModel.messageList)
         binding.recyclerView.adapter = messageAdapter
-        val layoutManager = LinearLayoutManager(this)
+        layoutManager = LinearLayoutManager(this)
         layoutManager.orientation = RecyclerView.VERTICAL
+        //keep scroll when keyboard opened
+        layoutManager.stackFromEnd = true
         binding.recyclerView.layoutManager = layoutManager
+        binding.recyclerView.post { binding.recyclerView.scrollToPosition(messageAdapter.itemCount - 1) }
 
         binding.ivBack.setOnTouchListener(this)
         binding.ivBack.setOnClickListener(this)
         binding.ivSend.setOnTouchListener(this)
         binding.ivSend.setOnClickListener(this)
+        binding.ivBottom.setOnTouchListener(this)
+        binding.ivBottom.setOnClickListener(this)
 
         binding.etMessage.addTextChangedListener(object: TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
@@ -69,6 +84,28 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
             }
 
             override fun afterTextChanged(s: Editable?) {}
+        })
+
+        binding.recyclerView.addOnScrollListener(object: OnScrollListener() {
+            var dragging = false
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                if (dragging) {
+                    super.onScrolled(recyclerView, dx, dy)
+//                    d(TAG, "onScrolled($dx, $dy)")
+//                    d(TAG, "last item ${layoutManager.findLastCompletelyVisibleItemPosition()}")
+//                    d(TAG, "first item ${layoutManager.findFirstCompletelyVisibleItemPosition()}")
+                    if (layoutManager.findLastCompletelyVisibleItemPosition() == viewModel.messageList.size - 1) {
+                        binding.ivBottom.visibility = INVISIBLE
+                    } else {
+                        binding.ivBottom.visibility = VISIBLE
+                    }
+                }
+            }
+
+            override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
+                super.onScrollStateChanged(recyclerView, newState)
+                dragging = true
+            }
         })
 
         PCObserverImpl.instance.add(this as PCObserver)
@@ -112,11 +149,19 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
         when (v?.id) {
             R.id.iv_back -> { finish() }
             R.id.iv_send -> { send() }
+            R.id.iv_bottom -> {
+                binding.recyclerView.post {
+                    binding.recyclerView.scrollToPosition(messageAdapter.itemCount - 1)
+                }
+                binding.ivBottom.visibility = INVISIBLE
+            }
         }
     }
 
     private fun send() {
+        d(TAG, "sned()")
         val msg = binding.etMessage.text.toString()
+        d(TAG, "send($msg)")
         val message = Message(MyDataViewModel.instance.getMyId(), viewModel.chat!!.id!!, body = msg, createdAt = Date(currentTimeMillis()))
         setMessage(message)
         if (viewModel.rtpConnected) {

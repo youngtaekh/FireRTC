@@ -14,6 +14,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.RecyclerView.VERTICAL
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 import kr.young.common.UtilLog.Companion.d
 import kr.young.firertc.CallDetailActivity
 import kr.young.firertc.R
@@ -38,6 +39,8 @@ class HistoryFragment : Fragment() {
         val swipe = layout.findViewById<SwipeRefreshLayout>(R.id.swipe)
         val recyclerView = layout.findViewById<RecyclerView>(R.id.recycler_view)
         val tvEmpty = layout.findViewById<TextView>(R.id.tv_empty)
+        val fabAdd: FloatingActionButton = layout.findViewById(R.id.fab_add)
+        fabAdd.visibility = INVISIBLE
 
         swipe.setOnRefreshListener {
             d(TAG, "history swipe refresh")

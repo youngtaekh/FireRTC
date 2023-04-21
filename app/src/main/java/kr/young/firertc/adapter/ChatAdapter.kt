@@ -87,7 +87,7 @@ class ChatAdapter : Adapter<ViewHolder>() {
                     }
                 }
             }
-            binding.tvMessage.text = chat.lastMessage ?: "No Message"
+            binding.tvMessage.text = chat.lastMessage
             val now = DateUtil.toFormattedString(currentTimeMillis(), "yy-MM-dd")
             val modifiedDate = DateUtil.toFormattedString(chat.modifiedAt!!, "yy-MM-dd")
             binding.tvTime.text = if (now == modifiedDate) {
