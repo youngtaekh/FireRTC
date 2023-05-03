@@ -21,7 +21,7 @@ android {
     buildTypes {
         debug {
             buildConfigField("String", "FCM_BASE_URL", "\"https://fcm.googleapis.com/\"")
-            buildConfigField("String", "FCM_SERVER_KEY", "\"AAAAxajhs4s:APA91bFbKcfhRGmIK_pn5HAQZgWoCpbF_qxaRNe2hG_QZLOBuwNfF3b2AGKpA8LcGd5QVAmIDazBnJBwC26rinf4G6kkPG1yyy63hdAqQx-q68axHZ9Hz-XgzziTPiI0fm1cfDXSNOIR\"")
+            buildConfigField("String", "FCM_SERVER_KEY", "")
         }
         release {
             minifyEnabled false
