@@ -29,12 +29,10 @@ class ChatAdapter : Adapter<ViewHolder>() {
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        if (chatViewModel.chatList != null) {
-            (holder as ChatHolder).bind(chatViewModel.chatList!![position])
-        }
+        (holder as ChatHolder).bind(chatViewModel.chatList[position])
     }
 
-    override fun getItemCount() = chatViewModel.chatList?.size ?: 0
+    override fun getItemCount() = chatViewModel.chatList.size
 
     fun setOnItemClickListener(listener: ClickListener, longListener: LongClickListener) {
         mClickListener = listener
