@@ -83,6 +83,10 @@ class SendFCM {
             val payload = JsonObject()
             payload.addProperty(TO, toToken)
             val data = JsonObject()
+            val notification = JsonObject()
+            notification.addProperty("title", "Notification Title")
+            notification.addProperty("body", "Notification Body")
+            data.addProperty("content_available", true)
             data.addProperty(USER_ID, myId)
             data.addProperty(NAME, name)
             data.addProperty(TYPE, type.toString())
@@ -108,6 +112,9 @@ class SendFCM {
                 data.addProperty(MESSAGE, message)
             }
             payload.add(DATA, data)
+            if (type == FCMType.Offer || type == FCMType.Answer) {
+                payload.add("notification", notification)
+            }
             return payload
         }
 
