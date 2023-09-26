@@ -9,6 +9,7 @@ data class User (
     var id: String = "",
     var password: String = "",
     var name: String = id,
+    val os: String = "Android",
     var fcmToken: String? = null,
     val createdAt: Date? = null,
 ) {
@@ -19,13 +20,14 @@ data class User (
             "id" to id,
             "password" to password,
             NAME to name,
+            "os" to os,
             FCM_TOKEN to token,
             "createdAt" to at
         )
     }
 
     override fun toString(): String {
-        return "id $id, pwd $password, $NAME $name, createdAt $createdAt\nfcmToken $fcmToken"
+        return "id $id, $NAME $name, os $os, createdAt $createdAt\nfcmToken $fcmToken"
     }
 
     companion object {

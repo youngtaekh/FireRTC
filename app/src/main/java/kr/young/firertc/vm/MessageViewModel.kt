@@ -16,14 +16,12 @@ import kr.young.firertc.repo.ChatRepository
 import kr.young.firertc.repo.ChatRepository.Companion.CHAT_READ_SUCCESS
 import kr.young.firertc.repo.UserRepository
 import kr.young.firertc.repo.UserRepository.Companion.USER_READ_SUCCESS
-import kr.young.firertc.util.NotificationUtil
 import kr.young.rtp.RTPManager
 import org.webrtc.SessionDescription
 import java.lang.System.currentTimeMillis
 import java.util.*
 
 class MessageViewModel private constructor(): ViewModel() {
-    val vm = CallVM.instance
     var counterpart: User? = null
     var chat: Chat? = null
     var messageMap = mutableMapOf<String, MutableList<Message>>()
@@ -97,12 +95,9 @@ class MessageViewModel private constructor(): ViewModel() {
             type = SendFCM.FCMType.Offer,
             callType = Call.Type.MESSAGE,
             chatId = chat!!.id,
+            targetOS = counterpart!!.os,
             sdp = sdp
         )
-    }
-
-    fun startAnswer() {
-        d(TAG, "startAnswer")
     }
 
     fun sendAnswer(sdp: String) {
@@ -112,6 +107,7 @@ class MessageViewModel private constructor(): ViewModel() {
             type = SendFCM.FCMType.Answer,
             callType = Call.Type.MESSAGE,
             chatId = chat!!.id,
+            targetOS = counterpart!!.os,
             sdp = sdp
         )
     }
@@ -123,6 +119,7 @@ class MessageViewModel private constructor(): ViewModel() {
             type = fcmType,
             callType = Call.Type.MESSAGE,
             chatId = chat!!.id,
+            targetOS = counterpart!!.os,
         )
         onTerminatedCall()
     }
@@ -137,7 +134,15 @@ class MessageViewModel private constructor(): ViewModel() {
         d(TAG, "onIncomingCall($userId, ${chat?.id}, $chatId, $message)")
         if (chatId == null || userId == null) { return }
         if (chat == null || chat!!.id != chatId) {
-            SendFCM.sendMessage(fcmToken!!, SendFCM.FCMType.Decline, Call.Type.MESSAGE)
+            UserRepository.getUser(userId) { user ->
+                this.counterpart = user.toObject()
+                SendFCM.sendMessage(
+                    toToken = fcmToken!!,
+                    type = SendFCM.FCMType.Decline,
+                    callType = Call.Type.MESSAGE,
+                    targetOS = counterpart!!.os,
+                )
+            }
             return
         }
 
@@ -166,6 +171,7 @@ class MessageViewModel private constructor(): ViewModel() {
             type = SendFCM.FCMType.Ice,
             callType = Call.Type.MESSAGE,
             chatId = chat!!.id,
+            targetOS = counterpart!!.os,
             sdp = ice
         )
     }

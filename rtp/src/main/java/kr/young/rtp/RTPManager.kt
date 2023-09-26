@@ -250,8 +250,7 @@ class RTPManager: PCObserver, PCObserver.SDP, PCObserver.ICE {
         i(TAG, "createPeerConnectionFactory()")
 
         executor!!.execute {
-            pcManager =
-                PCManager(context, pcParameters!!)
+            pcManager = PCManager(context, pcParameters!!)
             pcManager!!.createPeerConnectionFactory(context, eglBase!!, executor!!, recordAudio)
             this.isCreatedPCFactory = true
         }
@@ -334,7 +333,7 @@ class RTPManager: PCObserver, PCObserver.SDP, PCObserver.ICE {
 
     fun addRemoteIceCandidate(iceCandidate: IceCandidate) {
         executor!!.execute {
-            i(TAG, "addRemoteIceCandidate()")
+//            i(TAG, "addRemoteIceCandidate()")
             pcManager!!.addRemoteIceCandidate(iceCandidate)
         }
     }

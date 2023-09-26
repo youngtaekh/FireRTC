@@ -86,10 +86,11 @@ class VideoViewModel private constructor(): ViewModel() {
         context: Context,
         userId: String?,
         spaceId: String?,
+        callId: String?,
         type: String?,
         sdp: String?
     ) {
-        vm.onIncomingCall(context, userId, spaceId, type, sdp)
+        vm.onIncomingCall(context, userId, spaceId, callId, type, sdp)
     }
 
     fun onAnswerCall(sdp: String?) {

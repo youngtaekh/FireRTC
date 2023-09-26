@@ -18,6 +18,7 @@ import kr.young.common.UtilLog.Companion.d
 import kr.young.firertc.adapter.MessageAdapter
 import kr.young.firertc.databinding.ActivityMessageBinding
 import kr.young.firertc.fcm.SendFCM
+import kr.young.firertc.model.Call
 import kr.young.firertc.model.Message
 import kr.young.firertc.repo.UserRepository.Companion.USER_READ_SUCCESS
 import kr.young.firertc.vm.ChatViewModel
@@ -170,6 +171,7 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
             SendFCM.sendMessage(
                 counterpart.fcmToken!!,
                 SendFCM.FCMType.Message,
+                callType = Call.Type.MESSAGE,
                 chatId = viewModel.chat!!.id,
                 messageId = message.id,
                 message = msg,

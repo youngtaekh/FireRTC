@@ -221,6 +221,12 @@ class PCManager(
         sdpMediaConstraints!!.mandatory.add(
             MediaConstraints.KeyValuePair("OfferToReceiveVideo", receiveVideo.toString())
         )
+        sdpMediaConstraints!!.optional.add(
+            MediaConstraints.KeyValuePair("DtlsSrtpKeyAgreement", "true")
+        )
+        sdpMediaConstraints!!.optional.add(
+            MediaConstraints.KeyValuePair("RtpDataChannels", pcParameters.isDataChannel.toString())
+        )
     }
 
     /**
@@ -265,14 +271,14 @@ class PCManager(
     }
 
     fun addRemoteIceCandidate(candidate: IceCandidate?) {
-        d(TAG, "addRemoteIceCandidate")
+//        d(TAG, "addRemoteIceCandidate")
         if (peerConnection != null) {
             if (sdpListener != null) {
-                d(TAG, "sdpListener!!.addCandidate")
+//                d(TAG, "sdpListener!!.addCandidate")
                 sdpListener!!.addCandidate(candidate!!)
             }
             if (peerConnection != null) {
-                d(TAG, "peerConnection!!.addIceCandidate")
+//                d(TAG, "peerConnection!!.addIceCandidate")
                 peerConnection!!.addIceCandidate(candidate)
             }
         }

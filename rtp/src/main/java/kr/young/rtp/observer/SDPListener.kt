@@ -43,12 +43,11 @@ class SDPListener(
             e(TAG, "Multiple SDP created.")
             return
         }
-        val description = p0!!.description
-        val sdp = SessionDescription(p0.type, description)
-        localSDP = sdp
+        localSDP = p0
         executor!!.execute {
-            i(TAG, "Set local SDP from ${sdp.type}")
-            peerConnection.setLocalDescription(this, sdp)
+            i(TAG, "Set local SDP from ${p0!!.type}")
+            println(p0.description)
+            peerConnection.setLocalDescription(this, p0)
         }
     }
 

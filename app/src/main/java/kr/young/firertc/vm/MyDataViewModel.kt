@@ -7,12 +7,21 @@ import com.google.firebase.firestore.ktx.toObject
 import kr.young.common.Crypto
 import kr.young.common.UtilLog.Companion.d
 import kr.young.common.UtilLog.Companion.e
+import kr.young.common.UtilLog.Companion.i
+import kr.young.firertc.fcm.HtmlParse
+import kr.young.firertc.fcm.StatizClient
 import kr.young.firertc.model.User
 import kr.young.firertc.repo.AppSP
+import kr.young.firertc.repo.GameRepository
 import kr.young.firertc.repo.UserRepository
 import kr.young.firertc.repo.UserRepository.Companion.USER_READ_FAILURE
 import kr.young.firertc.repo.UserRepository.Companion.USER_READ_SUCCESS
+import kr.young.firertc.util.DateUtil
 import kr.young.firertc.util.ResponseCode.Companion.WRONG_PASSWORD
+import okhttp3.ResponseBody
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
 
 class MyDataViewModel {
 
@@ -76,9 +85,27 @@ class MyDataViewModel {
     }
 
     fun signOut() {
-        myData = null
-        AppSP.instance.setSignIn(false)
-        setSigned(false)
+//        myData = null
+//        AppSP.instance.setSignIn(false)
+//        setSigned(false)
+//        StatizClient.getApiService().getSchedule(month = 8, year = 2023)
+//            .enqueue(object: Callback<ResponseBody> {
+//                override fun onResponse(call: Call<ResponseBody>, response: Response<ResponseBody>) {
+//                    if (response.isSuccessful) {
+//                        i(TAG, "getInfo Success ${call.request()}")
+//                        HtmlParse.schedule(response.body()!!.string())
+//                    } else {
+//                        d(TAG, "getInfo not Success")
+//                    }
+//                }
+//
+//                override fun onFailure(call: Call<ResponseBody>, t: Throwable) {
+//                    e(TAG, "getInfo Failure", t)
+//                }
+//
+//            })
+        GameRepository.getGames(endDate = DateUtil.getDate(2023, 9, 1), startDate = DateUtil.getDate(2023, 6, 29))
+        GameRepository.getGames(endDate = DateUtil.getDate(2023, 9, 1))
     }
 
     fun getMyId(): String {
