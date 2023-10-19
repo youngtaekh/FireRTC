@@ -42,6 +42,7 @@ class PCManager(
     /** timer for stat period */
     private var statTimer: Timer? = null
 
+    @Suppress("DEPRECATION")
     private var timerTask: TimerTask = object : TimerTask() {
         override fun run() {
             peerConnection?.getStats(statsObserver, null)
@@ -295,7 +296,7 @@ class PCManager(
     fun sendData(message: String) {
         if (dataChannel == null) return
         i(TAG, "sendData($message)")
-        val byteBuffer = ByteBuffer.allocate(100)
+        val byteBuffer = ByteBuffer.allocate(message.toByteArray().size)
         byteBuffer.put(message.toByteArray())
         byteBuffer.flip()
         val buffer = DataChannel.Buffer(byteBuffer, false)

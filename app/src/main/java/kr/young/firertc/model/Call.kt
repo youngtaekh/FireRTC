@@ -26,6 +26,7 @@ data class Call(
     var sdp: String? = null,
     var candidates: MutableList<String> = mutableListOf(),
     val createdAt: Date? = null,
+    var connectedAt: Date? = null,
     var terminatedAt: Date? = null,
     var isHeader: Boolean = false,
 ) {

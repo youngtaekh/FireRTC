@@ -11,6 +11,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.google.android.gms.tasks.OnSuccessListener
 import com.google.firebase.firestore.DocumentSnapshot
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.ktx.toObject
 import kr.young.common.DateUtil
 import kr.young.common.UtilLog.Companion.d
@@ -25,6 +26,7 @@ import kr.young.firertc.repo.CallRepository.Companion.CALL_READ_SUCCESS
 import kr.young.firertc.repo.SpaceRepository
 import kr.young.firertc.repo.SpaceRepository.Companion.SPACE_READ_SUCCESS
 import kr.young.firertc.repo.UserRepository
+import kr.young.firertc.util.Config.Companion.CONNECTED_AT
 import kr.young.rtp.RTPManager
 import org.webrtc.RendererCommon.ScalingType
 import org.webrtc.SessionDescription
@@ -51,7 +53,7 @@ open class CallVM internal constructor(): ViewModel() {
     val scaleType = MutableLiveData<ScalingType>()
     val swapScreen = MutableLiveData<Boolean> ()
 
-    val rtpManager = RTPManager.instance
+    private val rtpManager = RTPManager.instance
 
     var remoteSDP: SessionDescription? = null
     var remoteIce: String? = null
@@ -60,7 +62,7 @@ open class CallVM internal constructor(): ViewModel() {
         Handler(Looper.getMainLooper()).post { responseCode.value = value }
     }
 
-    fun setTerminatedCall(value: Boolean) {
+    private fun setTerminatedCall(value: Boolean) {
         Handler(Looper.getMainLooper()).post { terminatedCall.value = value }
     }
 
@@ -266,7 +268,7 @@ open class CallVM internal constructor(): ViewModel() {
 
     fun onPCConnected() {
         call!!.connected = true
-        CallRepository.update(call!!.id, mapOf("connected" to true))
+        CallRepository.update(call!!.id, mapOf("connected" to true, CONNECTED_AT to FieldValue.serverTimestamp()))
     }
 
     open fun onTerminatedCall() {
