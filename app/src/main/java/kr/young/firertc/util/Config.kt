@@ -6,6 +6,7 @@ class Config {
         const val SPACE_ID = "spaceId"
         const val CREATED_AT = "createdAt"
         const val MODIFIED_AT = "modifiedAt"
+        const val CONNECTED_AT = "connectedAt"
         const val TERMINATED_AT = "terminatedAt"
         const val TERMINATED = "terminated"
         const val NAME = "name"

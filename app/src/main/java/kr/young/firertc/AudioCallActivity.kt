@@ -132,7 +132,7 @@ class AudioCallActivity : AppCompatActivity(), OnClickListener, OnTouchListener 
 
     private fun activateSensor() {
         if (wakeLock == null) {
-            wakeLock = powerManager.newWakeLock(PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK, "FireRTC:video-call")
+            wakeLock = powerManager.newWakeLock(PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK, "FireRTC:audio-call")
         }
         if (!wakeLock!!.isHeld) {
             wakeLock!!.acquire(10*60*1000L /*10 minutes*/)
