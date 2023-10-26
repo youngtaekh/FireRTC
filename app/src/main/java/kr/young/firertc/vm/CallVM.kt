@@ -159,8 +159,7 @@ open class CallVM internal constructor(): ViewModel() {
             type = SendFCM.FCMType.Offer,
             callType = call!!.type,
             spaceId = space!!.id,
-            callId = call!!.id,
-            sdp = sdp
+            callId = call!!.id
         )
     }
 
@@ -176,8 +175,7 @@ open class CallVM internal constructor(): ViewModel() {
             type = SendFCM.FCMType.Answer,
             callType = call!!.type,
             spaceId = space!!.id,
-            callId = call!!.id,
-            sdp = sdp
+            callId = call!!.id
         )
     }
 

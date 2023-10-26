@@ -2,15 +2,12 @@ package kr.young.firertc
 
 import android.annotation.SuppressLint
 import android.content.Intent
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.MotionEvent
 import android.view.View
-import android.view.View.INVISIBLE
-import android.view.View.OnClickListener
-import android.view.View.OnTouchListener
-import android.view.View.VISIBLE
+import android.view.View.*
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 import androidx.databinding.DataBindingUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -122,7 +119,7 @@ class AddChatActivity : AppCompatActivity(), OnClickListener, OnTouchListener {
             UserViewModel.instance.readUser(checkedContacts[0].id) {
                 val user = it.toObject<User>()
                 if (user != null) {
-                    MessageViewModel.instance.startOffer(user) {
+                    MessageViewModel.instance.startChat(user) {
                         val intent = Intent(this, MessageActivity::class.java)
                         intent.flags =
                             Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP

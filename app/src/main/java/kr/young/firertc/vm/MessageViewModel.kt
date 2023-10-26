@@ -6,6 +6,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.google.android.gms.tasks.OnSuccessListener
 import com.google.firebase.firestore.ktx.toObject
+import kr.young.common.ApplicationUtil
 import kr.young.common.UtilLog.Companion.d
 import kr.young.firertc.fcm.SendFCM
 import kr.young.firertc.model.Call
@@ -16,7 +17,6 @@ import kr.young.firertc.repo.ChatRepository
 import kr.young.firertc.repo.ChatRepository.Companion.CHAT_READ_SUCCESS
 import kr.young.firertc.repo.UserRepository
 import kr.young.firertc.repo.UserRepository.Companion.USER_READ_SUCCESS
-import kr.young.firertc.util.NotificationUtil
 import kr.young.rtp.RTPManager
 import org.webrtc.SessionDescription
 import java.lang.System.currentTimeMillis
@@ -67,14 +67,13 @@ class MessageViewModel private constructor(): ViewModel() {
         rtpConnected = false
     }
 
-    fun startOffer(counterpart: User, chatCreateSuccess: OnSuccessListener<Void>) {
+    fun startChat(counterpart: User, chatCreateSuccess: OnSuccessListener<Void>) {
         this.isOffer = true
         this.counterpart = counterpart
         val participants = mutableListOf(MyDataViewModel.instance.getMyId())
         participants.add(counterpart.id)
         participants.sort()
         chat = Chat(participants = participants, title = counterpart.name)
-//        messageMap[chat!!.id!!] = mutableListOf()
         ChatRepository.getChat(chat!!.id!!) {
             if (it.toObject<Chat>() == null) {
                 ChatRepository.post(chat!!, success = chatCreateSuccess)
@@ -83,11 +82,6 @@ class MessageViewModel private constructor(): ViewModel() {
                 chatCreateSuccess.onSuccess(null)
             }
         }
-
-        if (handler == null) {
-            handler = Handler(Looper.myLooper()!!)
-        }
-        handler!!.postDelayed(cancelRunnable, 10 * 1000)
     }
 
     fun sendOffer(sdp: String) {
@@ -99,10 +93,6 @@ class MessageViewModel private constructor(): ViewModel() {
             chatId = chat!!.id,
             sdp = sdp
         )
-    }
-
-    fun startAnswer() {
-        d(TAG, "startAnswer")
     }
 
     fun sendAnswer(sdp: String) {
@@ -118,12 +108,14 @@ class MessageViewModel private constructor(): ViewModel() {
 
     fun end(fcmType: SendFCM.FCMType = SendFCM.FCMType.Bye) {
         d(TAG, "end")
-        SendFCM.sendMessage(
-            toToken = counterpart!!.fcmToken!!,
-            type = fcmType,
-            callType = Call.Type.MESSAGE,
-            chatId = chat!!.id,
-        )
+        if (fcmType == SendFCM.FCMType.Bye) {
+            SendFCM.sendMessage(
+                toToken = counterpart!!.fcmToken!!,
+                type = fcmType,
+                callType = Call.Type.MESSAGE,
+                chatId = chat!!.id,
+            )
+        }
         onTerminatedCall()
     }
 
@@ -156,7 +148,6 @@ class MessageViewModel private constructor(): ViewModel() {
 
     fun onAnswerCall(sdp: String?) {
         RTPManager.instance.setRemoteDescription(SessionDescription(SessionDescription.Type.ANSWER, sdp!!))
-        handler?.removeCallbacks(cancelRunnable)
     }
 
     fun onIceCandidate(ice: String?) {
@@ -173,7 +164,6 @@ class MessageViewModel private constructor(): ViewModel() {
     fun onPCConnected() {
         d(TAG, "onPCConnected")
         rtpConnected = true
-        handler?.removeCallbacks(cancelRunnable)
     }
 
     fun onPCClosed() {
@@ -183,19 +173,32 @@ class MessageViewModel private constructor(): ViewModel() {
 
     fun onTerminatedCall() {
         d(TAG, "onTerminatedCall")
-        handler?.removeCallbacks(cancelRunnable)
         RTPManager.instance.release()
     }
 
     fun onMessageReceived(chatId: String?, userId: String?, messageId: String?, message: String?) {
+        if (chatId == null || userId == null || messageId == null || message == null) { return }
         if (messageMap[chatId] == null) {
-            messageMap[chatId!!] = mutableListOf()
+            messageMap[chatId] = mutableListOf()
         }
-        messageMap[chatId!!]!!.add(Message(userId!!, chatId, messageId!!, message!!, true, Date(currentTimeMillis())))
-    }
+        messageMap[chatId]!!.add(Message(userId, chatId, messageId, message, true, Date(currentTimeMillis())))
+        ChatViewModel.instance.updateChatLastMessage(Chat(id = chatId, lastMessage = message))
+        if (chat != null && chat!!.id == chatId && ApplicationUtil.getContext() != null) {
+            val handler = Handler(Looper.getMainLooper())
+            handler.post {
+                val rtpManager = RTPManager.instance
+                rtpManager.init(ApplicationUtil.getContext()!!,
+                    isAudio = false,
+                    isVideo = false,
+                    isDataChannel = true,
+                    enableStat = false,
+                    recordAudio = false
+                )
 
-    private var handler: Handler? = null
-    private val cancelRunnable = Runnable { end(SendFCM.FCMType.Cancel) }
+                rtpManager.startRTP(context = ApplicationUtil.getContext()!!, data = null, isOffer = isOffer, remoteSDP, remoteIce)
+            }
+        }
+    }
 
     init {
         setResponseCode(0)

@@ -1,20 +1,21 @@
 package kr.young.firertc.fcm
 
 import com.google.gson.JsonObject
-import kr.young.common.UtilLog
 import kr.young.common.UtilLog.Companion.d
+import kr.young.common.UtilLog.Companion.e
+import kr.young.common.UtilLog.Companion.w
 import kr.young.firertc.model.Call
 import kr.young.firertc.repo.AppSP
 import kr.young.firertc.util.Config.Companion.CALL_ID
-import kr.young.firertc.util.Config.Companion.DATA
-import kr.young.firertc.util.Config.Companion.SDP
-import kr.young.firertc.util.Config.Companion.SPACE_ID
 import kr.young.firertc.util.Config.Companion.CALL_TYPE
 import kr.young.firertc.util.Config.Companion.CHAT_ID
+import kr.young.firertc.util.Config.Companion.DATA
 import kr.young.firertc.util.Config.Companion.FCM_TOKEN
 import kr.young.firertc.util.Config.Companion.MESSAGE
 import kr.young.firertc.util.Config.Companion.MESSAGE_ID
 import kr.young.firertc.util.Config.Companion.NAME
+import kr.young.firertc.util.Config.Companion.SDP
+import kr.young.firertc.util.Config.Companion.SPACE_ID
 import kr.young.firertc.util.Config.Companion.TO
 import kr.young.firertc.util.Config.Companion.TYPE
 import kr.young.firertc.util.Config.Companion.USER_ID
@@ -55,14 +56,14 @@ class SendFCM {
                     response: Response<JsonObject?>
                 ) {
                     if (response.isSuccessful) {
-                        UtilLog.d(TAG, "$type send Success")
+                        d(TAG, "$type send Success")
                     } else {
-                        UtilLog.w(TAG, "$type send failure")
+                        w(TAG, "$type send failure")
                     }
                 }
 
                 override fun onFailure(call: retrofit2.Call<JsonObject?>, t: Throwable) {
-                    UtilLog.e(TAG, "send failure")
+                    e(TAG, "$type send failure")
                 }
             })
         }
@@ -84,8 +85,8 @@ class SendFCM {
             payload.addProperty(TO, toToken)
             val data = JsonObject()
             val notification = JsonObject()
-            notification.addProperty("title", "Notification Title")
-            notification.addProperty("body", "Notification Body")
+            notification.addProperty("title", MyDataViewModel.instance.myData!!.name)
+            notification.addProperty("body", "$callType $type")
             data.addProperty("content_available", true)
             data.addProperty(USER_ID, myId)
             data.addProperty(NAME, name)
@@ -112,9 +113,9 @@ class SendFCM {
                 data.addProperty(MESSAGE, message)
             }
             payload.add(DATA, data)
-            if (type == FCMType.Offer || type == FCMType.Answer) {
-                payload.add("notification", notification)
-            }
+//            if (type == FCMType.Offer || type == FCMType.Answer) {
+            payload.add("notification", notification)
+//            }
             return payload
         }
 

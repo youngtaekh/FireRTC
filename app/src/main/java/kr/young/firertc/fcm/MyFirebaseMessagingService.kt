@@ -58,6 +58,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
                         receiveOfferMessage(
                             data[USER_ID],
                             data[SPACE_ID],
+                            data[CALL_ID],
                             data[CHAT_ID],
                             data[CALL_TYPE],
                             data[SDP],
@@ -67,9 +68,9 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
                     }
                     FCMType.Sdp -> { receiveSDPMessage(data[SDP]) }
                     FCMType.Ice -> { receiveICEMessage(data[SDP], data[CALL_TYPE]) }
-                    FCMType.Answer -> { receiveAnswerMessage(data[SDP], data[CALL_TYPE]) }
+                    FCMType.Answer -> { receiveAnswerMessage(data[CALL_ID], data[SDP], data[CALL_TYPE]) }
                     FCMType.Bye, FCMType.Cancel, FCMType.Decline, FCMType.Busy -> { receiveEndMessage(data[CALL_TYPE]) }
-                    FCMType.Message -> onReceiveMessage(data[CHAT_ID], data[USER_ID], data[NAME], data[MESSAGE_ID], data[MESSAGE])
+                    FCMType.Message -> onReceiveChatMessage(data[CHAT_ID], data[USER_ID], data[NAME], data[MESSAGE_ID], data[MESSAGE])
                     else -> { sendNotification("else") }
                 }
             }
@@ -93,13 +94,14 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
     private fun receiveOfferMessage(
         userId: String?,
         spaceId: String?,
+        callId: String?,
         chatId: String?,
         type: String?,
         sdp: String?,
         message: String?,
         fcmToken: String?
     ) {
-        d(TAG, "receiveOfferMessage($userId, $type)")
+        d(TAG, "receiveOfferMessage($userId, $type, sdp: ${sdp != null})")
         if (CallVM.instance.space != null) {
             SendFCM.sendMessage(fcmToken!!, FCMType.Busy)
             SpaceRepository.getSpace(spaceId!!) {
@@ -119,16 +121,22 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         } else if (type == Call.Type.MESSAGE.toString()) {
             MessageViewModel.instance.onIncomingCall(userId, chatId, message, sdp, fcmToken)
         } else {
-            CallVM.instance.onIncomingCall(this, userId, spaceId, type, sdp)
+            CallRepository.getCall(callId!!) {
+                val call = it.toObject<Call>()
+                CallVM.instance.onIncomingCall(this, userId, spaceId, type, call!!.sdp)
+            }
         }
     }
 
-    private fun receiveAnswerMessage(sdp: String?, type: String?) {
+    private fun receiveAnswerMessage(callId: String?, sdp: String?, type: String?) {
         d(TAG, "receiveAnswerMessage")
         if (type == Call.Type.MESSAGE.toString()) {
             MessageViewModel.instance.onAnswerCall(sdp)
         } else {
-            CallVM.instance.onAnswerCall(sdp)
+            CallRepository.getCall(callId!!) {
+                val call = it.toObject<Call>()!!
+                CallVM.instance.onAnswerCall(call.sdp)
+            }
         }
     }
 
@@ -178,8 +186,8 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         }
     }
 
-    private fun onReceiveMessage(chatId: String?, userId: String?, name: String?, messageId: String?, message: String?) {
-        d(TAG, "onReceiveMessage($chatId, $userId, $name, $messageId, $message)")
+    private fun onReceiveChatMessage(chatId: String?, userId: String?, name: String?, messageId: String?, message: String?) {
+        d(TAG, "onReceiveChatMessage(${chatId != null}, $userId, $name, ${messageId != null}, $message)")
         MessageViewModel.instance.onMessageReceived(chatId, userId, messageId, message)
         NotificationUtil.messageNotification(this, chatId!!, name!!, message!!)
     }

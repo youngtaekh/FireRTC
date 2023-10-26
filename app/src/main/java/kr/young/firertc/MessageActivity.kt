@@ -47,14 +47,6 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
         super.onCreate(savedInstanceState)
         binding = DataBindingUtil.setContentView(this, R.layout.activity_message)
 
-        for (i in 0 until 99) {
-            val message = if (i % 3 == 0) {
-                Message(MyDataViewModel.instance.getMyId(), viewModel.chat!!.id!!, body = "msg$i", createdAt = Date(currentTimeMillis()))
-            } else {
-                Message("test00", viewModel.chat!!.id!!, body = "msg$i", createdAt = Date(currentTimeMillis()))
-            }
-            viewModel.messageList.add(message)
-        }
         messageAdapter = MessageAdapter(viewModel.messageList)
         binding.recyclerView.adapter = messageAdapter
         layoutManager = LinearLayoutManager(this)
@@ -76,7 +68,7 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
 
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                 d(TAG, "onTextChanged($start, $before, $count)")
-                if (count == 0) {
+                if (start + count == 0) {
                     binding.ivSend.visibility = INVISIBLE
                 } else {
                     binding.ivSend.visibility = VISIBLE
@@ -121,8 +113,6 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
         }
 
         binding.tvTitle.text = counterpart.name
-
-        startCall()
     }
 
     override fun onDestroy() {
@@ -130,8 +120,6 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
         d(TAG, "onDestroy")
         if (viewModel.rtpConnected) {
             viewModel.end(SendFCM.FCMType.Bye)
-        } else {
-            viewModel.end(SendFCM.FCMType.Cancel)
         }
         viewModel.release()
         PCObserverImpl.instance.remove(this as PCObserver)
@@ -159,7 +147,6 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
     }
 
     private fun send() {
-        d(TAG, "sned()")
         val msg = binding.etMessage.text.toString()
         d(TAG, "send($msg)")
         val message = Message(MyDataViewModel.instance.getMyId(), viewModel.chat!!.id!!, body = msg, createdAt = Date(currentTimeMillis()))
@@ -250,6 +237,8 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
         d(TAG, "onMessage ${counterpart.id} $message")
         val msg = Message(counterpart.id, viewModel.chat!!.id!!, body = message, createdAt = Date(currentTimeMillis()))
         setMessage(msg)
+        ChatViewModel.instance.selectedChat!!.lastMessage = message
+        ChatViewModel.instance.updateChatLastMessage()
     }
 
     override fun onLocalDescription(sdp: SessionDescription?) {

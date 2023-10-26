@@ -208,8 +208,7 @@ class CallActivity : AppCompatActivity(), OnClickListener, OnTouchListener, PCOb
                     type = FCMType.Sdp,
                     callType = call.type,
                     spaceId = call.spaceId,
-                    callId = call.id,
-                    sdp = sdp!!.description
+                    callId = call.id
                 )
             }
         }
