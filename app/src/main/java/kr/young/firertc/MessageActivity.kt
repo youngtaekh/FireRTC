@@ -19,10 +19,10 @@ import kr.young.firertc.adapter.MessageAdapter
 import kr.young.firertc.databinding.ActivityMessageBinding
 import kr.young.firertc.fcm.SendFCM
 import kr.young.firertc.model.Message
+import kr.young.firertc.model.User
 import kr.young.firertc.repo.UserRepository.Companion.USER_READ_SUCCESS
 import kr.young.firertc.vm.ChatViewModel
 import kr.young.firertc.vm.MessageViewModel
-import kr.young.firertc.vm.MyDataViewModel
 import kr.young.rtp.RTPManager
 import kr.young.rtp.observer.PCObserver
 import kr.young.rtp.observer.PCObserverImpl
@@ -37,7 +37,9 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
     private val viewModel = MessageViewModel.instance
     private val rtpManager = RTPManager.instance
 
-    private val counterpart = viewModel.counterpart!!
+    private val counterpart: User get() {
+        return viewModel.counterpart!!
+    }
 
     private lateinit var messageAdapter: MessageAdapter
     private lateinit var layoutManager: LinearLayoutManager
@@ -148,26 +150,11 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
 
     private fun send() {
         val msg = binding.etMessage.text.toString()
-        d(TAG, "send($msg)")
-        val message = Message(MyDataViewModel.instance.getMyId(), viewModel.chat!!.id!!, body = msg, createdAt = Date(currentTimeMillis()))
+
+        val message = viewModel.sendData(msg)
         setMessage(message)
-        if (viewModel.rtpConnected) {
-            rtpManager.sendData(msg)
-        } else {
-            SendFCM.sendMessage(
-                counterpart.fcmToken!!,
-                SendFCM.FCMType.Message,
-                chatId = viewModel.chat!!.id,
-                messageId = message.id,
-                message = msg,
-                myId = message.from,
-                name = MyDataViewModel.instance.myData!!.name
-            )
-        }
         binding.etMessage.setText("")
         binding.ivSend.visibility = INVISIBLE
-        ChatViewModel.instance.selectedChat!!.lastMessage = msg
-        ChatViewModel.instance.updateChatLastMessage()
     }
 
     private fun setMessage(message: Message) {

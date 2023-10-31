@@ -46,6 +46,7 @@ class MessageViewModel private constructor(): ViewModel() {
 
     val responseCode = MutableLiveData<Int>()
 
+    val rtpManager = RTPManager.instance
     var isOffer = true
     var remoteSDP: SessionDescription? = null
     var remoteIce: String? = null
@@ -91,6 +92,7 @@ class MessageViewModel private constructor(): ViewModel() {
             type = SendFCM.FCMType.Offer,
             callType = Call.Type.MESSAGE,
             chatId = chat!!.id,
+            targetOS = counterpart!!.os,
             sdp = sdp
         )
     }
@@ -102,8 +104,31 @@ class MessageViewModel private constructor(): ViewModel() {
             type = SendFCM.FCMType.Answer,
             callType = Call.Type.MESSAGE,
             chatId = chat!!.id,
+            targetOS = counterpart!!.os,
             sdp = sdp
         )
+    }
+
+    fun sendData(msg: String): Message {
+        d(TAG, "send($msg)")
+        val message = Message(MyDataViewModel.instance.getMyId(), chat!!.id!!, body = msg, createdAt = Date(currentTimeMillis()))
+        if (rtpConnected) {
+            rtpManager.sendData(msg)
+        } else {
+            SendFCM.sendMessage(
+                toToken = counterpart!!.fcmToken!!,
+                type = SendFCM.FCMType.Message,
+                callType = Call.Type.MESSAGE,
+                chatId = chat!!.id,
+                messageId = message.id,
+                message = msg,
+                targetOS = counterpart!!.os
+            )
+        }
+        ChatViewModel.instance.selectedChat!!.lastMessage = msg
+        ChatViewModel.instance.updateChatLastMessage()
+
+        return message
     }
 
     fun end(fcmType: SendFCM.FCMType = SendFCM.FCMType.Bye) {
@@ -114,6 +139,7 @@ class MessageViewModel private constructor(): ViewModel() {
                 type = fcmType,
                 callType = Call.Type.MESSAGE,
                 chatId = chat!!.id,
+                targetOS = counterpart!!.os,
             )
         }
         onTerminatedCall()
@@ -129,7 +155,12 @@ class MessageViewModel private constructor(): ViewModel() {
         d(TAG, "onIncomingCall($userId, ${chat?.id}, $chatId, $message)")
         if (chatId == null || userId == null) { return }
         if (chat == null || chat!!.id != chatId) {
-            SendFCM.sendMessage(fcmToken!!, SendFCM.FCMType.Decline, Call.Type.MESSAGE)
+            SendFCM.sendMessage(
+                toToken = fcmToken!!,
+                type = SendFCM.FCMType.Decline,
+                callType = Call.Type.MESSAGE,
+                targetOS = counterpart!!.os
+            )
             return
         }
 
@@ -157,6 +188,7 @@ class MessageViewModel private constructor(): ViewModel() {
             type = SendFCM.FCMType.Ice,
             callType = Call.Type.MESSAGE,
             chatId = chat!!.id,
+            targetOS = counterpart!!.os,
             sdp = ice
         )
     }
