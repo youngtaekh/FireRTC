@@ -13,7 +13,8 @@ data class Message(
     val id: String = Crypto().getHash("$from$chatId${System.currentTimeMillis()}"),
     val body: String,
     var timeFlag: Boolean = true,
-    val createdAt: Date?
+    val createdAt: Date?,
+    var isDate: Boolean = false,
 ) {
     fun toMap(): Map<String, Any> {
         val createdAt = this.createdAt ?: FieldValue.serverTimestamp()

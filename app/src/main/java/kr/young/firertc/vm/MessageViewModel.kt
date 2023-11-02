@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import com.google.android.gms.tasks.OnSuccessListener
 import com.google.firebase.firestore.ktx.toObject
 import kr.young.common.ApplicationUtil
+import kr.young.common.DateUtil
 import kr.young.common.UtilLog.Companion.d
 import kr.young.firertc.fcm.SendFCM
 import kr.young.firertc.model.Call
@@ -45,6 +46,7 @@ class MessageViewModel private constructor(): ViewModel() {
         }
 
     val responseCode = MutableLiveData<Int>()
+    val receivedMessage = MutableLiveData<Message>()
 
     val rtpManager = RTPManager.instance
     var isOffer = true
@@ -58,9 +60,9 @@ class MessageViewModel private constructor(): ViewModel() {
 
     fun release() {
         counterpart = null
-        if (chat != null && chat!!.id != null) {
-            messageMap[chat!!.id!!] = mutableListOf()
-        }
+//        if (chat != null && chat!!.id != null) {
+//            messageMap[chat!!.id!!] = mutableListOf()
+//        }
         chat = null
         remoteIce = null
         remoteSDP = null
@@ -129,6 +131,24 @@ class MessageViewModel private constructor(): ViewModel() {
         ChatViewModel.instance.updateChatLastMessage()
 
         return message
+    }
+
+    fun addDateView(message: Message) {
+        if (messageMap[message.chatId] == null) {
+            messageMap[message.chatId] = mutableListOf()
+        }
+
+        val curDate = DateUtil.toFormattedString(message.createdAt!!, "yyMMdd")
+        val lastDate = if (messageMap[message.chatId]!!.size == 0) {
+            null
+        } else {
+            DateUtil.toFormattedString(messageMap[message.chatId]!!.last().createdAt!!, "yyMMdd")
+        }
+
+        if (lastDate == null || curDate != lastDate) {
+            val dateMessage = Message(from = message.from, chatId = message.chatId, body = message.body, createdAt = message.createdAt, isDate = true)
+            messageMap[message.chatId]!!.add(dateMessage)
+        }
     }
 
     fun end(fcmType: SendFCM.FCMType = SendFCM.FCMType.Bye) {
@@ -208,13 +228,16 @@ class MessageViewModel private constructor(): ViewModel() {
         RTPManager.instance.release()
     }
 
-    fun onMessageReceived(chatId: String?, userId: String?, messageId: String?, message: String?) {
-        if (chatId == null || userId == null || messageId == null || message == null) { return }
+    fun onMessageReceived(chatId: String?, userId: String?, messageId: String?, msg: String?) {
+        if (chatId == null || userId == null || messageId == null || msg == null) { return }
         if (messageMap[chatId] == null) {
             messageMap[chatId] = mutableListOf()
         }
-        messageMap[chatId]!!.add(Message(userId, chatId, messageId, message, true, Date(currentTimeMillis())))
-        ChatViewModel.instance.updateChatLastMessage(Chat(id = chatId, lastMessage = message))
+        val message = Message(userId, chatId, messageId, msg, true, Date(currentTimeMillis()))
+        addDateView(message)
+        messageMap[chatId]!!.add(message)
+        Handler(Looper.getMainLooper()).post { receivedMessage.value = message }
+        ChatViewModel.instance.updateChatLastMessage(Chat(id = chatId, lastMessage = msg))
         if (chat != null && chat!!.id == chatId && ApplicationUtil.getContext() != null) {
             val handler = Handler(Looper.getMainLooper())
             handler.post {

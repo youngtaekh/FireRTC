@@ -15,6 +15,7 @@ import androidx.recyclerview.widget.RecyclerView.OnScrollListener
 import kr.young.common.DateUtil
 import kr.young.common.TouchEffect
 import kr.young.common.UtilLog.Companion.d
+import kr.young.common.UtilLog.Companion.i
 import kr.young.firertc.adapter.MessageAdapter
 import kr.young.firertc.databinding.ActivityMessageBinding
 import kr.young.firertc.fcm.SendFCM
@@ -114,6 +115,19 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
             }
         }
 
+        viewModel.receivedMessage.observe(this) {
+            val lastMsg = viewModel.messageList[viewModel.messageList.size - 2]
+            val lastDate = DateUtil.toFormattedString(lastMsg.createdAt!!, "aa hh:mm")
+            if (
+                lastDate == DateUtil.toFormattedString(it.createdAt!!, "aa hh:mm") &&
+                lastMsg.from == it.from
+            ) {
+                viewModel.messageList[viewModel.messageList.size - 2].timeFlag = false
+                messageAdapter.notifyItemChanged(viewModel.messageList.size - 2)
+            }
+            messageAdapter.notifyItemInserted(viewModel.messageList.size - 1)
+        }
+
         binding.tvTitle.text = counterpart.name
     }
 
@@ -170,6 +184,7 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
                     messageAdapter.notifyItemChanged(viewModel.messageList.size - 1)
                 }
             }
+            viewModel.addDateView(message)
             viewModel.messageMap[viewModel.chat!!.id!!]?.add(message)
             messageAdapter.notifyItemInserted(viewModel.messageList.size - 1)
             binding.recyclerView.post {

@@ -101,7 +101,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
     private fun receiveAnswerMessage(fm: FirebaseMessage) {
         d(TAG, "receiveAnswerMessage")
-        if (fm.type == Call.Type.MESSAGE.toString()) {
+        if (fm.callType == Call.Type.MESSAGE.toString()) {
             MessageViewModel.instance.onAnswerCall(fm.sdp)
         } else {
             CallRepository.getCall(fm.callId!!) {
@@ -113,7 +113,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
     private fun receiveEndMessage(fm: FirebaseMessage) {
         d(TAG, "receiveEndMessage")
-        if (fm.type == Call.Type.MESSAGE.toString()) {
+        if (fm.callType == Call.Type.MESSAGE.toString()) {
             MessageViewModel.instance.onTerminatedCall()
         } else {
             CallVM.instance.onTerminatedCall()
@@ -141,7 +141,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
                 d(TAG, "receiveIceMessage")
                 val remote = IceCandidate("0", 0, fm.sdp!!)
                 RTPManager.instance.addRemoteIceCandidate(remote)
-            } else if (fm.type == Call.Type.MESSAGE.toString()) {
+            } else if (fm.callType == Call.Type.MESSAGE.toString()) {
                 if (MessageViewModel.instance.remoteIce == null) {
                     MessageViewModel.instance.remoteIce = fm.sdp!!
                 } else {
