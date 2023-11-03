@@ -11,7 +11,6 @@
             android:id="@+id/iv_profile"
             android:layout_width="40dp"
             android:layout_height="40dp"
-            android:layout_marginTop="5dp"
             android:src="@drawable/outline_mood_24"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
@@ -21,8 +20,6 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="5dp"
-            android:layout_marginTop="5dp"
-            android:text="asdf"
             app:layout_constraintStart_toEndOf="@+id/iv_profile"
             app:layout_constraintTop_toTopOf="parent" />
 
@@ -39,7 +36,7 @@
                 android:id="@+id/iv_tail"
                 android:layout_width="18dp"
                 android:layout_height="18dp"
-                android:src="@drawable/triangle"
+                android:src="@drawable/recv_triangle"
                 app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintStart_toStartOf="parent" />
 
@@ -49,7 +46,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="-10dp"
                 android:padding="10dp"
-                android:maxWidth="250dp"
+                android:maxWidth="255dp"
                 android:background="@drawable/recv_text_box"
                 android:ellipsize="end"
                 android:maxLines="5"
@@ -66,7 +63,7 @@
             android:layout_height="wrap_content"
             app:layout_constraintLeft_toRightOf="@+id/cl_message"
             app:layout_constraintBottom_toBottomOf="@+id/cl_message"
-            android:layout_marginStart="10dp"
+            android:layout_marginStart="5dp"
             android:textColor="#222222"
             android:textSize="13sp"/>
 

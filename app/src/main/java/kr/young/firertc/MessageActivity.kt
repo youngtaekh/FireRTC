@@ -1,12 +1,16 @@
 package kr.young.firertc
 
 import android.annotation.SuppressLint
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.MotionEvent
 import android.view.View
 import android.view.View.*
+import android.widget.Toast
+import android.widget.Toast.LENGTH_SHORT
 import androidx.appcompat.app.AppCompatActivity
 import androidx.databinding.DataBindingUtil
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -15,7 +19,6 @@ import androidx.recyclerview.widget.RecyclerView.OnScrollListener
 import kr.young.common.DateUtil
 import kr.young.common.TouchEffect
 import kr.young.common.UtilLog.Companion.d
-import kr.young.common.UtilLog.Companion.i
 import kr.young.firertc.adapter.MessageAdapter
 import kr.young.firertc.databinding.ActivityMessageBinding
 import kr.young.firertc.fcm.SendFCM
@@ -51,6 +54,7 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
         binding = DataBindingUtil.setContentView(this, R.layout.activity_message)
 
         messageAdapter = MessageAdapter(viewModel.messageList)
+        messageAdapter.setOnItemClickListener(longClickListener)
         binding.recyclerView.adapter = messageAdapter
         layoutManager = LinearLayoutManager(this)
         layoutManager.orientation = RecyclerView.VERTICAL
@@ -203,6 +207,16 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
         )
 
         rtpManager.startRTP(context = this, data = null, isOffer = viewModel.isOffer, viewModel.remoteSDP, viewModel.remoteIce)
+    }
+
+    private val longClickListener = object: MessageAdapter.LongClickListener {
+        override fun onLongClick(pos: Int, v: View) {
+            d(TAG, "onLongClick($pos, v) - ${viewModel.messageList[pos].body}")
+            val clipBoard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+            val clipData = ClipData.newPlainText("message", viewModel.messageList[pos].body)
+            clipBoard.setPrimaryClip(clipData)
+            Toast.makeText(this@MessageActivity, "Copy!!!!!", LENGTH_SHORT).show()
+        }
     }
 
     companion object {

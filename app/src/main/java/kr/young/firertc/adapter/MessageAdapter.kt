@@ -1,7 +1,9 @@
 package kr.young.firertc.adapter
 
 import android.view.LayoutInflater
+import android.view.View
 import android.view.View.INVISIBLE
+import android.view.View.OnLongClickListener
 import android.view.View.VISIBLE
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView.Adapter
@@ -26,7 +28,7 @@ class MessageAdapter(private val list: List<Message>): Adapter<ViewHolder>() {
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         when (holder) {
-            is SendViewHolder -> holder.bind(list[position])
+            is SendViewHolder -> holder.bind(list[position], if (position == 0) null else list[position - 1])
             is RecvViewHolder -> holder.bind(list[position])
             is DateViewHolder -> holder.bind(list[position])
             is RecvViewHolder2 -> holder.bind(list[position])
@@ -51,11 +53,20 @@ class MessageAdapter(private val list: List<Message>): Adapter<ViewHolder>() {
         }
     }
 
+    fun setOnItemClickListener(longListener: LongClickListener) {
+        mLongClickListener = longListener
+    }
+
+    lateinit var mLongClickListener: LongClickListener
+    interface LongClickListener {
+        fun onLongClick(pos: Int, v: View)
+    }
+
     companion object {
         private const val TAG = "MessageAdapter"
-        private const val SEND = 0
-        private const val RECV = 1
-        private const val DATE = 2
+        private const val DATE = 0
+        private const val SEND = 1
+        private const val RECV = 2
         private const val RECV2 = 3
     }
 
@@ -65,7 +76,33 @@ class MessageAdapter(private val list: List<Message>): Adapter<ViewHolder>() {
         }
     }
 
-    class SendViewHolder(private val binding: LayoutSendMessageBinding): ViewHolder(binding.root) {
+    inner class SendViewHolder(private val binding: LayoutSendMessageBinding): ViewHolder(binding.root), OnLongClickListener {
+        fun bind(message: Message, prevMessage: Message?) {
+            if (prevMessage == null || prevMessage.from != message.from || prevMessage.isDate) {
+                binding.ivTail.visibility = VISIBLE
+            } else {
+                binding.ivTail.visibility = INVISIBLE
+            }
+            binding.tvMessage.text = message.body
+            if (message.timeFlag) {
+                binding.tvTime.visibility = VISIBLE
+                binding.tvTime.text = DateUtil.toFormattedString(message.createdAt!!, "aa hh:mm")
+            } else {
+                binding.tvTime.visibility = INVISIBLE
+            }
+        }
+
+        override fun onLongClick(v: View?): Boolean {
+            mLongClickListener.onLongClick(adapterPosition, binding.root)
+            return true
+        }
+
+        init {
+            binding.root.setOnLongClickListener(this)
+        }
+    }
+
+    inner class RecvViewHolder(private val binding: LayoutRecvMessageBinding): ViewHolder(binding.root), OnLongClickListener {
         fun bind(message: Message) {
             binding.tvMessage.text = message.body
             if (message.timeFlag) {
@@ -75,21 +112,18 @@ class MessageAdapter(private val list: List<Message>): Adapter<ViewHolder>() {
                 binding.tvTime.visibility = INVISIBLE
             }
         }
-    }
 
-    class RecvViewHolder(private val binding: LayoutRecvMessageBinding): ViewHolder(binding.root) {
-        fun bind(message: Message) {
-            binding.tvMessage.text = message.body
-            if (message.timeFlag) {
-                binding.tvTime.visibility = VISIBLE
-                binding.tvTime.text = DateUtil.toFormattedString(message.createdAt!!, "aa hh:mm")
-            } else {
-                binding.tvTime.visibility = INVISIBLE
-            }
+        override fun onLongClick(v: View?): Boolean {
+            mLongClickListener.onLongClick(adapterPosition, binding.root)
+            return true
+        }
+
+        init {
+            binding.root.setOnLongClickListener(this)
         }
     }
 
-    class RecvViewHolder2(private val binding: LayoutRecvMessage2Binding): ViewHolder(binding.root) {
+    inner class RecvViewHolder2(private val binding: LayoutRecvMessage2Binding): ViewHolder(binding.root), OnLongClickListener {
         fun bind(message: Message) {
             binding.tvName.text = message.from
             binding.tvMessage.text = message.body
@@ -99,6 +133,15 @@ class MessageAdapter(private val list: List<Message>): Adapter<ViewHolder>() {
             } else {
                 binding.tvTime.visibility = INVISIBLE
             }
+        }
+
+        override fun onLongClick(v: View?): Boolean {
+            mLongClickListener.onLongClick(adapterPosition, binding.root)
+            return true
+        }
+
+        init {
+            binding.root.setOnLongClickListener(this)
         }
     }
 }

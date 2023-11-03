@@ -250,7 +250,7 @@ class MessageViewModel private constructor(): ViewModel() {
                     recordAudio = false
                 )
 
-                rtpManager.startRTP(context = ApplicationUtil.getContext()!!, data = null, isOffer = isOffer, remoteSDP, remoteIce)
+                rtpManager.startRTP(context = ApplicationUtil.getContext()!!, data = null, isOffer = true, remoteSDP, remoteIce)
             }
         }
     }
