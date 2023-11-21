@@ -12,7 +12,6 @@ import kr.young.common.TouchEffect
 import kr.young.common.UtilLog.Companion.d
 import kr.young.firertc.databinding.ActivityProfileBinding
 import kr.young.firertc.model.Call
-import kr.young.firertc.repo.ChatRepository
 import kr.young.firertc.util.BaseActivity
 import kr.young.firertc.vm.AudioViewModel
 import kr.young.firertc.vm.MessageViewModel
@@ -103,8 +102,7 @@ class ProfileActivity : BaseActivity(), OnClickListener, OnTouchListener {
     private fun chat() {
         d(TAG, "chat")
         val messageVM = MessageViewModel.instance
-        messageVM.startOffer(userViewModel.selectedProfile!!) {
-//            startService(Intent(this, CallService::class.java))
+        messageVM.startChat(userViewModel.selectedProfile!!) {
             val intent = Intent(this, MessageActivity::class.java)
             intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
             startActivity(intent)

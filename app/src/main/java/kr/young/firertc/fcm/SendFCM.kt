@@ -1,20 +1,23 @@
 package kr.young.firertc.fcm
 
 import com.google.gson.JsonObject
-import kr.young.common.UtilLog
 import kr.young.common.UtilLog.Companion.d
+import kr.young.common.UtilLog.Companion.e
+import kr.young.common.UtilLog.Companion.w
 import kr.young.firertc.model.Call
 import kr.young.firertc.repo.AppSP
 import kr.young.firertc.util.Config.Companion.CALL_ID
-import kr.young.firertc.util.Config.Companion.DATA
-import kr.young.firertc.util.Config.Companion.SDP
-import kr.young.firertc.util.Config.Companion.SPACE_ID
 import kr.young.firertc.util.Config.Companion.CALL_TYPE
 import kr.young.firertc.util.Config.Companion.CHAT_ID
+import kr.young.firertc.util.Config.Companion.DATA
 import kr.young.firertc.util.Config.Companion.FCM_TOKEN
 import kr.young.firertc.util.Config.Companion.MESSAGE
 import kr.young.firertc.util.Config.Companion.MESSAGE_ID
 import kr.young.firertc.util.Config.Companion.NAME
+import kr.young.firertc.util.Config.Companion.SDP
+import kr.young.firertc.util.Config.Companion.SEQUENCE
+import kr.young.firertc.util.Config.Companion.SPACE_ID
+import kr.young.firertc.util.Config.Companion.TARGET_OS
 import kr.young.firertc.util.Config.Companion.TO
 import kr.young.firertc.util.Config.Companion.TYPE
 import kr.young.firertc.util.Config.Companion.USER_ID
@@ -32,44 +35,32 @@ class SendFCM {
             callId: String? = null,
             chatId: String? = null,
             messageId: String? = null,
+            targetOS: String? = null,
             sdp: String? = null,
+            sequence: Long = -1,
             message: String? = null,
-            myId: String = "",
-            name: String = "",
         ) {
-            d(TAG, "toToken $toToken")
-            d(TAG, "type $type")
-            d(TAG, "callType $callType")
-            d(TAG, "spaceId $spaceId")
-            d(TAG, "callId $callId")
-            d(TAG, "chatId $chatId")
-            d(TAG, "messageId $messageId")
-            d(TAG, "sdp $sdp")
-            d(TAG, "message $message")
-            d(TAG, "myId $myId")
-            d(TAG, "name $name")
-            ApiClient.getApiService().sendNotification(payload = fcmPayload(myId, name, toToken, type, callType, spaceId, callId, chatId, messageId, sdp, message))?.enqueue(object:
+            d(TAG, "sendMessage $type $message")
+            ApiClient.getApiService().sendNotification(payload = fcmPayload(toToken, type, callType, spaceId, callId, chatId, messageId, targetOS, sdp, sequence, message))?.enqueue(object:
                 Callback<JsonObject?> {
                 override fun onResponse(
                     call: retrofit2.Call<JsonObject?>,
                     response: Response<JsonObject?>
                 ) {
                     if (response.isSuccessful) {
-                        UtilLog.d(TAG, "$type send Success")
+                        d(TAG, "$type send Success")
                     } else {
-                        UtilLog.w(TAG, "$type send failure")
+                        w(TAG, "$type send failure")
                     }
                 }
 
                 override fun onFailure(call: retrofit2.Call<JsonObject?>, t: Throwable) {
-                    UtilLog.e(TAG, "send failure")
+                    e(TAG, "$type send failure")
                 }
             })
         }
 
         private fun fcmPayload(
-            myId: String,
-            name: String,
             toToken: String,
             type: FCMType,
             callType: Call.Type,
@@ -77,22 +68,24 @@ class SendFCM {
             callId: String?,
             chatId: String?,
             messageId: String?,
+            targetOS: String?,
             sdp: String?,
+            sequence: Long,
             message: String?
         ): JsonObject {
             val payload = JsonObject()
             payload.addProperty(TO, toToken)
             val data = JsonObject()
             val notification = JsonObject()
-            notification.addProperty("title", "Notification Title")
-            notification.addProperty("body", "Notification Body")
+            notification.addProperty("title", MyDataViewModel.instance.myData!!.name)
+            notification.addProperty("body", "$callType $type")
             data.addProperty("content_available", true)
-            data.addProperty(USER_ID, myId)
-            data.addProperty(NAME, name)
             data.addProperty(TYPE, type.toString())
             data.addProperty(CALL_TYPE, callType.toString())
             data.addProperty(USER_ID, MyDataViewModel.instance.getMyId())
+            data.addProperty(NAME, MyDataViewModel.instance.myData!!.name)
             data.addProperty(FCM_TOKEN, AppSP.instance.getFCMToken())
+            data.addProperty(TARGET_OS, "Android")
             if (callId != null) {
                 data.addProperty(CALL_ID, callId)
             }
@@ -109,10 +102,11 @@ class SendFCM {
                 data.addProperty(SDP, sdp)
             }
             if (message != null) {
+                data.addProperty(SEQUENCE, sequence)
                 data.addProperty(MESSAGE, message)
             }
             payload.add(DATA, data)
-            if (type == FCMType.Offer || type == FCMType.Answer) {
+            if (targetOS == null || targetOS.lowercase() == "ios") {
                 payload.add("notification", notification)
             }
             return payload

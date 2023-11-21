@@ -2,7 +2,9 @@ package kr.young.firertc.model
 
 import com.google.firebase.firestore.FieldValue
 import kr.young.common.Crypto
+import kr.young.firertc.util.Config.Companion.CREATED_AT
 import kr.young.firertc.util.Config.Companion.NAME
+import kr.young.firertc.util.Config.Companion.PARTICIPANTS
 import kr.young.firertc.vm.MyDataViewModel
 import java.util.*
 
@@ -31,11 +33,11 @@ data class Space(
         map["connected"] = connected
         map["terminated"] = terminated
         map["calls"] = calls
-        map["participants"] = participants
+        map[PARTICIPANTS] = participants
         map["leaves"] = leaves
         map["callType"] = callType
         map["createdBy"] = createdBy
-        map["createdAt"] = createdAt ?: FieldValue.serverTimestamp()
+        map[CREATED_AT] = createdAt ?: FieldValue.serverTimestamp()
         return map
     }
 

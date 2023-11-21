@@ -22,5 +22,5 @@ interface PCObserver {
     fun onPCClosed()
     fun onPCStatsReady(reports: Array<StatsReport?>?)
     fun onPCError(description: String?)
-    fun onMessage(message: String)
+    fun onMessage(msg: String)
 }

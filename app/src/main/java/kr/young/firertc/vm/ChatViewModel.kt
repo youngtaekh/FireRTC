@@ -52,8 +52,10 @@ class ChatViewModel private constructor(): ViewModel() {
         }
     }
 
-    fun updateChatLastMessage() {
-        if (selectedChat != null) {
+    fun updateChatLastMessage(chat: Chat? = null) {
+        if (chat != null) {
+            ChatRepository.updateLastMessage(chat)
+        } else if (selectedChat != null) {
             ChatRepository.updateLastMessage(selectedChat!!)
         }
     }

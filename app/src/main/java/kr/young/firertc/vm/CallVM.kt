@@ -160,7 +160,7 @@ open class CallVM internal constructor(): ViewModel() {
             callType = call!!.type,
             spaceId = space!!.id,
             callId = call!!.id,
-            sdp = sdp
+            targetOS = counterpart!!.os
         )
     }
 
@@ -177,7 +177,7 @@ open class CallVM internal constructor(): ViewModel() {
             callType = call!!.type,
             spaceId = space!!.id,
             callId = call!!.id,
-            sdp = sdp
+            targetOS = counterpart!!.os
         )
     }
 
@@ -215,7 +215,8 @@ open class CallVM internal constructor(): ViewModel() {
             type = fcmType,
             callType = call!!.type,
             spaceId = space!!.id,
-            callId = call!!.id
+            callId = call!!.id,
+            targetOS = counterpart!!.os
         )
         onTerminatedCall()
     }
@@ -267,6 +268,7 @@ open class CallVM internal constructor(): ViewModel() {
             callType = call!!.type,
             spaceId = call!!.spaceId,
             callId = call!!.id,
+            targetOS = counterpart!!.os,
             sdp = ice
         )
     }

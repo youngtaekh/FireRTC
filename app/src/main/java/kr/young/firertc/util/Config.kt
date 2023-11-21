@@ -10,6 +10,7 @@ class Config {
         const val TERMINATED_AT = "terminatedAt"
         const val TERMINATED = "terminated"
         const val NAME = "name"
+        const val OS = "os"
         const val STATUS = "status"
         const val CALLS = "calls"
         const val FCM_TOKEN = "fcmToken"
@@ -17,12 +18,24 @@ class Config {
         const val CALL_TYPE = "callType"
         const val CALL_ID = "callId"
         const val DATA = "data"
+        const val TARGET_OS = "targetOS"
         const val SDP = "sdp"
         const val CANDIDATES = "candidates"
         const val USER_ID = "userId"
         const val CHAT_ID = "chatId"
         const val MESSAGE_ID = "messageId"
         const val MESSAGE = "message"
+
+        //chat
+        const val TITLE = "title"
+        const val PARTICIPANTS = "participants"
+        const val IS_GROUP = "isGroup"
+        const val LAST_MESSAGE = "lastMessage"
+        const val LAST_SEQUENCE = "lastSequence"
+
+        //message
+        const val BODY = "body"
+        const val SEQUENCE = "sequence"
 
         //relation
         const val FROM = "from"

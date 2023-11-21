@@ -12,6 +12,7 @@ import kr.young.common.UtilLog.Companion.e
 import kr.young.firertc.model.Space
 import kr.young.firertc.util.Config.Companion.CALLS
 import kr.young.firertc.util.Config.Companion.NAME
+import kr.young.firertc.util.Config.Companion.PARTICIPANTS
 import kr.young.firertc.util.Config.Companion.STATUS
 import kr.young.firertc.util.Config.Companion.TERMINATED_AT
 import kr.young.firertc.vm.MyDataViewModel
@@ -164,7 +165,7 @@ class SpaceRepository {
         ) {
             d(TAG, "addParticipantList")
             Firebase.firestore.collection(COLLECTION).document(spaceId)
-                .update("participants", FieldValue.arrayUnion(userId))
+                .update(PARTICIPANTS, FieldValue.arrayUnion(userId))
                 .addOnSuccessListener(success)
                 .addOnFailureListener(failure)
         }

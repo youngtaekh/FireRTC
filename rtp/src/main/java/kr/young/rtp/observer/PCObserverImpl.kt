@@ -104,9 +104,9 @@ class PCObserverImpl private constructor(): PCPublisher {
         }
     }
 
-    override fun onMessageObserver(message: String) {
+    override fun onMessageObserver(msg: String) {
         for (observer in pcObservers) {
-            observer.onMessage(message)
+            observer.onMessage(msg)
         }
     }
 
