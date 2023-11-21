@@ -3,6 +3,7 @@ package kr.young.firertc.model
 import com.google.firebase.firestore.FieldValue
 import kr.young.common.Crypto
 import kr.young.firertc.util.Config.Companion.CANDIDATES
+import kr.young.firertc.util.Config.Companion.CREATED_AT
 import kr.young.firertc.util.Config.Companion.DIRECTION
 import kr.young.firertc.util.Config.Companion.FCM_TOKEN
 import kr.young.firertc.util.Config.Companion.SDP
@@ -43,7 +44,7 @@ data class Call(
         if (direction != null) map[DIRECTION] = direction!!
         if (sdp != null) map[SDP] = sdp!!
         map[CANDIDATES] = candidates
-        map["createdAt"] = createdAt ?: FieldValue.serverTimestamp()
+        map[CREATED_AT] = createdAt ?: FieldValue.serverTimestamp()
         return map
     }
 
@@ -54,8 +55,8 @@ data class Call(
                 "$SPACE_ID=${spaceId?.substring(0,5)}\n" +
                 "direction=$direction\n" +
                 "connected=$connected\nterminated=${terminated}\n" +
-                "createAt=$createdAt\nid=${id.substring(0,5)}\n" +
-                "sdp=$s\ncandidates=${candidates.size})"
+                "$CREATED_AT=$createdAt\nid=${id.substring(0,5)}\n" +
+                "$SDP=$s\n$CANDIDATES=${candidates.size})"
     }
 
     override fun equals(other: Any?): Boolean {

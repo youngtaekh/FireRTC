@@ -26,6 +26,17 @@ class Config {
         const val MESSAGE_ID = "messageId"
         const val MESSAGE = "message"
 
+        //chat
+        const val TITLE = "title"
+        const val PARTICIPANTS = "participants"
+        const val IS_GROUP = "isGroup"
+        const val LAST_MESSAGE = "lastMessage"
+        const val LAST_SEQUENCE = "lastSequence"
+
+        //message
+        const val BODY = "body"
+        const val SEQUENCE = "sequence"
+
         //relation
         const val FROM = "from"
         const val TO = "to"

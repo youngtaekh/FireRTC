@@ -268,7 +268,7 @@ class CallActivity : AppCompatActivity(), OnClickListener, OnTouchListener, PCOb
         d(TAG, "onPCError")
     }
 
-    override fun onMessage(message: String) {
+    override fun onMessage(msg: String) {
         d(TAG, "onMessage")
     }
 }

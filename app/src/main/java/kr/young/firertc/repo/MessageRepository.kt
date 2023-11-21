@@ -1,35 +1,72 @@
 package kr.young.firertc.repo
 
+import android.provider.BaseColumns
 import com.google.android.gms.tasks.OnFailureListener
 import com.google.android.gms.tasks.OnSuccessListener
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.QuerySnapshot
+import com.google.firebase.firestore.Source
 import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.firestore.ktx.toObject
 import com.google.firebase.ktx.Firebase
 import kr.young.common.UtilLog.Companion.d
 import kr.young.common.UtilLog.Companion.e
 import kr.young.firertc.model.Message
+import kr.young.firertc.util.Config.Companion.BODY
+import kr.young.firertc.util.Config.Companion.CHAT_ID
 import kr.young.firertc.util.Config.Companion.CREATED_AT
+import kr.young.firertc.util.Config.Companion.FROM
+import kr.young.firertc.util.Config.Companion.SEQUENCE
 import kr.young.firertc.vm.CallViewModel
 
 class MessageRepository {
     companion object {
         fun getMessages(
             chatId: String,
+            min: Long = -1,
+            max: Long = 9_223_372_036_854_775_807,
             failure: OnFailureListener = OnFailureListener {
                 CallViewModel.instance.setResponseCode(MESSAGE_READ_FAILURE)
                 e(TAG, "get message failure", it)
             },
             success: OnSuccessListener<QuerySnapshot> = OnSuccessListener<QuerySnapshot> {
                 CallViewModel.instance.setResponseCode(MESSAGE_READ_SUCCESS)
+                for (document in it) {
+                    val message = document.toObject<Message>()
+                    d(TAG, "message $message")
+                }
                 d(TAG, "get message success")
             }
         ) {
-            d(TAG, "get message by chat id")
+            d(TAG, "getMessages by chat id")
             Firebase.firestore.collection(COLLECTION)
-                .whereEqualTo("chatId", chatId)
-                .orderBy(CREATED_AT, Query.Direction.DESCENDING)
+                .whereEqualTo(CHAT_ID, chatId)
+                .whereGreaterThan(SEQUENCE, min)
+                .whereLessThan(SEQUENCE, max)
+                .orderBy(SEQUENCE, Query.Direction.DESCENDING)
                 .limit(100)
+                .get()
+                .addOnSuccessListener(success)
+                .addOnFailureListener(failure)
+        }
+
+        fun getLastMessage(
+            chatId: String,
+            failure: OnFailureListener = OnFailureListener {
+                e(TAG, "get message failure", it)
+            },
+            success: OnSuccessListener<QuerySnapshot> = OnSuccessListener<QuerySnapshot> {
+                for (document in it) {
+                    val message = document.toObject<Message>()
+                    d(TAG, "getLastMessage $message")
+                }
+                d(TAG, "get message success")
+            }
+        ) {
+            Firebase.firestore.collection(COLLECTION)
+                .whereEqualTo(CHAT_ID, chatId)
+                .orderBy(SEQUENCE, Query.Direction.DESCENDING)
+                .limit(1)
                 .get()
                 .addOnSuccessListener(success)
                 .addOnFailureListener(failure)

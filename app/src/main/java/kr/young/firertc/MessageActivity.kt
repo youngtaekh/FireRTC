@@ -16,7 +16,6 @@ import androidx.databinding.DataBindingUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.RecyclerView.OnScrollListener
-import kr.young.common.DateUtil
 import kr.young.common.TouchEffect
 import kr.young.common.UtilLog.Companion.d
 import kr.young.firertc.adapter.MessageAdapter
@@ -24,16 +23,19 @@ import kr.young.firertc.databinding.ActivityMessageBinding
 import kr.young.firertc.fcm.SendFCM
 import kr.young.firertc.model.Message
 import kr.young.firertc.model.User
+import kr.young.firertc.repo.ChatRepository
+import kr.young.firertc.repo.MessageRepository.Companion.MESSAGE_READ_SUCCESS
 import kr.young.firertc.repo.UserRepository.Companion.USER_READ_SUCCESS
+import kr.young.firertc.util.RecyclerViewNotifier.ModifierCategory.*
 import kr.young.firertc.vm.ChatViewModel
 import kr.young.firertc.vm.MessageViewModel
+import kr.young.firertc.vm.MyDataViewModel
 import kr.young.rtp.RTPManager
 import kr.young.rtp.observer.PCObserver
 import kr.young.rtp.observer.PCObserverImpl
 import org.webrtc.IceCandidate
 import org.webrtc.SessionDescription
 import org.webrtc.StatsReport
-import java.lang.System.currentTimeMillis
 import java.util.*
 
 class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, PCObserver, PCObserver.ICE, PCObserver.SDP {
@@ -45,6 +47,9 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
         return viewModel.counterpart!!
     }
 
+    private var isBottom = true
+    private var lastVisiblePosition = -1
+
     private lateinit var messageAdapter: MessageAdapter
     private lateinit var layoutManager: LinearLayoutManager
 
@@ -52,6 +57,7 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = DataBindingUtil.setContentView(this, R.layout.activity_message)
+        d(TAG, "onCreate")
 
         messageAdapter = MessageAdapter(viewModel.messageList)
         messageAdapter.setOnItemClickListener(longClickListener)
@@ -74,7 +80,6 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
 
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                d(TAG, "onTextChanged($start, $before, $count)")
                 if (start + count == 0) {
                     binding.ivSend.visibility = INVISIBLE
                 } else {
@@ -93,10 +98,25 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
 //                    d(TAG, "onScrolled($dx, $dy)")
 //                    d(TAG, "last item ${layoutManager.findLastCompletelyVisibleItemPosition()}")
 //                    d(TAG, "first item ${layoutManager.findFirstCompletelyVisibleItemPosition()}")
-                    if (layoutManager.findLastCompletelyVisibleItemPosition() == viewModel.messageList.size - 1) {
-                        binding.ivBottom.visibility = INVISIBLE
-                    } else {
-                        binding.ivBottom.visibility = VISIBLE
+                    if (layoutManager.findLastCompletelyVisibleItemPosition() != lastVisiblePosition) {
+                        lastVisiblePosition = layoutManager.findLastCompletelyVisibleItemPosition()
+                        if (layoutManager.findLastCompletelyVisibleItemPosition() == viewModel.messageList.size - 1) {
+                            binding.ivBottom.visibility = INVISIBLE
+                            isBottom = true
+                        } else {
+                            binding.ivBottom.visibility = VISIBLE
+                            isBottom = false
+                        }
+
+                        if (layoutManager.findLastCompletelyVisibleItemPosition() < 20 &&
+                            !viewModel.isEndReload &&
+                            viewModel.messageList.first().sequence != 0L &&
+                            viewModel.firstSequence != viewModel.messageList.first().sequence
+                        ) {
+                            d(TAG, "reload messages")
+                            viewModel.firstSequence = viewModel.messageList.first().sequence
+                            viewModel.getAdditionalMessages(max = viewModel.messageList.first().sequence)
+                        }
                     }
                 }
             }
@@ -112,24 +132,35 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
         PCObserverImpl.instance.add(this as PCObserver.ICE)
 
         viewModel.responseCode.observe(this) {
-            if (it != null) {
+            if (it != null && it != 0) {
                 if (it == USER_READ_SUCCESS) {
                     startCall()
+                } else if (it == MESSAGE_READ_SUCCESS) {
+                    d(TAG, "MESSAGE_READ_SUCCESS ${viewModel.messageList.size} ${viewModel.size}")
+                    messageAdapter.notifyItemRangeInserted(0, viewModel.size)
                 }
             }
         }
 
-        viewModel.receivedMessage.observe(this) {
-            val lastMsg = viewModel.messageList[viewModel.messageList.size - 2]
-            val lastDate = DateUtil.toFormattedString(lastMsg.createdAt!!, "aa hh:mm")
-            if (
-                lastDate == DateUtil.toFormattedString(it.createdAt!!, "aa hh:mm") &&
-                lastMsg.from == it.from
-            ) {
-                viewModel.messageList[viewModel.messageList.size - 2].timeFlag = false
-                messageAdapter.notifyItemChanged(viewModel.messageList.size - 2)
+        viewModel.recyclerViewNotifier.observe(this) {
+            if (it != null) {
+                runOnUiThread {
+                    when (it.modifierCategory) {
+                        Insert -> {
+                            messageAdapter.notifyItemInserted(it.position)
+                        }
+                        Changed -> {
+                            messageAdapter.notifyItemChanged(it.position)
+                        }
+                        Removed -> {
+                            messageAdapter.notifyItemRemoved(it.position)
+                        }
+                    }
+                    if (it.modifierCategory == Insert && (viewModel.messageList.last().from == MyDataViewModel.instance.getMyId() || isBottom)) {
+                        binding.recyclerView.scrollToPosition(messageAdapter.itemCount - 1)
+                    }
+                }
             }
-            messageAdapter.notifyItemInserted(viewModel.messageList.size - 1)
         }
 
         binding.tvTitle.text = counterpart.name
@@ -138,6 +169,7 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
     override fun onDestroy() {
         super.onDestroy()
         d(TAG, "onDestroy")
+        ChatRepository.removeChatListener()
         if (viewModel.rtpConnected) {
             viewModel.end(SendFCM.FCMType.Bye)
         }
@@ -170,31 +202,9 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
         val msg = binding.etMessage.text.toString()
 
         val message = viewModel.sendData(msg)
-        setMessage(message)
+        viewModel.addMessage(message)
         binding.etMessage.setText("")
         binding.ivSend.visibility = INVISIBLE
-    }
-
-    private fun setMessage(message: Message) {
-        runOnUiThread {
-            if (viewModel.messageList.isNotEmpty()) {
-                val lastMsg = viewModel.messageList.last()
-                val lastDate = DateUtil.toFormattedString(lastMsg.createdAt!!, "aa hh:mm")
-                if (
-                    lastDate == DateUtil.toFormattedString(message.createdAt!!, "aa hh:mm") &&
-                    lastMsg.from == message.from
-                ) {
-                    viewModel.messageList.last().timeFlag = false
-                    messageAdapter.notifyItemChanged(viewModel.messageList.size - 1)
-                }
-            }
-            viewModel.addDateView(message)
-            viewModel.messageMap[viewModel.chat!!.id!!]?.add(message)
-            messageAdapter.notifyItemInserted(viewModel.messageList.size - 1)
-            binding.recyclerView.post {
-                binding.recyclerView.scrollToPosition(messageAdapter.itemCount - 1)
-            }
-        }
     }
 
     private fun startCall() {
@@ -249,12 +259,10 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
         d(TAG, "onPCError")
     }
 
-    override fun onMessage(message: String) {
-        d(TAG, "onMessage ${counterpart.id} $message")
-        val msg = Message(counterpart.id, viewModel.chat!!.id!!, body = message, createdAt = Date(currentTimeMillis()))
-        setMessage(msg)
-        ChatViewModel.instance.selectedChat!!.lastMessage = message
-        ChatViewModel.instance.updateChatLastMessage()
+    override fun onMessage(msg: String) {
+        d(TAG, "onMessage ${counterpart.id} $msg")
+        val message = Message.fromJson(msg)
+        viewModel.addMessage(message)
     }
 
     override fun onLocalDescription(sdp: SessionDescription?) {

@@ -512,7 +512,7 @@ class RTPManager: PCObserver, PCObserver.SDP, PCObserver.ICE {
     }
 
     /** Event receive data */
-    override fun onMessage(message: String) {
+    override fun onMessage(msg: String) {
         i(TAG, "onMessage()")
     }
 }

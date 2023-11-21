@@ -15,6 +15,7 @@ import kr.young.firertc.util.Config.Companion.MESSAGE
 import kr.young.firertc.util.Config.Companion.MESSAGE_ID
 import kr.young.firertc.util.Config.Companion.NAME
 import kr.young.firertc.util.Config.Companion.SDP
+import kr.young.firertc.util.Config.Companion.SEQUENCE
 import kr.young.firertc.util.Config.Companion.SPACE_ID
 import kr.young.firertc.util.Config.Companion.TARGET_OS
 import kr.young.firertc.util.Config.Companion.TO
@@ -36,18 +37,11 @@ class SendFCM {
             messageId: String? = null,
             targetOS: String? = null,
             sdp: String? = null,
+            sequence: Long = -1,
             message: String? = null,
         ) {
-            d(TAG, "toToken $toToken")
-            d(TAG, "type $type")
-            d(TAG, "callType $callType")
-            d(TAG, "spaceId $spaceId")
-            d(TAG, "callId $callId")
-            d(TAG, "chatId $chatId")
-            d(TAG, "messageId $messageId")
-            d(TAG, "sdp $sdp")
-            d(TAG, "message $message")
-            ApiClient.getApiService().sendNotification(payload = fcmPayload(toToken, type, callType, spaceId, callId, chatId, messageId, targetOS, sdp, message))?.enqueue(object:
+            d(TAG, "sendMessage $type $message")
+            ApiClient.getApiService().sendNotification(payload = fcmPayload(toToken, type, callType, spaceId, callId, chatId, messageId, targetOS, sdp, sequence, message))?.enqueue(object:
                 Callback<JsonObject?> {
                 override fun onResponse(
                     call: retrofit2.Call<JsonObject?>,
@@ -76,6 +70,7 @@ class SendFCM {
             messageId: String?,
             targetOS: String?,
             sdp: String?,
+            sequence: Long,
             message: String?
         ): JsonObject {
             val payload = JsonObject()
@@ -107,6 +102,7 @@ class SendFCM {
                 data.addProperty(SDP, sdp)
             }
             if (message != null) {
+                data.addProperty(SEQUENCE, sequence)
                 data.addProperty(MESSAGE, message)
             }
             payload.add(DATA, data)

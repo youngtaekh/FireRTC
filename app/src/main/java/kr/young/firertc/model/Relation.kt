@@ -2,6 +2,7 @@ package kr.young.firertc.model
 
 import com.google.firebase.firestore.FieldValue
 import kr.young.common.Crypto
+import kr.young.firertc.util.Config.Companion.CREATED_AT
 import kr.young.firertc.util.Config.Companion.FROM
 import kr.young.firertc.util.Config.Companion.TO
 import kr.young.firertc.vm.MyDataViewModel
@@ -21,7 +22,7 @@ data class Relation(
             FROM to from!!,
             TO to to!!,
             "id" to id,
-            "createdAt" to at
+            CREATED_AT to at
         )
     }
 

@@ -1,19 +1,26 @@
 package kr.young.firertc.model
 
 import com.google.firebase.firestore.FieldValue
+import com.google.gson.JsonObject
 import kr.young.common.Crypto
+import kr.young.firertc.util.Config.Companion.BODY
+import kr.young.firertc.util.Config.Companion.CHAT_ID
 import kr.young.firertc.util.Config.Companion.CREATED_AT
 import kr.young.firertc.util.Config.Companion.FROM
+import kr.young.firertc.util.Config.Companion.SEQUENCE
+import kr.young.firertc.vm.MyDataViewModel
+import org.json.JSONObject
 import java.util.*
 import kotlin.collections.Map
 
 data class Message(
-    val from: String,
-    val chatId: String,
+    val from: String = MyDataViewModel.instance.getMyId(),
+    val chatId: String? = null,
     val id: String = Crypto().getHash("$from$chatId${System.currentTimeMillis()}"),
-    val body: String,
+    val body: String? = null,
+    var sequence: Long = -1,
+    val createdAt: Date? = null,
     var timeFlag: Boolean = true,
-    val createdAt: Date?,
     var isDate: Boolean = false,
 ) {
     fun toMap(): Map<String, Any> {
@@ -21,13 +28,37 @@ data class Message(
         return mapOf(
             "id" to id,
             FROM to from,
-            "chatId" to chatId,
-            "body" to body,
+            CHAT_ID to chatId!!,
+            BODY to body!!,
+            SEQUENCE to sequence,
             CREATED_AT to createdAt
         )
     }
 
+    override fun toString(): String {
+        val json = JsonObject()
+        json.addProperty("id", id)
+        json.addProperty(CHAT_ID, chatId)
+        json.addProperty(FROM, from)
+        json.addProperty(BODY, body)
+        json.addProperty(SEQUENCE, sequence)
+        json.addProperty(CREATED_AT, createdAt?.time)
+        return json.toString()
+    }
+
     companion object {
         private const val TAG = "Message"
+
+        fun fromJson(json: String): Message {
+            val obj = JSONObject(json)
+            return Message(
+                from = obj.getString(FROM),
+                id = obj.getString("id"),
+                chatId = obj.getString(CHAT_ID),
+                body = obj.getString(BODY),
+                sequence = obj.getLong(SEQUENCE),
+                createdAt = Date(obj.getLong(CREATED_AT))
+            )
+        }
     }
 }
