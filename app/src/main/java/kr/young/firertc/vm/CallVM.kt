@@ -221,9 +221,9 @@ open class CallVM internal constructor(): ViewModel() {
         onTerminatedCall()
     }
 
-    open fun onIncomingCall(context: Context, userId: String?, spaceId: String?, callId: String?, type: String?, sdp: String?) {
+    open fun onIncomingCall(context: Context, userId: String?, spaceId: String?, type: String?, sdp: String?) {
         d(TAG, "onIncomingCall")
-        if (spaceId == null || type == null || userId == null) { return }
+        if (spaceId == null || type == null) { return }
 
         callType = Call.Type.valueOf(type)
         callDirection = Call.Direction.Answer
