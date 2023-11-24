@@ -4,17 +4,45 @@ import com.google.android.gms.tasks.OnFailureListener
 import com.google.android.gms.tasks.OnSuccessListener
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.QuerySnapshot
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import kr.young.common.UtilLog.Companion.d
 import kr.young.common.UtilLog.Companion.e
+import kr.young.common.UtilLog.Companion.i
 import kr.young.firertc.model.Chat
+import kr.young.firertc.util.Config.Companion.LAST_MESSAGE
+import kr.young.firertc.util.Config.Companion.LAST_SEQUENCE
+import kr.young.firertc.util.Config.Companion.MODIFIED_AT
+import kr.young.firertc.util.Config.Companion.PARTICIPANTS
 import kr.young.firertc.vm.ChatViewModel
 
 class ChatRepository {
     companion object {
+        var registration: ListenerRegistration? = null
+
+        fun addChatListener(id: String, handler: (Map<String, Any>?) -> Unit) {
+            registration = Firebase.firestore.collection(COLLECTION).document(id)
+                .addSnapshotListener { snapshot, e ->
+                    if (e != null) {
+                        e(TAG, "Listen fail", e)
+                        return@addSnapshotListener
+                    }
+
+                    if (snapshot != null && snapshot.exists()) {
+                        handler(snapshot.data)
+                    } else {
+                        i(TAG, "Current data: null")
+                    }
+                }
+        }
+
+        fun removeChatListener() {
+            registration?.remove()
+        }
+
         fun getChat(
             id: String,
             failure: OnFailureListener = OnFailureListener {
@@ -46,8 +74,8 @@ class ChatRepository {
         ) {
             d(TAG, "getChats by my id")
             Firebase.firestore.collection(COLLECTION)
-                .whereArrayContains("participants", id)
-                .orderBy("modifiedAt", Query.Direction.DESCENDING)
+                .whereArrayContains(PARTICIPANTS, id)
+                .orderBy(MODIFIED_AT, Query.Direction.DESCENDING)
                 .get()
                 .addOnSuccessListener(success)
                 .addOnFailureListener(failure)
@@ -84,7 +112,7 @@ class ChatRepository {
         ) {
             d(TAG, "update modified at")
             Firebase.firestore.collection(COLLECTION).document(chat.id!!)
-                .update("modifiedAt", FieldValue.serverTimestamp())
+                .update(MODIFIED_AT, FieldValue.serverTimestamp())
                 .addOnSuccessListener(success)
                 .addOnFailureListener(failure)
         }
@@ -102,8 +130,9 @@ class ChatRepository {
         ) {
             d(TAG, "update last message")
             val map = mapOf(
-                "modifiedAt" to FieldValue.serverTimestamp(),
-                "lastMessage" to chat.lastMessage
+                MODIFIED_AT to FieldValue.serverTimestamp(),
+                LAST_SEQUENCE to FieldValue.increment(1),
+                LAST_MESSAGE to chat.lastMessage
             )
             Firebase.firestore.collection(COLLECTION).document(chat.id!!)
                 .update(map)

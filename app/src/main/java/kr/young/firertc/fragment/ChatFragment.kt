@@ -2,14 +2,12 @@ package kr.young.firertc.fragment
 
 import android.content.Intent
 import android.os.Bundle
-import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
-import android.view.View.INVISIBLE
-import android.view.View.OnClickListener
-import android.view.View.VISIBLE
+import android.view.View.*
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
@@ -110,7 +108,7 @@ class ChatFragment : Fragment(), OnClickListener {
                 if (participant != MyDataViewModel.instance.getMyId()) {
                     val user = UserViewModel.instance.getLocalUser(participant)
                     if (user != null) {
-                        MessageViewModel.instance.startOffer(user) {
+                        MessageViewModel.instance.startChat(user) {
                             val intent = Intent(this@ChatFragment.context, MessageActivity::class.java)
                             intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
                             startActivity(intent)
@@ -119,7 +117,7 @@ class ChatFragment : Fragment(), OnClickListener {
                         UserViewModel.instance.readUser(participant) {
                             val userDoc = it.toObject<User>()
                             if (userDoc != null) {
-                                MessageViewModel.instance.startOffer(userDoc) {
+                                MessageViewModel.instance.startChat(userDoc) {
                                     val intent = Intent(
                                         this@ChatFragment.context,
                                         MessageActivity::class.java

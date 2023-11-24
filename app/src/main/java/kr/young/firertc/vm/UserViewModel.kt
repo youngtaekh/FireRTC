@@ -45,18 +45,6 @@ class UserViewModel: ViewModel() {
         }
     }
 
-    fun setContacts(users: List<User>) {
-        d(TAG, "setContacts size ${users.size}")
-        removeAllContact()
-        contacts.addAll(users)
-        setRefreshContacts()
-    }
-
-    fun addContact(user: User) {
-        d(TAG, "addContact id ${user.id}")
-        contacts.add(user)
-    }
-
     fun addContacts(list: List<User>) {
         d(TAG, "addContacts size ${list.size}")
         contacts.addAll(list)

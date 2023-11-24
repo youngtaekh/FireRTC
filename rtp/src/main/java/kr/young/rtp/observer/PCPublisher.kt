@@ -23,5 +23,5 @@ interface PCPublisher {
     fun onPCClosedObserver()
     fun onPCStatsReadyObserver(reports: Array<StatsReport?>?)
     fun onPCErrorObserver(description: String?)
-    fun onMessageObserver(message: String)
+    fun onMessageObserver(msg: String)
 }

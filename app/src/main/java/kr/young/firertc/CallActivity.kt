@@ -208,8 +208,7 @@ class CallActivity : AppCompatActivity(), OnClickListener, OnTouchListener, PCOb
                     type = FCMType.Sdp,
                     callType = call.type,
                     spaceId = call.spaceId,
-                    callId = call.id,
-                    sdp = sdp!!.description
+                    callId = call.id
                 )
             }
         }
@@ -269,7 +268,7 @@ class CallActivity : AppCompatActivity(), OnClickListener, OnTouchListener, PCOb
         d(TAG, "onPCError")
     }
 
-    override fun onMessage(message: String) {
+    override fun onMessage(msg: String) {
         d(TAG, "onMessage")
     }
 }

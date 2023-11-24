@@ -15,7 +15,6 @@ import kr.young.firertc.databinding.ActivityCallDetailBinding
 import kr.young.firertc.model.Call
 import kr.young.firertc.model.Space
 import kr.young.firertc.model.User
-import kr.young.firertc.repo.ChatRepository.Companion.CHAT_CREATE_SUCCESS
 import kr.young.firertc.util.BaseActivity
 import kr.young.firertc.vm.*
 import java.util.*
@@ -157,8 +156,7 @@ class CallDetailActivity : BaseActivity(), OnClickListener, OnTouchListener {
         d(TAG, "chat()")
         if (counterpart != null) {
             val messageVM = MessageViewModel.instance
-            messageVM.startOffer(counterpart!!) {
-//                startService(Intent(this, CallService::class.java))
+            messageVM.startChat(counterpart!!) {
                 val intent = Intent(this, MessageActivity::class.java)
                 intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
                 startActivity(intent)

@@ -160,8 +160,7 @@ open class CallVM internal constructor(): ViewModel() {
             callType = call!!.type,
             spaceId = space!!.id,
             callId = call!!.id,
-            targetOS = counterpart!!.os,
-//            sdp = sdp
+            targetOS = counterpart!!.os
         )
     }
 
@@ -178,8 +177,7 @@ open class CallVM internal constructor(): ViewModel() {
             callType = call!!.type,
             spaceId = space!!.id,
             callId = call!!.id,
-            targetOS = counterpart!!.os,
-//            sdp = sdp
+            targetOS = counterpart!!.os
         )
     }
 
@@ -229,19 +227,28 @@ open class CallVM internal constructor(): ViewModel() {
 
         callType = Call.Type.valueOf(type)
         callDirection = Call.Direction.Answer
-        if (sdp == null) {
-            if (callId != null) {
-                CallRepository.getCall(callId) {
-                    val call = it.toObject<Call>()
-                    remoteSDP = SessionDescription(SessionDescription.Type.OFFER, call!!.sdp)
-                    getSpaceForIncomingCall(context, spaceId, userId)
+        remoteSDP = SessionDescription(SessionDescription.Type.OFFER, sdp!!)
+        SpaceRepository.getSpace(id = spaceId, success = {
+            d(TAG, "get space success")
+            this.space = it.toObject<Space>()!!
+            setResponseCode(SPACE_READ_SUCCESS)
+            UserRepository.getUser(id = userId!!) { user ->
+                counterpart = user.toObject<User>()
+                call = Call(spaceId = space!!.id, type = callType!!, direction = Call.Direction.Answer, counterpartName = counterpart!!.name)
+                d(TAG, "call id ${call!!.id}")
+                CallRepository.post(call!!) {
+                    d(TAG, "call post success")
+                    updateCallList()
+                    updateParticipantList()
+                    if (callType == Call.Type.MESSAGE) {
+                        context.startService(Intent(context, CallService::class.java))
+                    } else {
+                        startForegroundService(context, Intent(context, CallService::class.java))
+                    }
+                    CallSignalImpl.instance.onIncomingObserver()
                 }
             }
-        } else {
-            remoteSDP = SessionDescription(SessionDescription.Type.OFFER, sdp)
-            getSpaceForIncomingCall(context, spaceId, userId)
-        }
-
+        })
     }
 
     open fun onAnswerCall(sdp: String?) {
@@ -281,30 +288,6 @@ open class CallVM internal constructor(): ViewModel() {
                 CallRepository.updateTerminatedAt(call!!)
             }
         }
-    }
-
-    private fun getSpaceForIncomingCall(context: Context, spaceId: String, userId: String) {
-        SpaceRepository.getSpace(id = spaceId, success = {
-            d(TAG, "get space success")
-            this.space = it.toObject<Space>()!!
-            setResponseCode(SPACE_READ_SUCCESS)
-            UserRepository.getUser(id = userId) { user ->
-                counterpart = user.toObject<User>()
-                call = Call(spaceId = space!!.id, type = callType!!, direction = Call.Direction.Answer, counterpartName = counterpart!!.name)
-                d(TAG, "call id ${call!!.id}")
-                CallRepository.post(call!!) {
-                    d(TAG, "call post success")
-                    updateCallList()
-                    updateParticipantList()
-                    if (callType == Call.Type.MESSAGE) {
-                        context.startService(Intent(context, CallService::class.java))
-                    } else {
-                        startForegroundService(context, Intent(context, CallService::class.java))
-                    }
-                    CallSignalImpl.instance.onIncomingObserver()
-                }
-            }
-        })
     }
 
     fun getSpace(id: String, success: OnSuccessListener<DocumentSnapshot>) {

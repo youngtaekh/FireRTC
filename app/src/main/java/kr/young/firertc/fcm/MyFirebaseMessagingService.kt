@@ -19,21 +19,11 @@ import kr.young.firertc.MainActivity
 import kr.young.firertc.R
 import kr.young.firertc.fcm.SendFCM.FCMType
 import kr.young.firertc.model.Call
+import kr.young.firertc.model.FirebaseMessage
 import kr.young.firertc.model.Space
 import kr.young.firertc.repo.AppSP
 import kr.young.firertc.repo.CallRepository
 import kr.young.firertc.repo.SpaceRepository
-import kr.young.firertc.util.Config.Companion.CALL_ID
-import kr.young.firertc.util.Config.Companion.SDP
-import kr.young.firertc.util.Config.Companion.SPACE_ID
-import kr.young.firertc.util.Config.Companion.CALL_TYPE
-import kr.young.firertc.util.Config.Companion.CHAT_ID
-import kr.young.firertc.util.Config.Companion.FCM_TOKEN
-import kr.young.firertc.util.Config.Companion.MESSAGE
-import kr.young.firertc.util.Config.Companion.MESSAGE_ID
-import kr.young.firertc.util.Config.Companion.NAME
-import kr.young.firertc.util.Config.Companion.TYPE
-import kr.young.firertc.util.Config.Companion.USER_ID
 import kr.young.firertc.util.NotificationUtil
 import kr.young.firertc.vm.*
 import kr.young.rtp.RTPManager
@@ -41,36 +31,21 @@ import org.webrtc.IceCandidate
 import org.webrtc.SessionDescription
 
 class MyFirebaseMessagingService : FirebaseMessagingService() {
+
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         val data = remoteMessage.data
         if (data.isNotEmpty()) {
-            val type = data[TYPE]
-            d(TAG, "Message data payload: {userId: ${data[USER_ID]}, type: $type, callType: ${data[CALL_TYPE]}")
-//            d(TAG, "Message data payload: $data")
-            if (type != null) {
-                when (FCMType.valueOf(type)) {
-                    FCMType.New, FCMType.Leave -> {
-                        receivedSpaceMessage(
-                            data[SPACE_ID],
-                            data[CALL_ID])
-                    }
-                    FCMType.Offer -> {
-                        receiveOfferMessage(
-                            data[USER_ID],
-                            data[SPACE_ID],
-                            data[CALL_ID],
-                            data[CHAT_ID],
-                            data[CALL_TYPE],
-                            data[SDP],
-                            data[MESSAGE],
-                            data[FCM_TOKEN]
-                        )
-                    }
-                    FCMType.Sdp -> { receiveSDPMessage(data[SDP]) }
-                    FCMType.Ice -> { receiveICEMessage(data[SDP], data[CALL_TYPE]) }
-                    FCMType.Answer -> { receiveAnswerMessage(data[CALL_ID], data[SDP], data[CALL_TYPE]) }
-                    FCMType.Bye, FCMType.Cancel, FCMType.Decline, FCMType.Busy -> { receiveEndMessage(data[CALL_TYPE]) }
-                    FCMType.Message -> onReceiveMessage(data[CHAT_ID], data[USER_ID], data[NAME], data[MESSAGE_ID], data[MESSAGE])
+            val fm = FirebaseMessage(data)
+            d(TAG, "Message data payload: ${fm.userId}, ${fm.type}, ${fm.callType}")
+            if (fm.type != null) {
+                when (FCMType.valueOf(fm.type!!)) {
+                    FCMType.New, FCMType.Leave -> receivedSpaceMessage(fm)
+                    FCMType.Offer -> receiveOfferMessage(fm)
+                    FCMType.Sdp -> receiveSDPMessage(fm)
+                    FCMType.Ice -> receiveICEMessage(fm)
+                    FCMType.Answer -> receiveAnswerMessage(fm)
+                    FCMType.Bye, FCMType.Cancel, FCMType.Decline, FCMType.Busy -> receiveEndMessage(fm)
+                    FCMType.Message -> onReceiveChatMessage(fm)
                     else -> { sendNotification("else") }
                 }
             }
@@ -91,106 +66,101 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         sendRegistrationToServer(token)
     }
 
-    private fun receiveOfferMessage(
-        userId: String?,
-        spaceId: String?,
-        callId: String?,
-        chatId: String?,
-        type: String?,
-        sdp: String?,
-        message: String?,
-        fcmToken: String?
-    ) {
-        d(TAG, "receiveOfferMessage($userId, $type)")
+    private fun receiveOfferMessage(fm: FirebaseMessage) {
+        d(TAG, "receiveOfferMessage(${fm.userId}, ${fm.callType}, sdp: ${fm.sdp != null})")
         if (CallVM.instance.space != null) {
-            SendFCM.sendMessage(fcmToken!!, FCMType.Busy)
-            SpaceRepository.getSpace(spaceId!!) {
+            SendFCM.sendMessage(
+                toToken = fm.fcmToken!!,
+                type = FCMType.Busy,
+                callType = Call.Type.valueOf(fm.callType ?: "AUDIO"),
+                targetOS = fm.targetOS
+            )
+            SpaceRepository.getSpace(fm.spaceId!!) {
                 val space = it.toObject<Space>()!!
                 CallVM.instance.busy(space)
             }
             val call = Call(
-                spaceId = spaceId,
-                type = Call.Type.valueOf(type!!),
+                spaceId = fm.spaceId,
+                type = Call.Type.valueOf(fm.callType!!),
                 direction = Call.Direction.Answer,
                 terminated = true
             )
-            SpaceRepository.addCallList(spaceId, call.id)
+            SpaceRepository.addCallList(fm.spaceId!!, call.id)
             CallRepository.post(call) {
                 CallRepository.updateTerminatedAt(call)
             }
-        } else if (type == Call.Type.MESSAGE.toString()) {
-            MessageViewModel.instance.onIncomingCall(userId, chatId, message, sdp, fcmToken)
+        } else if (fm.callType == Call.Type.MESSAGE.toString()) {
+            MessageViewModel.instance.onIncomingCall(fm.userId, fm.chatId, fm.message, fm.sdp, fm.fcmToken)
         } else {
-            CallVM.instance.onIncomingCall(this, userId, spaceId, callId, type, sdp)
-        }
-    }
-
-    private fun receiveAnswerMessage(callId: String?, sdp: String?, type: String?) {
-        d(TAG, "receiveAnswerMessage")
-        if (sdp.isNullOrEmpty()) {
-            CallRepository.getCall(callId!!) {
+            CallRepository.getCall(fm.callId!!) {
                 val call = it.toObject<Call>()
-                CallVM.instance.onAnswerCall(call?.sdp)
-            }
-        } else {
-            if (type == Call.Type.MESSAGE.toString()) {
-                MessageViewModel.instance.onAnswerCall(sdp)
-            } else {
-                CallVM.instance.onAnswerCall(sdp)
+                CallVM.instance.onIncomingCall(this, fm.userId, fm.spaceId, fm.callType, call!!.sdp)
             }
         }
     }
 
-    private fun receiveEndMessage(type: String?) {
+    private fun receiveAnswerMessage(fm: FirebaseMessage) {
+        d(TAG, "receiveAnswerMessage")
+        if (fm.callType == Call.Type.MESSAGE.toString()) {
+            MessageViewModel.instance.onAnswerCall(fm.sdp)
+        } else {
+            CallRepository.getCall(fm.callId!!) {
+                val call = it.toObject<Call>()!!
+                CallVM.instance.onAnswerCall(call.sdp)
+            }
+        }
+    }
+
+    private fun receiveEndMessage(fm: FirebaseMessage) {
         d(TAG, "receiveEndMessage")
-        if (type == Call.Type.MESSAGE.toString()) {
+        if (fm.callType == Call.Type.MESSAGE.toString()) {
             MessageViewModel.instance.onTerminatedCall()
         } else {
             CallVM.instance.onTerminatedCall()
         }
     }
 
-    private fun receivedSpaceMessage(spaceId: String?, callId: String?) {
+    private fun receivedSpaceMessage(fm: FirebaseMessage) {
         val spaceViewModel = SpaceViewModel.instance
-        if (spaceViewModel.checkSpaceId(spaceId)) {
+        if (spaceViewModel.checkSpaceId(fm.spaceId)) {
             SpaceViewModel.instance.readSpace()
-            CallViewModel.instance.refreshCalls(spaceId!!)
+            CallViewModel.instance.refreshCalls(fm.spaceId!!)
         }
     }
 
-    private fun receiveSDPMessage(sdp: String?) {
-        if (sdp != null) {
-            val remote = SessionDescription(SessionDescription.Type.ANSWER, sdp)
+    private fun receiveSDPMessage(fm: FirebaseMessage) {
+        if (fm.sdp != null) {
+            val remote = SessionDescription(SessionDescription.Type.ANSWER, fm.sdp!!)
             RTPManager.instance.setRemoteDescription(remote)
         }
     }
 
-    private fun receiveICEMessage(sdp: String?, type: String?) {
-        if (sdp != null) {
+    private fun receiveICEMessage(fm: FirebaseMessage) {
+        if (fm.sdp != null) {
             if (RTPManager.instance.isInit && RTPManager.instance.isCreatedPCFactory) {
                 d(TAG, "receiveIceMessage")
-                val remote = IceCandidate("0", 0, sdp)
+                val remote = IceCandidate("0", 0, fm.sdp!!)
                 RTPManager.instance.addRemoteIceCandidate(remote)
-            } else if (type == Call.Type.MESSAGE.toString()) {
+            } else if (fm.callType == Call.Type.MESSAGE.toString()) {
                 if (MessageViewModel.instance.remoteIce == null) {
-                    MessageViewModel.instance.remoteIce = sdp
+                    MessageViewModel.instance.remoteIce = fm.sdp!!
                 } else {
-                    MessageViewModel.instance.remoteIce += ";$sdp"
+                    MessageViewModel.instance.remoteIce += ";${fm.sdp!!}"
                 }
             } else {
                 if (CallVM.instance.remoteIce == null) {
-                    CallVM.instance.remoteIce = sdp
+                    CallVM.instance.remoteIce = fm.sdp!!
                 } else {
-                    CallVM.instance.remoteIce += ";$sdp"
+                    CallVM.instance.remoteIce += ";${fm.sdp!!}"
                 }
             }
         }
     }
 
-    private fun onReceiveMessage(chatId: String?, userId: String?, name: String?, messageId: String?, message: String?) {
-        d(TAG, "onReceiveMessage($chatId, $userId, $name, $messageId, $message)")
-        MessageViewModel.instance.onMessageReceived(chatId, userId, messageId, message)
-        NotificationUtil.messageNotification(this, chatId!!, name!!, message!!)
+    private fun onReceiveChatMessage(fm: FirebaseMessage) {
+        d(TAG, "onReceiveChatMessage(${fm.chatId != null}, ${fm.userId}, ${fm.name}, ${fm.messageId != null}, ${fm.message})")
+        MessageViewModel.instance.onMessageReceived(fm.chatId, fm.userId, fm.messageId, fm.message)
+        NotificationUtil.messageNotification(this, fm.chatId!!, fm.name!!, fm.message!!)
     }
 
     private fun scheduleJob() {
