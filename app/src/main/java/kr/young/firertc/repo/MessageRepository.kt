@@ -1,21 +1,16 @@
 package kr.young.firertc.repo
 
-import android.provider.BaseColumns
 import com.google.android.gms.tasks.OnFailureListener
 import com.google.android.gms.tasks.OnSuccessListener
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.QuerySnapshot
-import com.google.firebase.firestore.Source
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.firestore.ktx.toObject
 import com.google.firebase.ktx.Firebase
 import kr.young.common.UtilLog.Companion.d
 import kr.young.common.UtilLog.Companion.e
 import kr.young.firertc.model.Message
-import kr.young.firertc.util.Config.Companion.BODY
 import kr.young.firertc.util.Config.Companion.CHAT_ID
-import kr.young.firertc.util.Config.Companion.CREATED_AT
-import kr.young.firertc.util.Config.Companion.FROM
 import kr.young.firertc.util.Config.Companion.SEQUENCE
 import kr.young.firertc.vm.CallViewModel
 
@@ -38,7 +33,7 @@ class MessageRepository {
                 d(TAG, "get message success")
             }
         ) {
-            d(TAG, "getMessages by chat id")
+            d(TAG, "getMessages($min - $max)")
             Firebase.firestore.collection(COLLECTION)
                 .whereEqualTo(CHAT_ID, chatId)
                 .whereGreaterThan(SEQUENCE, min)

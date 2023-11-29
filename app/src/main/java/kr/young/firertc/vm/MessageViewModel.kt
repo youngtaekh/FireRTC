@@ -1,5 +1,6 @@
 package kr.young.firertc.vm
 
+import android.annotation.SuppressLint
 import android.os.Handler
 import android.os.Looper
 import androidx.lifecycle.MutableLiveData
@@ -8,6 +9,11 @@ import com.google.android.gms.tasks.OnSuccessListener
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.QuerySnapshot
 import com.google.firebase.firestore.ktx.toObject
+import io.reactivex.Observable
+import io.reactivex.android.schedulers.AndroidSchedulers
+import io.reactivex.rxkotlin.subscribeBy
+import io.reactivex.rxkotlin.toObservable
+import io.reactivex.schedulers.Schedulers
 import kr.young.common.ApplicationUtil
 import kr.young.common.DateUtil
 import kr.young.common.UtilLog.Companion.d
@@ -18,11 +24,10 @@ import kr.young.firertc.model.Chat
 import kr.young.firertc.model.Message
 import kr.young.firertc.model.User
 import kr.young.firertc.repo.ChatRepository
+import kr.young.firertc.repo.MessageDatabase
 import kr.young.firertc.repo.MessageRepository
-import kr.young.firertc.repo.MessageRepository.Companion.MESSAGE_READ_SUCCESS
 import kr.young.firertc.util.RecyclerViewNotifier
-import kr.young.firertc.util.RecyclerViewNotifier.ModifierCategory.Changed
-import kr.young.firertc.util.RecyclerViewNotifier.ModifierCategory.Insert
+import kr.young.firertc.util.RecyclerViewNotifier.ModifierCategory.*
 import kr.young.rtp.RTPManager
 import org.webrtc.SessionDescription
 import java.lang.System.currentTimeMillis
@@ -33,7 +38,7 @@ class MessageViewModel private constructor(): ViewModel() {
     var counterpart: User? = null
     var chat: Chat? = null
     var message: Message? = null
-    var messageMap = mutableMapOf<String, MutableList<Message>>()
+    private var messageMap = mutableMapOf<String, MutableList<Message>>()
     var messageList: MutableList<Message>
         get() {
             return if (chat == null) {
@@ -56,7 +61,8 @@ class MessageViewModel private constructor(): ViewModel() {
     var size = 0
     var isEndReload = false
     var firstSequence = -1L
-    var getMessageTime = 0L
+
+    private var messageDB = MessageDatabase.getInstance()
 
     private val rtpManager = RTPManager.instance
     var isOffer = true
@@ -105,6 +111,7 @@ class MessageViewModel private constructor(): ViewModel() {
         }
     }
 
+    @SuppressLint("CheckResult")
     private val onGetChatSuccess: (DocumentSnapshot, OnSuccessListener<Void>) -> Unit = { documentSnapshot, onSuccessListener ->
         d(TAG, "onGetChatSuccess")
         if (documentSnapshot.toObject<Chat>() == null) {
@@ -115,24 +122,40 @@ class MessageViewModel private constructor(): ViewModel() {
         } else {
             chat = documentSnapshot.toObject()!!
             ChatRepository.addChatListener(chat!!.id!!, onChangeChat)
-            getMessageTime = currentTimeMillis()
-            MessageRepository.getMessages(chatId = chat!!.id!!, success = onGetMessageSuccess)
-//                MessageRepository.getLastMessage(chat!!.id!!)
-            onSuccessListener.onSuccess(null)
+            Observable.just(1)
+                .observeOn(Schedulers.io())
+                .map {
+                    val last = messageDB!!.messageDao().getLastMessage(chat!!.id!!)
+                    MessageRepository.getMessages(chatId = chat!!.id!!, min = last.sequence, success = onGetMessageSuccess)
+                }.observeOn(AndroidSchedulers.mainThread())
+                .subscribe { onSuccessListener.onSuccess(null) }
+
         }
     }
 
+    @SuppressLint("CheckResult")
     private val onGetMessageSuccess: (QuerySnapshot) -> Unit = { query ->
-        d(TAG, "onGetMessageSuccess ${currentTimeMillis() - getMessageTime}ms")
-        size = if (chat == null || messageMap[chat!!.id!!] == null) 0 else messageMap[chat!!.id!!]!!.size
-        for (document in query.documents.asReversed()) {
-            val message = document.toObject<Message>()
-            addMessage(message!!, false)
-        }
-        size = messageMap[chat!!.id!!]!!.size - size
-        setResponseCode(MESSAGE_READ_SUCCESS)
+        size = messageList.size
+        d(TAG, "onGetMessageSuccess size ${query.documents.size}")
+        Observable.fromIterable(query.documents.asReversed())
+            .observeOn(Schedulers.computation())
+            .map { it.toObject<Message>()!! }
+            .observeOn(Schedulers.io())
+            .map {
+                messageDB?.messageDao()?.setMessage(it)
+                addMessage(it, false)
+            }
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribeBy(
+                onComplete = {
+                    d(TAG, "notifier($size, ${messageList.size - size})")
+                    val notifier = RecyclerViewNotifier(size, messageList.size - size, Insert, true)
+                    setRecyclerViewNotifier(notifier)
+                }
+            )
     }
 
+    @SuppressLint("CheckResult")
     fun startChat(counterpart: User, chatCreateSuccess: OnSuccessListener<Void>) {
         d(TAG, "startChat")
         this.counterpart = counterpart
@@ -141,19 +164,50 @@ class MessageViewModel private constructor(): ViewModel() {
         participants.sort()
         chat = Chat(participants = participants, title = counterpart.name)
         messageMap[chat!!.id!!] = mutableListOf()
+        Thread{
+            val list = messageDB!!.messageDao().getMessages(chat!!.id!!)
+            list.asReversed().toObservable()
+                .subscribe { addMessage(it, false) }
+        }.start()
         ChatRepository.getChat(chat!!.id!!) { onGetChatSuccess(it, chatCreateSuccess) }
     }
 
+    @SuppressLint("CheckResult")
     fun getAdditionalMessages(min: Long = -1, max: Long = 9_223_372_036_854_775_807) {
+        d(TAG, "getAdditionalMessage($min, $max)")
+        size = messageList.size
+        Observable.just(max).observeOn(Schedulers.io())
+            .flatMap { messageDB!!.messageDao().getMessages(chatId = chat!!.id!!, max = it).toObservable() }
+            .map { addAdditionalMessage(it) }
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribeBy(
+                onComplete = {
+                    d(TAG, "notifier($size, ${messageList.size - size})")
+                    val notifier = RecyclerViewNotifier(0, messageList.size - size, Insert)
+                    setRecyclerViewNotifier(notifier)
+                    getAdditionalMessageFromServer(min, messageList.first().sequence)
+                })
+    }
+
+    @SuppressLint("CheckResult")
+    private fun getAdditionalMessageFromServer(min: Long, max: Long) {
+        d(TAG, "getAdditionalMessageFromServer($min, $max)")
         MessageRepository.getMessages(chat!!.id!!, min = min, max = max) {
-            size = if (messageMap[chat!!.id!!] == null) 0 else messageMap[chat!!.id!!]!!.size
+            size = messageList.size
             isEndReload = it.documents.isEmpty()
-            for (document in it.documents) {
-                val message = document.toObject<Message>()
-                addAdditionalMessage(message!!)
-            }
-            size = messageMap[chat!!.id!!]!!.size - size
-            setResponseCode(MESSAGE_READ_SUCCESS)
+            it.documents.toObservable()
+                .observeOn(Schedulers.io())
+                .map { doc ->
+                    val message = doc.toObject<Message>()!!
+                    messageDB?.messageDao()?.setMessage(message)
+                    addAdditionalMessage(message)
+                }
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribeBy(onComplete = {
+                    d(TAG, "notifier($size, ${messageList.size - size})")
+                    val notifier = RecyclerViewNotifier(0, messageList.size - size, Insert)
+                    setRecyclerViewNotifier(notifier)
+                })
         }
     }
 
@@ -214,7 +268,7 @@ class MessageViewModel private constructor(): ViewModel() {
         }
 
         list.add(message)
-        if (isNotifier) { setRecyclerViewNotifier(RecyclerViewNotifier(list.size - 1, 1, Insert)) }
+        if (isNotifier) { setRecyclerViewNotifier(RecyclerViewNotifier(list.size - 1, 1, Insert, true)) }
 
         // Modifier Time View
         val currentMessageTime = DateUtil.toFormattedString(message.createdAt, "yyMMddaaHHmm")
