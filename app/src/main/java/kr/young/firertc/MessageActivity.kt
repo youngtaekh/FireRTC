@@ -27,7 +27,6 @@ import kr.young.firertc.repo.ChatRepository
 import kr.young.firertc.repo.MessageRepository.Companion.MESSAGE_READ_SUCCESS
 import kr.young.firertc.repo.UserRepository.Companion.USER_READ_SUCCESS
 import kr.young.firertc.util.RecyclerViewNotifier.ModifierCategory.*
-import kr.young.firertc.vm.ChatViewModel
 import kr.young.firertc.vm.MessageViewModel
 import kr.young.firertc.vm.MyDataViewModel
 import kr.young.rtp.RTPManager
@@ -49,6 +48,7 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
 
     private var isBottom = true
     private var lastVisiblePosition = -1
+    private var isLoading = false
 
     private lateinit var messageAdapter: MessageAdapter
     private lateinit var layoutManager: LinearLayoutManager
@@ -95,9 +95,6 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
                 if (dragging) {
                     super.onScrolled(recyclerView, dx, dy)
-//                    d(TAG, "onScrolled($dx, $dy)")
-//                    d(TAG, "last item ${layoutManager.findLastCompletelyVisibleItemPosition()}")
-//                    d(TAG, "first item ${layoutManager.findFirstCompletelyVisibleItemPosition()}")
                     if (layoutManager.findLastCompletelyVisibleItemPosition() != lastVisiblePosition) {
                         lastVisiblePosition = layoutManager.findLastCompletelyVisibleItemPosition()
                         if (layoutManager.findLastCompletelyVisibleItemPosition() == viewModel.messageList.size - 1) {
@@ -109,11 +106,12 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
                         }
 
                         if (layoutManager.findLastCompletelyVisibleItemPosition() < 20 &&
+                            !isLoading &&
                             !viewModel.isEndReload &&
                             viewModel.messageList.first().sequence != 0L &&
                             viewModel.firstSequence != viewModel.messageList.first().sequence
                         ) {
-                            d(TAG, "reload messages")
+                            isLoading = true
                             viewModel.firstSequence = viewModel.messageList.first().sequence
                             viewModel.getAdditionalMessages(max = viewModel.messageList.first().sequence)
                         }
@@ -137,29 +135,26 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
                     startCall()
                 } else if (it == MESSAGE_READ_SUCCESS) {
                     d(TAG, "MESSAGE_READ_SUCCESS ${viewModel.messageList.size} ${viewModel.size}")
-                    messageAdapter.notifyItemRangeInserted(0, viewModel.size)
+//                    messageAdapter.notifyItemRangeInserted(0, viewModel.size)
+//                    messageAdapter.notifyDataSetChanged()
                 }
             }
         }
 
         viewModel.recyclerViewNotifier.observe(this) {
-            if (it != null) {
-                runOnUiThread {
-                    when (it.modifierCategory) {
-                        Insert -> {
-                            messageAdapter.notifyItemInserted(it.position)
-                        }
-                        Changed -> {
-                            messageAdapter.notifyItemChanged(it.position)
-                        }
-                        Removed -> {
-                            messageAdapter.notifyItemRemoved(it.position)
-                        }
-                    }
-                    if (it.modifierCategory == Insert && (viewModel.messageList.last().from == MyDataViewModel.instance.getMyId() || isBottom)) {
-                        binding.recyclerView.scrollToPosition(messageAdapter.itemCount - 1)
-                    }
+            if (it == null) {
+                return@observe
+            }
+            runOnUiThread {
+                when (it.modifierCategory) {
+                    Insert -> messageAdapter.notifyItemRangeInserted(it.position, it.count)
+                    Changed -> messageAdapter.notifyItemRangeChanged(it.position, it.count)
+                    Removed -> messageAdapter.notifyItemRangeRemoved(it.position, it.count)
                 }
+                if (it.isBottom && viewModel.messageList.last().from == MyDataViewModel.instance.getMyId() || isBottom) {
+                    binding.recyclerView.scrollToPosition(messageAdapter.itemCount - 1)
+                }
+                isLoading = false
             }
         }
 

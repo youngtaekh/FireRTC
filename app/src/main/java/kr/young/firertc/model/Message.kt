@@ -1,5 +1,7 @@
 package kr.young.firertc.model
 
+import androidx.room.Entity
+import androidx.room.PrimaryKey
 import com.google.firebase.firestore.FieldValue
 import com.google.gson.JsonObject
 import kr.young.common.Crypto
@@ -11,11 +13,12 @@ import kr.young.firertc.util.Config.Companion.SEQUENCE
 import kr.young.firertc.vm.MyDataViewModel
 import org.json.JSONObject
 import java.util.*
-import kotlin.collections.Map
 
+@Entity(tableName = "messages")
 data class Message(
     val from: String = MyDataViewModel.instance.getMyId(),
     val chatId: String? = null,
+    @PrimaryKey
     val id: String = Crypto().getHash("$from$chatId${System.currentTimeMillis()}"),
     val body: String? = null,
     var sequence: Long = -1,
