@@ -78,7 +78,11 @@ class SendFCM {
             val data = JsonObject()
             val notification = JsonObject()
             notification.addProperty("title", MyDataViewModel.instance.myData!!.name)
-            notification.addProperty("body", "$callType $type")
+            if (type == FCMType.Message) {
+                notification.addProperty("body", "$type $message")
+            } else {
+                notification.addProperty("body", "$callType $type")
+            }
             data.addProperty("content_available", true)
             data.addProperty(TYPE, type.toString())
             data.addProperty(CALL_TYPE, callType.toString())
