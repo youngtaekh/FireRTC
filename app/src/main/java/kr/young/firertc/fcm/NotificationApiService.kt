@@ -41,13 +41,8 @@ interface NotificationApiService {
     ): Call<ResponseBody>
 
     // tm=&
-    // hi=&un=&pl=&
-    // tr=&cv=&
-    // ml=1&
-    // si=&cn=&
-    // opt=0&sopt=0&
-    // si=999&si_it=1&si_ds=04-01&si_de=4-30&si_wd=&si_tm=&si_ha=&si_te=&si_st=&si_as=&si_or=&si_ty=&si_pl=&si_in=&si_on=&si_um=&si_oc=&si_bs=&si_sc=&si_cnt=&si_aft=&si_li=
-    // si=999&si_it=1&si_wd=1&si_tm=&si_ha=&si_te=&si_st=&si_as=&si_or=&si_ty=&si_pl=&si_in=&si_on=&si_um=&si_oc=&si_bs=&si_sc=&si_cnt=&si_aft=&si_li=
+    // o1=WAR&o2=OutCount
+    // o1=WAR_ALL_ADJ&o2=TPA&pa=0
     @GET("stat.php")
     fun getPlayer(
         @Query("mid")mid: String = "stat",
@@ -57,16 +52,16 @@ interface NotificationApiService {
         @Query("se")season: Int = Season.Regular.idx,
         @Query("te")team: String = Team.All.title,
         @Query("ty")battingLocation: Int = BattingLocation.All.idx,
-        @Query("qu")qu: String = "100", //all, p70, 500
+        @Query("qu")qu: String = "90", //all, p70, 500
         @Query("po")position: Int = FieldPosition.All.idx,
-        @Query("da")da: Int = 1,    //Category(기본, 확장...)
+        @Query("da")category: Int = Category.General.idx,    //Category(기본, 확장...)
         @Query("o1")sort1: String = IndexCode.WAR_ALL_ADJ.toString(),
         @Query("o2")sort2: String = IndexCode.TPA.toString(),
         @Query("de")descending: Int = 1,
         @Query("lr")lr: Int = 0,    //표기
         @Query("ml")ml: Int = 1,
-        @Query("sn")count: Int = 100,
-        @Query("pa")pa: Int = 0, // 이상 순위부터 출력
+        @Query("sn")count: Int = 1000,
+        @Query("pa")pa: Int = 0, // 초과 순위부터 출력
         @Query("as")ageStart: Int = 19,
         @Query("ae")ageEnd: Int = 19,
     ): Call<ResponseBody>
@@ -145,6 +140,23 @@ enum class Season(val idx: Int) {
     WildCard(7)
 }
 
+enum class Category(val idx: Int) {
+    General(1),
+    Extension(2),
+    Value(3),
+    Clutch(4),
+    PlateAppearance(5),
+    BattedBall1(6),
+    BattedBall2(7),
+    Power(9),
+    TeamBatting1(8),
+    TeamBatting2(10),
+    StealBase(11),
+    BaseRunning(12),
+    PitchingArsenalValue(13),
+    PitchingArsenalCommand(14)
+}
+
 enum class IndexCode(val title: String) {
     Year("연도"),
     GP("G"),
@@ -186,5 +198,7 @@ enum class IndexCode(val title: String) {
     RAA_BT("타격"),
     RAA_SB("도루"),
     WAR_ALL_ADJ("WAR*"),
-    TPA("타석")
+    TPA("타석"),
+    WAR("WAR"),
+    OUT_COUNT("OutCount")
 }

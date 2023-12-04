@@ -1,24 +1,36 @@
 package kr.young.firertc.vm
 
+import android.annotation.SuppressLint
 import android.os.Handler
 import android.os.Looper
 import androidx.lifecycle.MutableLiveData
 import com.google.firebase.firestore.ktx.toObject
+import io.reactivex.Observable
+import io.reactivex.rxkotlin.subscribeBy
+import io.reactivex.rxkotlin.toObservable
+import io.reactivex.schedulers.Schedulers
 import kr.young.common.Crypto
 import kr.young.common.UtilLog.Companion.d
 import kr.young.common.UtilLog.Companion.e
+import kr.young.firertc.fcm.IndexCode
+import kr.young.firertc.fcm.Tool
+import kr.young.firertc.model.Hitter
 import kr.young.firertc.model.User
 import kr.young.firertc.repo.AppSP
+import kr.young.firertc.repo.HitterDatabase
 import kr.young.firertc.repo.UserRepository
 import kr.young.firertc.repo.UserRepository.Companion.USER_READ_FAILURE
 import kr.young.firertc.repo.UserRepository.Companion.USER_READ_SUCCESS
 import kr.young.firertc.util.ResponseCode.Companion.WRONG_PASSWORD
+import kotlin.math.round
 
 class MyDataViewModel {
 
     val isSigned = MutableLiveData<Boolean>()
     val responseCode = MutableLiveData<Int>()
     var myData: User? = null
+
+    val map = mutableMapOf<String, Hitter>()
 
     private fun setSigned(value: Boolean) {
         Handler(Looper.getMainLooper()).post { isSigned.value = value }
@@ -80,9 +92,66 @@ class MyDataViewModel {
 //        AppSP.instance.setSignIn(false)
 //        setSigned(false)
 //        StatizViewModel.getSchedule()
-        StatizViewModel.getPlayerInfo()
+        StatizViewModel.getPlayerInfo(tool = Tool.Pitching.idx, sort1 = IndexCode.WAR.title, sort2 = IndexCode.OUT_COUNT.title, ageStart = 18, ageEnd = 18)
 //        GameRepository.getGames(endDate = DateUtil.getDate(2023, 9, 1), startDate = DateUtil.getDate(2023, 6, 29))
 //        GameRepository.getGames(endDate = DateUtil.getDate(2023, 9, 1))
+//        getWar()
+    }
+
+    @SuppressLint("CheckResult")
+    private fun makeMap() {
+        val observable = Observable.just(0)
+            .observeOn(Schedulers.io())
+            .concatMap {
+                val hitters = HitterDatabase.getInstance()!!.hitterDao().getAll()
+                d(TAG, "size ${hitters.size}")
+                hitters.toObservable()
+            }
+
+        observable.subscribe { hitter ->
+                if (map.containsKey(hitter.id)) {
+                    d(TAG, "${hitter.id} ${hitter.name} ${hitter.age}")
+                } else {
+                    map[hitter.id] = hitter
+                }
+            }
+    }
+
+    @SuppressLint("CheckResult")
+    private fun getWar() {
+        val observable = Observable.fromIterable(17 .. 51)
+            .observeOn(Schedulers.io())
+            .concatMap { age ->
+                HitterDatabase.getInstance()!!.hitterDao().getHitters(age).toObservable()
+            }
+
+        val ageMap = mutableMapOf<Int, MutableList<Double>>()
+        observable.subscribeBy(
+            onNext = { hitter ->
+                if (hitter.year != 23 && hitter.plateAppearance >= 200) {
+                    val id = "${hitter.age + 1}${hitter.name}${hitter.year + 1}"
+                    if (ageMap[hitter.age] == null) {
+                        ageMap[hitter.age] = mutableListOf()
+                    }
+                    if (map.containsKey(id) && map[id]!!.plateAppearance >= 200) {
+//                        d(TAG, "${hitter.name} ${hitter.age}->${hitter.age+1} ${hitter.warStar} -> ${map[id]!!.warStar}")
+                        ageMap[hitter.age]!!.add(map[id]!!.warStar - hitter.warStar)
+                    } else {
+//                        d(TAG, "${hitter.name} ${hitter.age}->${hitter.age+1} ${hitter.warStar} -> 0.0")
+//                        ageMap[hitter.age]!!.add(0.0 - hitter.warStar)
+                    }
+                }
+            },
+            onComplete = {
+                for (key in ageMap.keys) {
+                    var sum = 0.0
+                    for (war in ageMap[key]!!) {
+                        sum += war
+                    }
+                    d(TAG, "age $key war ${round(sum*100)/100} / ${ageMap[key]!!.size} = ${round(sum / ageMap[key]!!.size * 100) / 100}")
+                }
+            }
+        )
     }
 
     fun getMyId(): String {
@@ -101,6 +170,7 @@ class MyDataViewModel {
         } else {
             isSigned.value = false
         }
+//        makeMap()
     }
 
     private object Holder {

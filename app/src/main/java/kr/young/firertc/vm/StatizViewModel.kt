@@ -4,7 +4,9 @@ import kr.young.common.UtilLog.Companion.d
 import kr.young.common.UtilLog.Companion.e
 import kr.young.common.UtilLog.Companion.i
 import kr.young.firertc.fcm.HtmlParse
+import kr.young.firertc.fcm.IndexCode
 import kr.young.firertc.fcm.StatizClient
+import kr.young.firertc.fcm.Tool
 import okhttp3.ResponseBody
 import retrofit2.Call
 import retrofit2.Callback
@@ -12,13 +14,21 @@ import retrofit2.Response
 
 class StatizViewModel {
     companion object {
-        fun getPlayerInfo() {
-            StatizClient.getApiService().getPlayer()
+        fun getPlayerInfo(
+            tool: Int = Tool.Batting.idx,
+            sort1: String = IndexCode.WAR_ALL_ADJ.title, sort2: String = IndexCode.TPA.title,
+            ageStart: Int = 17, ageEnd: Int = 51
+        ) {
+            StatizClient.getApiService().getPlayer(tool = tool, sort1 = sort1, sort2 = sort2, ageStart = ageStart, ageEnd = ageEnd)
                 .enqueue(object: Callback<ResponseBody> {
                     override fun onResponse(call: Call<ResponseBody>, response: Response<ResponseBody>) {
                         if (response.isSuccessful) {
                             i(TAG, "getInfo Success ${call.request()}")
-                            HtmlParse.player(response.body()!!.string())
+                            when (tool) {
+                                Tool.Batting.idx -> HtmlParse.hitter(response.body()!!.string(), ageStart)
+                                Tool.Pitching.idx -> HtmlParse.pitcher(response.body()!!.string(), ageStart)
+                                Tool.Fielding.idx -> HtmlParse.hitter(response.body()!!.string(), ageStart)
+                            }
                         } else {
                             d(TAG, "getInfo not Success")
                         }
