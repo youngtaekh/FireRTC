@@ -13,12 +13,15 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.firebase.firestore.ktx.toObject
+import io.reactivex.Observable
+import io.reactivex.rxkotlin.toObservable
+import io.reactivex.schedulers.Schedulers
 import kr.young.common.UtilLog.Companion.d
 import kr.young.firertc.AddChatActivity
 import kr.young.firertc.MessageActivity
 import kr.young.firertc.R
 import kr.young.firertc.adapter.ChatAdapter
-import kr.young.firertc.model.Chat
+import kr.young.firertc.db.AppRoomDatabase
 import kr.young.firertc.model.User
 import kr.young.firertc.repo.ChatRepository.Companion.CHAT_READ_SUCCESS
 import kr.young.firertc.vm.ChatViewModel
@@ -29,7 +32,6 @@ import kr.young.firertc.vm.UserViewModel
 class ChatFragment : Fragment(), OnClickListener {
     private val chatViewModel = ChatViewModel.instance
     private lateinit var chatAdapter: ChatAdapter
-    private lateinit var itemList :MutableList<Chat>
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -46,7 +48,6 @@ class ChatFragment : Fragment(), OnClickListener {
         chatAdapter = ChatAdapter()
         chatAdapter.setOnItemClickListener(listener, longListener)
         recyclerView.adapter = chatAdapter
-        itemList = chatViewModel.chatList
 
         val layoutManager = LinearLayoutManager(context)
         layoutManager.orientation = RecyclerView.VERTICAL
@@ -59,39 +60,33 @@ class ChatFragment : Fragment(), OnClickListener {
         }
 
         chatViewModel.responseCode.observe(viewLifecycleOwner) {
+            if (it != null && it == CHAT_READ_SUCCESS) {
+                d(TAG, "response code CHAT_READ_SUCCESS")
+                if (chatViewModel.chatList.isEmpty()) {
+                    tvEmpty.visibility = VISIBLE
+                    recyclerView.visibility = INVISIBLE
+                } else {
+                    tvEmpty.visibility = INVISIBLE
+                    recyclerView.visibility = VISIBLE
+                    chatAdapter.notifyItemRangeChanged(0, chatViewModel.chatList.size)
+                }
+            }
+        }
+
+        MessageViewModel.instance.receivedMessage.observe(viewLifecycleOwner) {
             if (it != null) {
-                if (it == CHAT_READ_SUCCESS) {
-                    d(TAG, "response code CHAT_READ_SUCCESS")
-                    if (chatViewModel.chatList.isEmpty()) {
-                        tvEmpty.visibility = VISIBLE
-                        chatAdapter.notifyItemRangeRemoved(0, itemList.size)
-                    } else {
-                        tvEmpty.visibility = INVISIBLE
-                        if (itemList.size != chatViewModel.chatList.size) {
-                            chatAdapter.notifyItemRangeRemoved(0, itemList.size)
-                            chatAdapter.notifyItemRangeInserted(0, chatViewModel.chatList.size)
-                        } else {
-                            for (i in chatViewModel.chatList.indices) {
-                                if (itemList[i] != chatViewModel.chatList[i]) {
-                                    d(TAG, "$i different")
-                                    chatAdapter.notifyItemChanged(i)
-                                } else {
-                                    d(TAG, "$i same")
-                                }
-                            }
-                        }
+                for (i in chatViewModel.chatList.indices) {
+                    if (chatViewModel.chatList[i].id == it.chatId) {
+                        chatViewModel.chatList[i].lastMessage = it.body!!
+                        chatViewModel.chatList[i].lastSequence = it.sequence
+                        chatViewModel.chatList[i].modifiedAt = it.createdAt
+                        chatAdapter.notifyItemChanged(i)
                     }
-                    itemList = chatViewModel.chatList
                 }
             }
         }
 
         return layout
-    }
-
-    override fun onResume() {
-        super.onResume()
-        chatViewModel.getChats()
     }
 
     override fun onClick(v: View?) {
@@ -100,38 +95,41 @@ class ChatFragment : Fragment(), OnClickListener {
         }
     }
 
+    private fun startMessageActivity() {
+        val intent = Intent(this@ChatFragment.context, MessageActivity::class.java)
+        intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+        startActivity(intent)
+    }
+
     private val listener = { it: Int ->
         val chat = chatViewModel.chatList[it]
         d(TAG, "clickListener $chat")
         if (!chat.isGroup) {
-            for (participant in chat.participants) {
+            var participant = ""
+            for (i in chat.participants.indices) {
+                participant = chat.participants[i]
                 if (participant != MyDataViewModel.instance.getMyId()) {
-                    val user = UserViewModel.instance.getLocalUser(participant)
-                    if (user != null) {
-                        MessageViewModel.instance.startChat(user) {
-                            val intent = Intent(this@ChatFragment.context, MessageActivity::class.java)
-                            intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-                            startActivity(intent)
-                        }
-                    } else {
-                        UserViewModel.instance.readUser(participant) {
-                            val userDoc = it.toObject<User>()
-                            if (userDoc != null) {
-                                MessageViewModel.instance.startChat(userDoc) {
-                                    val intent = Intent(
-                                        this@ChatFragment.context,
-                                        MessageActivity::class.java
-                                    )
-                                    intent.flags =
-                                        Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-                                    startActivity(intent)
-                                }
-                            }
-                        }
-                    }
                     break
                 }
             }
+            Observable.just(0)
+                .observeOn(Schedulers.io())
+                .map {
+                    val user = AppRoomDatabase.getInstance()!!.userDao().getUser(participant)
+                    if (user != null) {
+                        MessageViewModel.instance.startChat(user) { startMessageActivity() }
+                        user
+                    } else {
+                        User()
+                    }
+                }
+                .filter { user -> user.id.isEmpty() }
+                .map {
+                    UserViewModel.instance.readUser(participant) {
+                        MessageViewModel.instance.startChat(it.toObject<User>()) { startMessageActivity() }
+                    }
+                }
+                .subscribe()
         }
     }
 

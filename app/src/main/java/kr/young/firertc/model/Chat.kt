@@ -1,5 +1,7 @@
 package kr.young.firertc.model
 
+import androidx.room.Entity
+import androidx.room.PrimaryKey
 import com.google.firebase.firestore.FieldValue
 import kr.young.common.Crypto
 import kr.young.firertc.util.Config.Companion.CREATED_AT
@@ -11,27 +13,23 @@ import kr.young.firertc.util.Config.Companion.PARTICIPANTS
 import kr.young.firertc.util.Config.Companion.TITLE
 import java.util.*
 
+@Entity (tableName = "chats")
 data class Chat(
     val participants: List<String> = listOf(),
     val title: String? = "",
-    var id: String? = null,
+    @PrimaryKey
+    var id: String = if (participants.isEmpty()) "" else Crypto().getHash("${participants[0]}${participants[1]}"),
     var isGroup: Boolean = false,
     var lastMessage: String = "",
     var lastSequence: Long = -1,
-    val modifiedAt: Date? = null,
+    var modifiedAt: Date? = null,
     val createdAt: Date? = null
 ) {
-    init {
-        if (participants.size >= 2) {
-            id = this.id ?: Crypto().getHash("${participants[0]}${participants[1]}")
-        }
-    }
-
     fun toMap(): Map<String, Any> {
         val createdAt = this.createdAt ?: FieldValue.serverTimestamp()
         val modifiedAt = this.modifiedAt ?: FieldValue.serverTimestamp()
         return mapOf(
-            "id" to id!!,
+            "id" to id,
             TITLE to title!!,
             PARTICIPANTS to participants,
             IS_GROUP to isGroup,

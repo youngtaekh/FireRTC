@@ -9,7 +9,6 @@ import android.view.View.*
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.databinding.DataBindingUtil
 import com.google.android.gms.tasks.OnCompleteListener
-import com.google.firebase.firestore.Source
 import com.google.firebase.firestore.ktx.toObject
 import com.google.firebase.messaging.FirebaseMessaging
 import kr.young.common.TouchEffect
@@ -20,11 +19,7 @@ import kr.young.firertc.fragment.*
 import kr.young.firertc.repo.AppSP
 import kr.young.firertc.util.BaseActivity
 import kr.young.firertc.util.Config.Companion.CHAT_ID
-import kr.young.firertc.vm.ChatViewModel
-import kr.young.firertc.vm.MessageViewModel
-import kr.young.firertc.vm.MyDataViewModel
-import kr.young.firertc.vm.UserViewModel
-import kotlin.random.Random
+import kr.young.firertc.vm.*
 
 class HomeActivity : BaseActivity(), OnClickListener, OnTouchListener {
 
@@ -39,8 +34,6 @@ class HomeActivity : BaseActivity(), OnClickListener, OnTouchListener {
         binding = DataBindingUtil.setContentView(this, R.layout.activity_home)
         myViewModel = MyDataViewModel.instance
 
-        UserViewModel.instance.readAllRelation(Source.CACHE)
-
         replaceFragment(currentFragment)
         switchIcon(currentFragment)
 
@@ -51,13 +44,6 @@ class HomeActivity : BaseActivity(), OnClickListener, OnTouchListener {
         binding.rlConference.setOnClickListener(this)
         binding.rlHistory.setOnClickListener(this)
         binding.rlSetting.setOnClickListener(this)
-
-        print(Random.nextInt(5)+1)
-        print("jo ")
-        for (i in 0 .. 5) {
-            print(Random.nextInt(10))
-        }
-        println("")
 
         myViewModel.isSigned.observe(this) {
             if (!it) {
@@ -85,16 +71,30 @@ class HomeActivity : BaseActivity(), OnClickListener, OnTouchListener {
             d(TAG, "token $token")
         })
 
+//        Firebase.messaging.subscribeToTopic("topic")
+//            .addOnCompleteListener { task ->
+//                var msg = "Subscribed"
+//                if (!task.isSuccessful) {
+//                    msg = "Subscribe failed"
+//                }
+//                d(TAG, msg)
+//            }
+
         getChat(intent.getStringExtra(CHAT_ID))
     }
 
     override fun onResume() {
         super.onResume()
-        if (myViewModel.myData != null) {
-            d(TAG, "myData ${myViewModel.myData!!}")
+
+        if (AppSP.instance.isSigned()) {
             binding.tvTitle.text = myViewModel.myData!!.name
-        }
-        if (!AppSP.instance.isSigned()) {
+            when (currentFragment) {
+                CONTACT -> UserViewModel.instance.getContacts()
+                CHAT -> ChatViewModel.instance.getChats()
+                CONFERENCE -> {}
+                HISTORY -> HistoryVM.getInstance()!!.getHistory()
+            }
+        } else {
             val intent = Intent(this, SignActivity::class.java)
             intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
             signLauncher.launch(intent)
@@ -117,10 +117,12 @@ class HomeActivity : BaseActivity(), OnClickListener, OnTouchListener {
             R.id.rl_contact -> {
                 replaceFragment(CONTACT)
                 switchIcon(CONTACT)
+                UserViewModel.instance.getContacts()
             }
             R.id.rl_chat -> {
                 replaceFragment(CHAT)
                 switchIcon(CHAT)
+                ChatViewModel.instance.getChats()
             }
             R.id.rl_conference -> {
                 replaceFragment(CONFERENCE)
@@ -129,6 +131,7 @@ class HomeActivity : BaseActivity(), OnClickListener, OnTouchListener {
             R.id.rl_history -> {
                 replaceFragment(HISTORY)
                 switchIcon(HISTORY)
+                HistoryVM.getInstance()!!.getHistory()
             }
             R.id.rl_setting -> {
                 replaceFragment(SETTING)

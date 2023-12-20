@@ -37,32 +37,20 @@ class RelationRepository {
         }
 
         fun getAll(
-            source: Source,
-            success: OnSuccessListener<QuerySnapshot> = OnSuccessListener {
-                d(TAG, "getAll success")
-                UserViewModel.instance.setResponseCode(RELATION_READ_SUCCESS)
-                val list = mutableListOf<String>()
-                for (document in it) {
-                    val relation = document.toObject<Relation>()
-                    list.add(relation.to!!)
-                }
-                if (list.isEmpty()) {
-                    UserViewModel.instance.removeAllContact()
-                    UserViewModel.instance.setRefreshContacts()
-                } else {
-                    UserRepository.getUsers(source, list)
-                }
-            },
             failure: OnFailureListener = OnFailureListener {
                 e(TAG, "getAll failure", it)
                 UserViewModel.instance.setResponseCode(RELATION_READ_FAILURE)
+            },
+            success: OnSuccessListener<QuerySnapshot> = OnSuccessListener {
+                d(TAG, "getAll success")
+                UserViewModel.instance.setResponseCode(RELATION_READ_SUCCESS)
             }
         ) {
             d(TAG, "getAll")
             Firebase.firestore.collection(COLLECTION)
                 .whereEqualTo(FROM, MyDataViewModel.instance.getMyId())
                 .orderBy(TO)
-                .get(source)
+                .get()
                 .addOnSuccessListener(success)
                 .addOnFailureListener(failure)
         }

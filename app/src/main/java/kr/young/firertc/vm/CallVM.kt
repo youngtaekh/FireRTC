@@ -13,7 +13,6 @@ import com.google.android.gms.tasks.OnSuccessListener
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.ktx.toObject
-import kr.young.common.DateUtil
 import kr.young.common.UtilLog.Companion.d
 import kr.young.firertc.CallService
 import kr.young.firertc.fcm.SendFCM
@@ -22,7 +21,6 @@ import kr.young.firertc.model.Space
 import kr.young.firertc.model.User
 import kr.young.firertc.observer.CallSignalImpl
 import kr.young.firertc.repo.CallRepository
-import kr.young.firertc.repo.CallRepository.Companion.CALL_READ_SUCCESS
 import kr.young.firertc.repo.SpaceRepository
 import kr.young.firertc.repo.SpaceRepository.Companion.SPACE_READ_SUCCESS
 import kr.young.firertc.repo.UserRepository
@@ -30,7 +28,6 @@ import kr.young.firertc.util.Config.Companion.CONNECTED_AT
 import kr.young.rtp.RTPManager
 import org.webrtc.RendererCommon.ScalingType
 import org.webrtc.SessionDescription
-import java.util.*
 
 open class CallVM internal constructor(): ViewModel() {
     var space: Space? = null
@@ -40,7 +37,6 @@ open class CallVM internal constructor(): ViewModel() {
         get() { return field ?: Call.Type.AUDIO }
     var callDirection: Call.Direction? = null
         get() { return field ?: Call.Direction.Offer }
-    var historyList = mutableListOf<Call>()
     var selectedCall: Call? = null
 
     val responseCode = MutableLiveData<Int>()
@@ -292,27 +288,6 @@ open class CallVM internal constructor(): ViewModel() {
 
     fun getSpace(id: String, success: OnSuccessListener<DocumentSnapshot>) {
         SpaceRepository.getSpace(id = id, success = success)
-    }
-
-    fun getHistory() {
-        if (MyDataViewModel.instance.myData != null) {
-            CallRepository.getByUserId(MyDataViewModel.instance.getMyId()) {
-                d(TAG, "getHistory success size ${it.size()}")
-                var savedDate = ""
-                historyList.removeAll { true }
-                for (i in it) {
-                    val call = i.toObject<Call>()
-                    val newDate = DateUtil.toFormattedString(call.createdAt!!, "yy.MM.dd", TimeZone.getDefault())
-                    if (savedDate != newDate) {
-                        val header = Call(isHeader = true, createdAt = call.createdAt)
-                        historyList.add(header)
-                        savedDate = newDate
-                    }
-                    historyList.add(call)
-                }
-                setResponseCode(CALL_READ_SUCCESS)
-            }
-        }
     }
 
     init {

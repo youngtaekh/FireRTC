@@ -9,9 +9,13 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView.Adapter
 import androidx.recyclerview.widget.RecyclerView.ViewHolder
 import com.google.firebase.firestore.ktx.toObject
+import io.reactivex.Observable
+import io.reactivex.android.schedulers.AndroidSchedulers
+import io.reactivex.schedulers.Schedulers
 import kr.young.common.DateUtil
 import kr.young.firertc.R
 import kr.young.firertc.databinding.LayoutChatBinding
+import kr.young.firertc.db.AppRoomDatabase
 import kr.young.firertc.model.Chat
 import kr.young.firertc.model.User
 import kr.young.firertc.vm.ChatViewModel
@@ -71,16 +75,15 @@ class ChatAdapter : Adapter<ViewHolder>() {
             } else {
                 for (participant in chat.participants) {
                     if (participant != MyDataViewModel.instance.getMyId()) {
-                        val user = UserViewModel.instance.getLocalUser(participant)
-                        if (user == null) {
-                            UserViewModel.instance.readUser(participant) {
-                                val userDoc = it.toObject<User>()
-                                binding.tvName.text =
-                                    userDoc?.name ?: context!!.getString(R.string.no_one)
-                            }
-                        } else {
-                            binding.tvName.text = user.name
-                        }
+                        Observable.just(0)
+                            .observeOn(Schedulers.io())
+                            .map { AppRoomDatabase.getInstance()!!.userDao().getUser(participant) }
+                            .observeOn(AndroidSchedulers.mainThread())
+                            .map { binding.tvName.text = it.name }
+                            .doOnComplete { UserViewModel.instance.readUser(participant) {
+                                binding.tvName.text = it.toObject<User>()?.name ?: context!!.getString(R.string.no_one)
+                            }}
+                            .subscribe()
                         break
                     }
                 }
@@ -89,7 +92,7 @@ class ChatAdapter : Adapter<ViewHolder>() {
             val now = DateUtil.toFormattedString(currentTimeMillis(), "yy-MM-dd")
             val modifiedDate = DateUtil.toFormattedString(chat.modifiedAt!!, "yy-MM-dd")
             binding.tvTime.text = if (now == modifiedDate) {
-                DateUtil.toFormattedString(chat.modifiedAt, "aa hh:mm")
+                DateUtil.toFormattedString(chat.modifiedAt!!, "aa hh:mm")
             } else {
                 modifiedDate
             }

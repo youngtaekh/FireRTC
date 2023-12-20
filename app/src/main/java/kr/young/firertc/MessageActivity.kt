@@ -24,7 +24,6 @@ import kr.young.firertc.fcm.SendFCM
 import kr.young.firertc.model.Message
 import kr.young.firertc.model.User
 import kr.young.firertc.repo.ChatRepository
-import kr.young.firertc.repo.MessageRepository.Companion.MESSAGE_READ_SUCCESS
 import kr.young.firertc.repo.UserRepository.Companion.USER_READ_SUCCESS
 import kr.young.firertc.util.RecyclerViewNotifier.ModifierCategory.*
 import kr.young.firertc.vm.MessageViewModel
@@ -45,10 +44,13 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
     private val counterpart: User get() {
         return viewModel.counterpart!!
     }
+    private val messageList = mutableListOf<Message>()
 
     private var isBottom = true
     private var lastVisiblePosition = -1
     private var isLoading = false
+
+    private var checkFirst = true
 
     private lateinit var messageAdapter: MessageAdapter
     private lateinit var layoutManager: LinearLayoutManager
@@ -59,7 +61,7 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
         binding = DataBindingUtil.setContentView(this, R.layout.activity_message)
         d(TAG, "onCreate")
 
-        messageAdapter = MessageAdapter(viewModel.messageList)
+        messageAdapter = MessageAdapter(messageList)
         messageAdapter.setOnItemClickListener(longClickListener)
         binding.recyclerView.adapter = messageAdapter
         layoutManager = LinearLayoutManager(this)
@@ -75,6 +77,10 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
         binding.ivSend.setOnClickListener(this)
         binding.ivBottom.setOnTouchListener(this)
         binding.ivBottom.setOnClickListener(this)
+        binding.tvLastMessage.setOnTouchListener(this)
+        binding.tvLastMessage.setOnClickListener(this)
+
+        viewModel.setReceivedMessage(null)
 
         binding.etMessage.addTextChangedListener(object: TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
@@ -97,8 +103,9 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
                     super.onScrolled(recyclerView, dx, dy)
                     if (layoutManager.findLastCompletelyVisibleItemPosition() != lastVisiblePosition) {
                         lastVisiblePosition = layoutManager.findLastCompletelyVisibleItemPosition()
-                        if (layoutManager.findLastCompletelyVisibleItemPosition() == viewModel.messageList.size - 1) {
+                        if (layoutManager.findLastCompletelyVisibleItemPosition() == messageList.size - 1) {
                             binding.ivBottom.visibility = INVISIBLE
+                            binding.tvLastMessage.visibility = INVISIBLE
                             isBottom = true
                         } else {
                             binding.ivBottom.visibility = VISIBLE
@@ -108,12 +115,13 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
                         if (layoutManager.findLastCompletelyVisibleItemPosition() < 20 &&
                             !isLoading &&
                             !viewModel.isEndReload &&
-                            viewModel.messageList.first().sequence != 0L &&
-                            viewModel.firstSequence != viewModel.messageList.first().sequence
+                            messageList.first().sequence != 0L &&
+                            viewModel.firstSequence != messageList.first().sequence
                         ) {
                             isLoading = true
-                            viewModel.firstSequence = viewModel.messageList.first().sequence
-                            viewModel.getAdditionalMessages(max = viewModel.messageList.first().sequence)
+                            viewModel.firstSequence = messageList.first().sequence
+                            d(TAG, "notifier ${messageList.size}")
+                            viewModel.getAdditionalMessages(list = messageList, max = messageList.first().sequence)
                         }
                     }
                 }
@@ -133,32 +141,51 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
             if (it != null && it != 0) {
                 if (it == USER_READ_SUCCESS) {
                     startCall()
-                } else if (it == MESSAGE_READ_SUCCESS) {
-                    d(TAG, "MESSAGE_READ_SUCCESS ${viewModel.messageList.size} ${viewModel.size}")
-//                    messageAdapter.notifyItemRangeInserted(0, viewModel.size)
-//                    messageAdapter.notifyDataSetChanged()
                 }
             }
         }
 
         viewModel.recyclerViewNotifier.observe(this) {
-            if (it == null) {
+            if (it == null || it.list.isEmpty()) {
                 return@observe
             }
-            runOnUiThread {
+//            runOnUiThread {
+                d(TAG, "notifier ${messageList.size}")
+                messageList.addAll(it.position, it.list)
+                d(TAG, "notifier ${messageList.size}")
                 when (it.modifierCategory) {
                     Insert -> messageAdapter.notifyItemRangeInserted(it.position, it.count)
-                    Changed -> messageAdapter.notifyItemRangeChanged(it.position, it.count)
+                    Changed -> messageAdapter.notifyItemRangeChanged(it.position, it.count-1)
                     Removed -> messageAdapter.notifyItemRangeRemoved(it.position, it.count)
                 }
-                if (it.isBottom && viewModel.messageList.last().from == MyDataViewModel.instance.getMyId() || isBottom) {
+                if (it.isBottom && messageList.last().from == MyDataViewModel.instance.getMyId() || isBottom) {
                     binding.recyclerView.scrollToPosition(messageAdapter.itemCount - 1)
+                } else if (it.position != 0 && messageList.last().from != MyDataViewModel.instance.getMyId() && !isBottom) {
+                    binding.tvLastMessage.text = messageList.last().body
+                    binding.tvLastMessage.visibility = VISIBLE
                 }
                 isLoading = false
+//            }
+        }
+
+        viewModel.receivedMessage.observe(this) {
+            if (checkFirst) {
+                checkFirst = false
+                return@observe
+            }
+            if (it != null) {
+                d(TAG, "receivedMessage $it")
+                viewModel.addMessage(messageList, it)
             }
         }
 
         binding.tvTitle.text = counterpart.name
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+        viewModel.getChatMessage()
     }
 
     override fun onDestroy() {
@@ -184,11 +211,12 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
         when (v?.id) {
             R.id.iv_back -> { finish() }
             R.id.iv_send -> { send() }
-            R.id.iv_bottom -> {
+            R.id.iv_bottom, R.id.tv_last_message -> {
                 binding.recyclerView.post {
                     binding.recyclerView.scrollToPosition(messageAdapter.itemCount - 1)
                 }
                 binding.ivBottom.visibility = INVISIBLE
+                binding.tvLastMessage.visibility = INVISIBLE
             }
         }
     }
@@ -197,7 +225,7 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
         val msg = binding.etMessage.text.toString()
 
         val message = viewModel.sendData(msg)
-        viewModel.addMessage(message)
+        viewModel.addMessage(messageList, message)
         binding.etMessage.setText("")
         binding.ivSend.visibility = INVISIBLE
     }
@@ -216,9 +244,9 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
 
     private val longClickListener = object: MessageAdapter.LongClickListener {
         override fun onLongClick(pos: Int, v: View) {
-            d(TAG, "onLongClick($pos, v) - ${viewModel.messageList[pos].body}")
+            d(TAG, "onLongClick($pos, v) - ${messageList[pos].body}")
             val clipBoard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
-            val clipData = ClipData.newPlainText("message", viewModel.messageList[pos].body)
+            val clipData = ClipData.newPlainText("message", messageList[pos].body)
             clipBoard.setPrimaryClip(clipData)
             Toast.makeText(this@MessageActivity, "Copy!!!!!", LENGTH_SHORT).show()
         }
@@ -257,7 +285,7 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
     override fun onMessage(msg: String) {
         d(TAG, "onMessage ${counterpart.id} $msg")
         val message = Message.fromJson(msg)
-        viewModel.addMessage(message)
+        viewModel.addMessage(messageList, message)
     }
 
     override fun onLocalDescription(sdp: SessionDescription?) {

@@ -4,9 +4,7 @@ import com.google.android.gms.tasks.OnFailureListener
 import com.google.android.gms.tasks.OnSuccessListener
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.QuerySnapshot
-import com.google.firebase.firestore.Source
 import com.google.firebase.firestore.ktx.firestore
-import com.google.firebase.firestore.ktx.toObject
 import com.google.firebase.ktx.Firebase
 import kr.young.common.UtilLog.Companion.d
 import kr.young.common.UtilLog.Companion.e
@@ -55,23 +53,10 @@ class UserRepository {
         }
 
         fun getUsers(
-            source: Source,
             list: List<String>,
             success: OnSuccessListener<QuerySnapshot> = OnSuccessListener {
                 d(TAG, "get users success")
-                val userViewModel = UserViewModel.instance
-                userViewModel.setResponseCode(USER_READ_SUCCESS)
-                val userList = mutableListOf<User>()
-                for (document in it) {
-                    val user = document.toObject<User>()
-                    userList.add(user)
-                }
-                userViewModel.addContacts(userList)
-
-                if (userViewModel.checkPage()) {
-                    userViewModel.contacts.sortBy { user -> user.name }
-                    userViewModel.setRefreshContacts()
-                }
+                UserViewModel.instance.setResponseCode(USER_READ_SUCCESS)
             },
             failure: OnFailureListener = OnFailureListener {
                 e(TAG, "get users failure", it)
@@ -79,7 +64,7 @@ class UserRepository {
             }
         ) {
             d(TAG, "getUsers list size ${list.size}")
-            UserViewModel.instance.removeAllContact()
+//            UserViewModel.instance.removeAllContact()
             var start = 0
             var end = 10
             UserViewModel.instance.initPage(list.size / 10)
@@ -89,7 +74,7 @@ class UserRepository {
                 start = end
                 Firebase.firestore.collection(COLLECTION)
                     .whereIn("id", subList)
-                    .get(source)
+                    .get()
                     .addOnSuccessListener(success)
                     .addOnFailureListener(failure)
             }
