@@ -2,34 +2,34 @@ package kr.young.firertc.fragment
 
 import android.content.Intent
 import android.os.Bundle
-import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.View.INVISIBLE
-import android.view.View.VISIBLE
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
+import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import androidx.recyclerview.widget.RecyclerView.VERTICAL
+import androidx.recyclerview.widget.RecyclerView.*
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import kr.young.common.UtilLog.Companion.d
 import kr.young.firertc.CallDetailActivity
 import kr.young.firertc.R
 import kr.young.firertc.adapter.HistoryAdapter
-import kr.young.firertc.adapter.StickyHeaderAdapter
-import kr.young.firertc.adapter.StickyHeaderItemDecoration
-import kr.young.firertc.model.Call
-import kr.young.firertc.repo.CallRepository.Companion.CALL_READ_SUCCESS
+import kr.young.firertc.util.RecyclerViewNotifier.ModifierCategory.*
 import kr.young.firertc.vm.CallVM
+import kr.young.firertc.vm.HistoryVM
 
 class HistoryFragment : Fragment() {
     private val callViewModel = CallVM.instance
-    private var historyList = mutableListOf<Call>()
+    private val historyVM = HistoryVM.getInstance()!!
     private lateinit var historyAdapter: HistoryAdapter
-    private lateinit var adapter: StickyHeaderAdapter
+
+    private var isBottom = true
+    private var lastVisiblePosition = -1
+    private var isLoading = false
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -44,13 +44,11 @@ class HistoryFragment : Fragment() {
 
         swipe.setOnRefreshListener {
             d(TAG, "history swipe refresh")
-            callViewModel.getHistory()
+            historyVM.getHistory()
             swipe.isRefreshing = false
         }
 
-        adapter = StickyHeaderAdapter(historyList)
-
-        historyAdapter = HistoryAdapter(historyList)
+        historyAdapter = HistoryAdapter(historyVM.list)
         historyAdapter.setOnItemClickListener(clickListener, longClickListener)
         recyclerView.adapter = historyAdapter
 
@@ -58,78 +56,66 @@ class HistoryFragment : Fragment() {
         layoutManager.orientation = VERTICAL
         recyclerView.layoutManager = layoutManager
 
-        callViewModel.responseCode.observe(viewLifecycleOwner) {
-            if (it != null && it == CALL_READ_SUCCESS) {
-                if (historyList.isEmpty()) {
-                    historyList.addAll(callViewModel.historyList)
-                    historyAdapter.notifyItemRangeInserted(0, historyList.size)
-                } else if (historyList.size < callViewModel.historyList.size) {
-                    var idx = 0
-                    var flag = true
-                    while (flag) {
-                        val pCall = historyList[idx]
-                        val nCall = callViewModel.historyList[idx]
-                        if (pCall.isHeader && nCall.isHeader) {
-                            historyList.removeAt(idx)
-                            historyList.add(idx, nCall)
-                            historyAdapter.notifyItemChanged(idx)
-                            idx += 1
-                        } else if (pCall == nCall) {
-                            flag = false
-                        } else {
-                            historyList.add(idx, nCall)
-                            historyAdapter.notifyItemInserted(idx)
-                            idx += 1
+        recyclerView.addOnScrollListener(object: OnScrollListener() {
+            var dragging = false
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                super.onScrolled(recyclerView, dx, dy)
+                if (dragging) {
+                    if (layoutManager.findLastCompletelyVisibleItemPosition() != lastVisiblePosition) {
+                        lastVisiblePosition = layoutManager.findLastCompletelyVisibleItemPosition()
+                        isBottom = layoutManager.findLastCompletelyVisibleItemPosition() == historyVM.list.size - 1
+
+                        if (layoutManager.findLastCompletelyVisibleItemPosition() < 20 &&
+                            !isLoading &&
+                            !historyVM.isEndReload
+                        ) {
+                            isLoading = true
+                            d(TAG, "scroll Additional history ${layoutManager.findLastCompletelyVisibleItemPosition()}")
+                            historyVM.getHistory(true)
                         }
                     }
-                } else if (historyList.size > callViewModel.historyList.size) {
-                    val size = historyList.size
-                    historyList.removeAll { true }
-                    historyAdapter.notifyItemRangeRemoved(0, size)
-                    historyList.addAll(callViewModel.historyList)
-                    historyAdapter.notifyItemRangeInserted(0, historyList.size)
                 }
-                if (historyList.isEmpty()) {
-                    tvEmpty.visibility = VISIBLE
-                } else {
-                    tvEmpty.visibility = INVISIBLE
+            }
+
+            override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
+                super.onScrollStateChanged(recyclerView, newState)
+                dragging = true
+            }
+        })
+
+        historyVM.notifier.observe(viewLifecycleOwner) {
+            tvEmpty.visibility = if (historyVM.list.isEmpty()) VISIBLE else INVISIBLE
+            it?.let {
+                d(TAG, "historyList ${it.position} ${it.count} ${it.modifierCategory}")
+                when (it.modifierCategory) {
+                    Insert -> historyAdapter.notifyItemRangeInserted(it.position, it.count)
+                    Removed -> historyAdapter.notifyItemRangeRemoved(it.position, it.count)
+                    Changed -> historyAdapter.notifyItemRangeChanged(it.position, it.count)
+                }
+                if (it.isBottom) {
+                    recyclerView.scrollToPosition(0)
                 }
             }
         }
 
-        // Inflate the layout for this fragment
         return layout
     }
 
     override fun onResume() {
         super.onResume()
         d(TAG, "onResume")
-
-        callViewModel.getHistory()
     }
 
     private fun removeHistory(pos: Int) {
         d(TAG, "removeHistory($pos)")
-        historyList.removeAt(pos)
+        historyVM.list.removeAt(pos)
         historyAdapter.notifyItemRemoved(pos)
-    }
-
-    private fun getSectionCallback(): StickyHeaderItemDecoration.SectionCallback {
-        return object : StickyHeaderItemDecoration.SectionCallback {
-            override fun isHeader(position: Int): Boolean {
-                return adapter.isHeader(position)
-            }
-
-            override fun getHeaderLayoutView(list: RecyclerView, position: Int): View? {
-                return adapter.getHeaderView(list, position)
-            }
-        }
     }
 
     private val clickListener = object: HistoryAdapter.ClickListener {
         override fun onClick(pos: Int, v: View) {
             d(TAG, "onClick($pos, v)")
-            callViewModel.selectedCall = historyList[pos]
+            callViewModel.selectedCall = historyVM.list[pos]
             startActivity(Intent(context, CallDetailActivity::class.java))
         }
     }
@@ -137,7 +123,7 @@ class HistoryFragment : Fragment() {
     private val longClickListener = object: HistoryAdapter.LongClickListener {
         override fun onLongClick(pos: Int, v: View) {
             d(TAG, "onLongClick($pos, v)")
-            val call = historyList[pos]
+            val call = historyVM.list[pos]
             val builder = AlertDialog.Builder(context!!)
                 .setTitle(call.counterpartName ?: "No name")
                 .setMessage(R.string.delete_history)

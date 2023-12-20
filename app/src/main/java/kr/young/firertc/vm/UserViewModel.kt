@@ -1,22 +1,26 @@
 package kr.young.firertc.vm
 
+import android.annotation.SuppressLint
 import android.os.Handler
 import android.os.Looper
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import com.google.android.gms.tasks.OnSuccessListener
 import com.google.firebase.firestore.DocumentSnapshot
-import com.google.firebase.firestore.Source
+import com.google.firebase.firestore.QuerySnapshot
 import com.google.firebase.firestore.ktx.toObject
+import io.reactivex.Observable
+import io.reactivex.rxkotlin.toObservable
+import io.reactivex.schedulers.Schedulers
 import kr.young.common.UtilLog.Companion.d
 import kr.young.firertc.R
+import kr.young.firertc.db.AppRoomDatabase
 import kr.young.firertc.model.Relation
 import kr.young.firertc.model.User
 import kr.young.firertc.repo.RelationRepository
 import kr.young.firertc.repo.UserRepository
 import kr.young.firertc.repo.UserRepository.Companion.USER_READ_SUCCESS
 import kr.young.firertc.util.ResponseCode.Companion.NO_USER
-import kotlin.random.Random
 
 class UserViewModel: ViewModel() {
     val participants = mutableListOf<User>()
@@ -34,7 +38,7 @@ class UserViewModel: ViewModel() {
         Handler(Looper.getMainLooper()).post { responseCode.value = value }
     }
 
-    fun setRefreshContacts(value: Boolean = true) {
+    private fun setRefreshContacts(value: Boolean = true) {
         d(TAG, "setRefreshContacts")
         Handler(Looper.getMainLooper()).post { refreshContacts.value = value }
     }
@@ -45,32 +49,41 @@ class UserViewModel: ViewModel() {
         }
     }
 
-    fun addContacts(list: List<User>) {
-        d(TAG, "addContacts size ${list.size}")
-        contacts.addAll(list)
+    @SuppressLint("CheckResult")
+    fun getContacts() {
+        val list = Observable.just(AppRoomDatabase.getInstance()!!)
+            .observeOn(Schedulers.io())
+            .flatMap { it.userDao().getUsers().toObservable() }
+            .toList()
+            .blockingGet()
+        addContacts(list)
+        getRelations()
     }
 
-    fun removeAllContact() {
-        d(TAG, "removeAllContact")
-        contacts.removeAll {
-            d(TAG, "remove contacts")
-            true
-        }
-    }
-
-    fun getLocalUser(id: String): User? {
-        for (contact in contacts) {
-            if (contact.id == id) {
-                return contact
+    private fun addContacts(list: List<User>) {
+        d(TAG, "addContacts")
+        var i = 0
+        var j = 0
+        val copies = mutableListOf<User>()
+        copies.addAll(contacts)
+        copies.sortBy { user -> user.id }
+        val sortedList = list.sortedBy { user -> user.id }
+        while (j < sortedList.size) {
+            if (i == copies.size || copies[i].id != sortedList[j].id) {
+                copies.add(i++, sortedList[j++])
+            } else {
+                copies[i++] = sortedList[j++]
             }
         }
-        return null
+        contacts.removeAll { true }
+        contacts.addAll(copies)
+        contacts.sortBy { user -> user.name }
+        setRefreshContacts()
     }
 
     fun readUsers(list: List<String>) {
         d(TAG, "readUsers(${list.size})")
         UserRepository.getUsers(
-            source = Source.SERVER,
             list = list,
             success = {
                 d(TAG, "readUsers Success")
@@ -88,7 +101,7 @@ class UserViewModel: ViewModel() {
         destinationPage = destination + 1
     }
 
-    fun checkPage(): Boolean {
+    private fun checkPage(): Boolean {
         sourcePage += 1
         return sourcePage == destinationPage
     }
@@ -104,29 +117,12 @@ class UserViewModel: ViewModel() {
         UserRepository.getUser(id = userId, success = success)
     }
 
-    fun createRelation(userId: String) {
-        d(TAG, "createRelation")
-        val relation = Relation(
-            from = MyDataViewModel.instance.getMyId(),
-            to = userId
-        )
-        RelationRepository.post(relation)
-    }
-
-    fun readAllRelation(source: Source = Source.SERVER) {
-        d(TAG, "readAllRelation")
-        if (MyDataViewModel.instance.myData != null) {
-            RelationRepository.getAll(source)
-        }
-    }
-
-    fun deleteRelation(to: String) {
-        d(TAG, "deleteRelation")
-        RelationRepository.remove(to)
-    }
-
     fun selectImage(id: String?): Int {
-        return when (Random.nextInt(7)) {
+        var key = 0
+        for (i in id!!.indices) {
+            key += id[i].code
+        }
+        return when (key % 7) {
             0 -> R.drawable.outline_sentiment_very_satisfied_24
             1 -> R.drawable.outline_mood_24
             2 -> R.drawable.outline_sentiment_satisfied_24
@@ -137,9 +133,57 @@ class UserViewModel: ViewModel() {
         }
     }
 
+    fun createRelation(userId: String) {
+        d(TAG, "createRelation($userId)")
+        val relation = Relation(
+            from = MyDataViewModel.instance.getMyId(),
+            to = userId
+        )
+        RelationRepository.post(relation)
+    }
+
+    fun deleteRelation(to: String) {
+        d(TAG, "deleteRelation($to)")
+        RelationRepository.remove(to)
+    }
+
+    fun getRelations() {
+        d(TAG, "getRelations")
+        if (MyDataViewModel.instance.myData == null) return
+
+        RelationRepository.getAll {
+            setResponseCode(RelationRepository.RELATION_READ_SUCCESS)
+            val list = mutableListOf<String>()
+            for (document in it) {
+                val relation = document.toObject<Relation>()
+                list.add(relation.to!!)
+            }
+            if (list.isEmpty()) {
+                contacts.removeAll { true }
+                setRefreshContacts()
+            } else {
+                UserRepository.getUsers(list, getUsersListener)
+            }
+        }
+    }
+
     init {
         setRefreshContacts(false)
         responseCode.value = 0
+    }
+
+    @SuppressLint("CheckResult")
+    val getUsersListener = OnSuccessListener<QuerySnapshot> {
+        val userList = mutableListOf<User>()
+        Observable.fromIterable(it)
+            .observeOn(Schedulers.io())
+            .map { doc ->
+                val user = doc.toObject<User>()
+                AppRoomDatabase.getInstance()!!.userDao().setUser(user)
+                userList.add(user)
+            }
+            .doOnComplete { if (checkPage()) addContacts(userList) }
+            .subscribe()
     }
 
     private object Holder {

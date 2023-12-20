@@ -1,12 +1,16 @@
 package kr.young.firertc.model
 
+import androidx.room.Entity
+import androidx.room.PrimaryKey
 import com.google.firebase.firestore.FieldValue
 import kr.young.firertc.util.Config.Companion.FCM_TOKEN
 import kr.young.firertc.util.Config.Companion.NAME
 import kr.young.firertc.util.Config.Companion.OS
 import java.util.*
 
+@Entity(tableName = "users")
 data class User (
+    @PrimaryKey
     var id: String = "",
     var password: String = "",
     var name: String = id,

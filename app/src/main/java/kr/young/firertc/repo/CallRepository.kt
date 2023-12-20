@@ -8,6 +8,7 @@ import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.QuerySnapshot
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
+import kr.young.common.DateUtil
 import kr.young.common.UtilLog.Companion.d
 import kr.young.common.UtilLog.Companion.e
 import kr.young.firertc.model.Call
@@ -18,7 +19,10 @@ import kr.young.firertc.util.Config.Companion.SPACE_ID
 import kr.young.firertc.util.Config.Companion.TERMINATED
 import kr.young.firertc.util.Config.Companion.TERMINATED_AT
 import kr.young.firertc.util.Config.Companion.USER_ID
+import kr.young.firertc.util.Converter
 import kr.young.firertc.vm.CallViewModel
+import java.lang.System.currentTimeMillis
+import java.util.*
 
 class CallRepository {
     companion object {
@@ -59,6 +63,8 @@ class CallRepository {
 
         fun getByUserId(
             userId: String,
+            lastDate: Date? = null,
+            isAdditional: Boolean = false,
             failure: OnFailureListener = OnFailureListener {
                 CallViewModel.instance.setResponseCode(CALL_READ_FAILURE)
                 e(TAG, "get call by user id is failed")
@@ -69,12 +75,33 @@ class CallRepository {
             }
         ) {
             d(TAG, "getByUserId")
-            Firebase.firestore.collection(COLLECTION)
-                .whereEqualTo(USER_ID, userId)
-                .orderBy(CREATED_AT, Query.Direction.DESCENDING)
-                .get()
-                .addOnSuccessListener(success)
-                .addOnFailureListener(failure)
+
+            if (lastDate == null) {
+                Firebase.firestore.collection(COLLECTION)
+                    .whereEqualTo(USER_ID, userId)
+                    .orderBy(CREATED_AT, Query.Direction.DESCENDING)
+                    .limit(1000)
+                    .get()
+                    .addOnSuccessListener(success)
+                    .addOnFailureListener(failure)
+            } else if (isAdditional) {
+                Firebase.firestore.collection(COLLECTION)
+                    .whereEqualTo(USER_ID, userId)
+                    .whereLessThan(CREATED_AT, lastDate)
+                    .orderBy(CREATED_AT, Query.Direction.DESCENDING)
+                    .limit(1000)
+                    .get()
+                    .addOnSuccessListener(success)
+                    .addOnFailureListener(failure)
+            } else {
+                Firebase.firestore.collection(COLLECTION)
+                    .whereEqualTo(USER_ID, userId)
+                    .whereGreaterThan(CREATED_AT, lastDate)
+                    .orderBy(CREATED_AT, Query.Direction.DESCENDING)
+                    .get()
+                    .addOnSuccessListener(success)
+                    .addOnFailureListener(failure)
+            }
         }
 
         fun getActiveCalls(

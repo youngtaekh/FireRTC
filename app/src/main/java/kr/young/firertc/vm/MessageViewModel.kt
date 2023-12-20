@@ -18,13 +18,13 @@ import kr.young.common.ApplicationUtil
 import kr.young.common.DateUtil
 import kr.young.common.UtilLog.Companion.d
 import kr.young.common.UtilLog.Companion.i
+import kr.young.firertc.db.AppRoomDatabase
 import kr.young.firertc.fcm.SendFCM
 import kr.young.firertc.model.Call
 import kr.young.firertc.model.Chat
 import kr.young.firertc.model.Message
 import kr.young.firertc.model.User
 import kr.young.firertc.repo.ChatRepository
-import kr.young.firertc.repo.MessageDatabase
 import kr.young.firertc.repo.MessageRepository
 import kr.young.firertc.util.RecyclerViewNotifier
 import kr.young.firertc.util.RecyclerViewNotifier.ModifierCategory.*
@@ -35,36 +35,19 @@ import java.util.*
 
 class MessageViewModel private constructor(): ViewModel() {
     val vm = CallVM.instance
+    private var messageDB = AppRoomDatabase.getInstance()
+    private val rtpManager = RTPManager.instance
+
     var counterpart: User? = null
     var chat: Chat? = null
     var message: Message? = null
-    private var messageMap = mutableMapOf<String, MutableList<Message>>()
-    var messageList: MutableList<Message>
-        get() {
-            return if (chat == null) {
-                mutableListOf()
-            } else {
-                if (messageMap[chat!!.id] == null) {
-                    messageMap[chat!!.id!!] = mutableListOf()
-                }
-                messageMap[chat!!.id]!!
-            }
-        }
-        set(value) {
-            if (chat != null) {
-                messageMap[chat!!.id!!] = value
-            }
-        }
 
     val responseCode = MutableLiveData(0)
-    val recyclerViewNotifier = MutableLiveData<RecyclerViewNotifier>(null)
-    var size = 0
+    val recyclerViewNotifier = MutableLiveData<RecyclerViewNotifier<Message>>(null)
+    val receivedMessage = MutableLiveData<Message>(null)
     var isEndReload = false
     var firstSequence = -1L
 
-    private var messageDB = MessageDatabase.getInstance()
-
-    private val rtpManager = RTPManager.instance
     var isOffer = true
     var remoteSDP: SessionDescription? = null
     var remoteIce: String? = null
@@ -74,17 +57,32 @@ class MessageViewModel private constructor(): ViewModel() {
         Handler(Looper.getMainLooper()).post { responseCode.value = value }
     }
 
-    private fun setRecyclerViewNotifier(notifier: RecyclerViewNotifier?) {
+    private fun setRecyclerViewNotifier(notifier: RecyclerViewNotifier<Message>?) {
         Handler(Looper.getMainLooper()).post { recyclerViewNotifier.value = notifier }
+    }
+
+    fun setReceivedMessage(message: Message?) {
+        Observable.just(0)
+            .observeOn(AndroidSchedulers.mainThread())
+            .map { receivedMessage.value = message }
+            .subscribe()
     }
 
     fun release() {
         counterpart = null
         chat = null
-        remoteIce = null
-        remoteSDP = null
+        message = null
+
         setResponseCode(0)
         setRecyclerViewNotifier(null)
+        setReceivedMessage(null)
+
+        isEndReload = false
+        firstSequence = -1L
+
+        isOffer = true
+        remoteIce = null
+        remoteSDP = null
         rtpConnected = false
     }
 
@@ -116,98 +114,121 @@ class MessageViewModel private constructor(): ViewModel() {
         d(TAG, "onGetChatSuccess")
         if (documentSnapshot.toObject<Chat>() == null) {
             ChatRepository.post(chat!!) {
-                ChatRepository.addChatListener(chat!!.id!!, onChangeChat)
+                ChatRepository.addChatListener(chat!!.id, onChangeChat)
                 onSuccessListener.onSuccess(null)
             }
         } else {
             chat = documentSnapshot.toObject()!!
-            ChatRepository.addChatListener(chat!!.id!!, onChangeChat)
-            Observable.just(1)
-                .observeOn(Schedulers.io())
-                .map {
-                    val last = messageDB!!.messageDao().getLastMessage(chat!!.id!!)
-                    MessageRepository.getMessages(chatId = chat!!.id!!, min = last.sequence, success = onGetMessageSuccess)
-                }.observeOn(AndroidSchedulers.mainThread())
-                .subscribe { onSuccessListener.onSuccess(null) }
-
+            ChatRepository.addChatListener(chat!!.id, onChangeChat)
+            onSuccessListener.onSuccess(null)
         }
     }
 
     @SuppressLint("CheckResult")
-    private val onGetMessageSuccess: (QuerySnapshot) -> Unit = { query ->
-        size = messageList.size
-        d(TAG, "onGetMessageSuccess size ${query.documents.size}")
+    private val onGetMessageSuccess: (MutableList<Message>, QuerySnapshot) -> Unit = { list, query ->
+        val size = list.size
+        d(TAG, "onGetMessageSuccess size $size ${query.documents.size}")
         Observable.fromIterable(query.documents.asReversed())
             .observeOn(Schedulers.computation())
             .map { it.toObject<Message>()!! }
             .observeOn(Schedulers.io())
             .map {
                 messageDB?.messageDao()?.setMessage(it)
-                addMessage(it, false)
+                addMessage(list, it, false)
             }
             .observeOn(AndroidSchedulers.mainThread())
             .subscribeBy(
                 onComplete = {
-                    d(TAG, "notifier($size, ${messageList.size - size})")
-                    val notifier = RecyclerViewNotifier(size, messageList.size - size, Insert, true)
+                    val subList = list.subList(size, list.size)
+                    d(TAG, "onGetMessageSuccess notifier($size, ${subList.size})")
+                    val notifier = RecyclerViewNotifier(size, subList.size, Insert, true, subList)
                     setRecyclerViewNotifier(notifier)
                 }
             )
     }
 
-    @SuppressLint("CheckResult")
-    fun startChat(counterpart: User, chatCreateSuccess: OnSuccessListener<Void>) {
-        d(TAG, "startChat")
+    fun startChat(counterpart: User?, chatCreateSuccess: OnSuccessListener<Void>) {
+        d(TAG, "startChat counterpart is null ${counterpart == null}")
+        if (counterpart == null) return
         this.counterpart = counterpart
         val participants = mutableListOf(MyDataViewModel.instance.getMyId())
         participants.add(counterpart.id)
         participants.sort()
         chat = Chat(participants = participants, title = counterpart.name)
-        messageMap[chat!!.id!!] = mutableListOf()
-        Thread{
-            val list = messageDB!!.messageDao().getMessages(chat!!.id!!)
-            list.asReversed().toObservable()
-                .subscribe { addMessage(it, false) }
-        }.start()
-        ChatRepository.getChat(chat!!.id!!) { onGetChatSuccess(it, chatCreateSuccess) }
+        ChatRepository.getChat(chat!!.id) { onGetChatSuccess(it, chatCreateSuccess) }
     }
 
     @SuppressLint("CheckResult")
-    fun getAdditionalMessages(min: Long = -1, max: Long = 9_223_372_036_854_775_807) {
-        d(TAG, "getAdditionalMessage($min, $max)")
-        size = messageList.size
-        Observable.just(max).observeOn(Schedulers.io())
-            .flatMap { messageDB!!.messageDao().getMessages(chatId = chat!!.id!!, max = it).toObservable() }
-            .map { addAdditionalMessage(it) }
+    fun getChatMessage() {
+        val list = mutableListOf<Message>()
+        Observable.just(chat!!.id)
+            .observeOn(Schedulers.io())
+            .concatMap { id -> messageDB!!.messageDao().getMessages(id).asReversed().toObservable() }
+            .observeOn(Schedulers.computation())
+            .map { message -> addMessage(list, message, false) }
             .observeOn(AndroidSchedulers.mainThread())
             .subscribeBy(
                 onComplete = {
-                    d(TAG, "notifier($size, ${messageList.size - size})")
-                    val notifier = RecyclerViewNotifier(0, messageList.size - size, Insert)
+                    d(TAG, "getChatMessage notifier(0, ${list.size})")
+                    val notifier = RecyclerViewNotifier(0, list.size, Insert, true, list)
                     setRecyclerViewNotifier(notifier)
-                    getAdditionalMessageFromServer(min, messageList.first().sequence)
+
+                    Observable.just(1)
+                        .observeOn(Schedulers.io())
+                        .map {
+                            val last: Message? = messageDB!!.messageDao().getLastMessage(chat!!.id)
+                            MessageRepository.getMessages(chatId = chat!!.id, min = last?.sequence ?: -1) { onGetMessageSuccess(list, it) }
+                        }.observeOn(AndroidSchedulers.mainThread())
+                        .subscribe()
+                }
+            )
+    }
+
+    @SuppressLint("CheckResult")
+    fun getAdditionalMessages(list: MutableList<Message>, min: Long = -1, max: Long = 9_223_372_036_854_775_807) {
+        d(TAG, "getAdditionalMessage($min, $max)")
+        val copy = mutableListOf<Message>()
+        copy.addAll(list)
+        val size = copy.size
+        Observable.just(max).observeOn(Schedulers.io())
+            .flatMap { messageDB!!.messageDao().getMessages(chatId = chat!!.id, max = it).toObservable() }
+            .map { addAdditionalMessage(copy, it) }
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribeBy(
+                onComplete = {
+                    val subList = copy.subList(0, copy.size - size)
+                    d(TAG, "notifier(0, ${subList.size})")
+                    val notifier = RecyclerViewNotifier(0, subList.size, Insert, false, subList)
+                    setRecyclerViewNotifier(notifier)
+                    getAdditionalMessageFromServer(copy, min, copy.first().sequence)
                 })
     }
 
     @SuppressLint("CheckResult")
-    private fun getAdditionalMessageFromServer(min: Long, max: Long) {
+    private fun getAdditionalMessageFromServer(list: MutableList<Message>, min: Long, max: Long) {
+        val size = list.size
         d(TAG, "getAdditionalMessageFromServer($min, $max)")
-        MessageRepository.getMessages(chat!!.id!!, min = min, max = max) {
-            size = messageList.size
+        MessageRepository.getMessages(chat!!.id, min = min, max = max) {
+            d(TAG, "queryss size ${it.size()}")
             isEndReload = it.documents.isEmpty()
-            it.documents.toObservable()
+            val sub = it.documents.toObservable()
                 .observeOn(Schedulers.io())
                 .map { doc ->
                     val message = doc.toObject<Message>()!!
                     messageDB?.messageDao()?.setMessage(message)
-                    addAdditionalMessage(message)
+                    addAdditionalMessage(list, message)
+                    message
                 }
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribeBy(onComplete = {
-                    d(TAG, "notifier($size, ${messageList.size - size})")
-                    val notifier = RecyclerViewNotifier(0, messageList.size - size, Insert)
-                    setRecyclerViewNotifier(notifier)
-                })
+                .toList().blockingGet()
+            d(TAG, "sub size ${sub.size}")
+//                .observeOn(AndroidSchedulers.mainThread())
+//                .subscribeBy(onComplete = {
+            d(TAG, "list size ${size}, ${list.size})")
+            val subList = list.subList(0, list.size - size)
+            d(TAG, "notifier(0, ${subList.size})")
+            val notifier = RecyclerViewNotifier(0, subList.size, Insert, false, subList)
+            setRecyclerViewNotifier(notifier)
+//                })
         }
     }
 
@@ -238,20 +259,14 @@ class MessageViewModel private constructor(): ViewModel() {
     fun sendData(msg: String): Message {
         d(TAG, "send($msg)")
 
-        message = Message(chatId = chat!!.id!!, body = msg, createdAt = Date(currentTimeMillis()))
+        message = Message(chatId = chat!!.id, body = msg, createdAt = Date(currentTimeMillis()))
         ChatViewModel.instance.selectedChat!!.lastMessage = msg
         ChatViewModel.instance.updateChatLastMessage()
 
         return message!!
     }
 
-    fun addMessage(message: Message, isNotifier: Boolean = true) {
-        if (message.chatId != null && messageMap[message.chatId] == null) {
-            messageMap[message.chatId] = mutableListOf()
-        }
-
-        val list = messageMap[message.chatId]!!
-
+    fun addMessage(list: MutableList<Message>, message: Message, isNotifier: Boolean = true) {
         // Check Date View
         val currentMessageDate = DateUtil.toFormattedString(message.createdAt!!, "yyMMdd")
         val lastMessageDate = if (list.size == 0) { null } else {
@@ -271,17 +286,15 @@ class MessageViewModel private constructor(): ViewModel() {
         if (isNotifier) { setRecyclerViewNotifier(RecyclerViewNotifier(list.size - 1, 1, Insert, true)) }
 
         // Modifier Time View
-        val currentMessageTime = DateUtil.toFormattedString(message.createdAt, "yyMMddaaHHmm")
-        val lastMessageTime = DateUtil.toFormattedString(list[list.size - 2].createdAt!!, "yyMMddaaHHmm")
+        val currentMessageTime = DateUtil.toFormattedString(message.createdAt, "yy.MM.dd.aaHHmm")
+        val lastMessageTime = DateUtil.toFormattedString(list[list.size - 2].createdAt!!, "yy.MM.dd.aaHHmm")
         if (currentMessageTime == lastMessageTime && message.from == list[list.size - 2].from) {
             list[list.size - 2].timeFlag = false
             if (isNotifier) { setRecyclerViewNotifier(RecyclerViewNotifier(list.size - 2, 1, Changed)) }
         }
     }
 
-    private fun addAdditionalMessage(message: Message) {
-        val list = messageMap[message.chatId]!!
-
+    private fun addAdditionalMessage(list: MutableList<Message>, message: Message) {
         if (
             list.first().isDate &&
             DateUtil.toFormattedString(list.first().createdAt!!, "yyMMdd") ==
@@ -291,8 +304,8 @@ class MessageViewModel private constructor(): ViewModel() {
         }
 
         if (list.first().from == message.from &&
-            DateUtil.toFormattedString(list.first().createdAt!!, "yyMMddaaHHmm") ==
-            DateUtil.toFormattedString(message.createdAt!!, "yyMMddaaHHmm")) {
+            DateUtil.toFormattedString(list.first().createdAt!!, "yy.MM.dd.aaHHmm") ==
+            DateUtil.toFormattedString(message.createdAt!!, "yy.MM.dd.aaHHmm")) {
             message.timeFlag = false
         }
 
@@ -393,7 +406,7 @@ class MessageViewModel private constructor(): ViewModel() {
     fun onMessageReceived(chatId: String?, userId: String?, messageId: String?, msg: String?) {
         if (chatId == null || userId == null || messageId == null || msg == null) { return }
         val message = Message(userId, chatId, messageId, msg, 0, Date(currentTimeMillis()))
-        addMessage(message)
+        setReceivedMessage(message)
         if (chat != null && chat!!.id == chatId && ApplicationUtil.getContext() != null) {
             isOffer = true
             startRTP()

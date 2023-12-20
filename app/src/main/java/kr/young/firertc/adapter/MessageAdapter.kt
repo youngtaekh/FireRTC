@@ -2,9 +2,7 @@ package kr.young.firertc.adapter
 
 import android.view.LayoutInflater
 import android.view.View
-import android.view.View.INVISIBLE
-import android.view.View.OnLongClickListener
-import android.view.View.VISIBLE
+import android.view.View.*
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView.Adapter
 import androidx.recyclerview.widget.RecyclerView.ViewHolder
@@ -27,11 +25,12 @@ class MessageAdapter(private val list: List<Message>): Adapter<ViewHolder>() {
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+        val safePosition = holder.adapterPosition
         when (holder) {
-            is SendViewHolder -> holder.bind(list[position], if (position == 0) null else list[position - 1])
-            is RecvViewHolder -> holder.bind(list[position])
-            is DateViewHolder -> holder.bind(list[position])
-            is RecvViewHolder2 -> holder.bind(list[position])
+            is SendViewHolder -> holder.bind(list[safePosition], if (safePosition == 0) null else list[safePosition - 1])
+            is RecvViewHolder -> holder.bind(list[safePosition])
+            is DateViewHolder -> holder.bind(list[safePosition])
+            is RecvViewHolder2 -> holder.bind(list[safePosition])
         }
     }
 

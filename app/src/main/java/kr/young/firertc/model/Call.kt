@@ -1,5 +1,7 @@
 package kr.young.firertc.model
 
+import androidx.room.Entity
+import androidx.room.PrimaryKey
 import com.google.firebase.firestore.FieldValue
 import kr.young.common.Crypto
 import kr.young.firertc.util.Config.Companion.CANDIDATES
@@ -14,10 +16,12 @@ import kr.young.firertc.vm.MyDataViewModel
 import java.lang.System.currentTimeMillis
 import java.util.*
 
+@Entity(tableName = "calls")
 data class Call(
     val userId: String = MyDataViewModel.instance.getMyId(),
     val fcmToken: String? = MyDataViewModel.instance.myData!!.fcmToken,
     val spaceId: String? = null,
+    @PrimaryKey
     val id: String = Crypto().getHash("$userId$spaceId${currentTimeMillis()}"),
     var type: Type = Type.AUDIO,
     var direction: Direction? = null,

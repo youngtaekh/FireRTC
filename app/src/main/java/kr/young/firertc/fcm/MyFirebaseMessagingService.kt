@@ -15,7 +15,7 @@ import com.google.firebase.firestore.ktx.toObject
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import kr.young.common.UtilLog.Companion.d
-import kr.young.firertc.MainActivity
+import kr.young.firertc.HomeActivity
 import kr.young.firertc.R
 import kr.young.firertc.fcm.SendFCM.FCMType
 import kr.young.firertc.model.Call
@@ -188,7 +188,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
     }
 
     private fun sendNotification(messageBody: String) {
-        val intent = Intent(this, MainActivity::class.java)
+        val intent = Intent(this, HomeActivity::class.java)
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
         val pendingIntent = PendingIntent.getActivity(this, 0 /* Request code */, intent,
             PendingIntent.FLAG_IMMUTABLE)

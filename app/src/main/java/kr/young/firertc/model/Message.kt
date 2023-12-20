@@ -40,12 +40,12 @@ data class Message(
 
     override fun toString(): String {
         val json = JsonObject()
-        json.addProperty("id", id)
-        json.addProperty(CHAT_ID, chatId)
         json.addProperty(FROM, from)
         json.addProperty(BODY, body)
         json.addProperty(SEQUENCE, sequence)
         json.addProperty(CREATED_AT, createdAt?.time)
+        json.addProperty("id", id)
+        json.addProperty(CHAT_ID, chatId)
         return json.toString()
     }
 

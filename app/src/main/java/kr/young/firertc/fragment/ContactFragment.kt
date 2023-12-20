@@ -18,15 +18,12 @@ import kr.young.firertc.AddContactActivity
 import kr.young.firertc.ProfileActivity
 import kr.young.firertc.R
 import kr.young.firertc.adapter.ContactAdapter
-import kr.young.firertc.model.Relation
 import kr.young.firertc.model.User
-import kr.young.firertc.repo.RelationRepository
 import kr.young.firertc.vm.UserViewModel
 
 class ContactFragment : Fragment(), OnClickListener {
 
     private val userViewModel = UserViewModel.instance
-    private lateinit var contactList: MutableList<User>
     private lateinit var contactAdapter: ContactAdapter
 
     override fun onCreateView(
@@ -42,12 +39,11 @@ class ContactFragment : Fragment(), OnClickListener {
 
         swipe.setOnRefreshListener {
             d(TAG, "contacts swipe refresh")
-            userViewModel.readAllRelation()
+            userViewModel.getRelations()
             swipe.isRefreshing = false
         }
 
-        contactList = userViewModel.contacts
-        contactAdapter = ContactAdapter(contactList)
+        contactAdapter = ContactAdapter(userViewModel.contacts)
         contactAdapter.setOnItemClickListener(clickListener, longClickListener)
         recyclerView.adapter = contactAdapter
 
@@ -62,25 +58,13 @@ class ContactFragment : Fragment(), OnClickListener {
                     tvEmpty.visibility = VISIBLE
                 } else {
                     tvEmpty.visibility = INVISIBLE
-                    contactAdapter.notifyDataSetChanged()
-//                    for (i in 0 until contactList.size) {
-//                        d(TAG, "nofityItemInserted($i)")
-//                        contactAdapter.notifyItemInserted(i)
-//                    }
-//                    contactAdapter.notifyItemRangeInserted(0, contactList.size)
+                    contactAdapter.notifyItemRangeChanged(0, userViewModel.contacts.size)
                 }
             }
         }
 
-        userViewModel.readAllRelation()
-
         // Inflate the layout for this fragment
         return layout
-    }
-
-    override fun onResume() {
-        super.onResume()
-        d(TAG, "onResume")
     }
 
     override fun onClick(v: View?) {
@@ -90,28 +74,16 @@ class ContactFragment : Fragment(), OnClickListener {
     }
 
     private fun removeContact(pos: Int) {
-        val user = contactList[pos]
+        val user = userViewModel.contacts[pos]
         userViewModel.deleteRelation(user.id)
-        contactList.removeAt(pos)
+        userViewModel.contacts.removeAt(pos)
         contactAdapter.notifyItemRemoved(pos)
-    }
-
-    private fun addTestContacts() {
-        for (i in 0 until 15) {
-            if (i < 10) {
-                RelationRepository.post(Relation(to = "test0$i"))
-//                UserRepository.post(User(id = "test0$i", name = "Test0$i"))
-            } else {
-                RelationRepository.post(Relation(to = "test$i"))
-//                UserRepository.post(User(id = "test$i", name = "Test$i"))
-            }
-        }
     }
 
     private val clickListener = object: ContactAdapter.ClickListener {
         override fun onClick(pos: Int, v: View) {
             d(TAG, "onClick($pos, view)")
-            userViewModel.selectedProfile = contactList[pos]
+            userViewModel.selectedProfile = userViewModel.contacts[pos]
             startActivity(Intent(context, ProfileActivity::class.java))
         }
     }
@@ -119,7 +91,7 @@ class ContactFragment : Fragment(), OnClickListener {
     private val longClickListener = object: ContactAdapter.LongClickListener {
         override fun onLongClick(pos: Int, v: View) {
             d(TAG, "onLongClick($pos, v)")
-            val user = contactList[pos]
+            val user = userViewModel.contacts[pos]
             val builder = AlertDialog.Builder(context!!)
                 .setTitle(user.name)
                 .setMessage(getString(R.string.delete_contact))
