@@ -83,17 +83,15 @@ class UserViewModel: ViewModel() {
 
     fun readUsers(list: List<String>) {
         d(TAG, "readUsers(${list.size})")
-        UserRepository.getUsers(
-            list = list,
-            success = {
-                d(TAG, "readUsers Success")
-                participants.removeAll { true }
-                for (document in it) {
-                    val user = document.toObject<User>()
-                    participants.add(user)
-                }
-                setResponseCode(USER_READ_SUCCESS)
-            })
+        UserRepository.getUsers(list) {
+            d(TAG, "readUsers Success")
+            participants.removeAll { true }
+            for (document in it) {
+                val user = document.toObject<User>()
+                participants.add(user)
+            }
+            setResponseCode(USER_READ_SUCCESS)
+        }
     }
 
     fun initPage(destination: Int) {
@@ -162,7 +160,7 @@ class UserViewModel: ViewModel() {
                 contacts.removeAll { true }
                 setRefreshContacts()
             } else {
-                UserRepository.getUsers(list, getUsersListener)
+                UserRepository.getUsers(list = list, success = getUsersListener)
             }
         }
     }
@@ -179,7 +177,7 @@ class UserViewModel: ViewModel() {
             .observeOn(Schedulers.io())
             .map { doc ->
                 val user = doc.toObject<User>()
-                AppRoomDatabase.getInstance()!!.userDao().setUser(user)
+                AppRoomDatabase.getInstance()!!.userDao().setUsers(user)
                 userList.add(user)
             }
             .doOnComplete { if (checkPage()) addContacts(userList) }

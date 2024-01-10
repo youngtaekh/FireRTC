@@ -13,7 +13,13 @@ interface ChatDAO {
     fun getChat(id: String): Chat
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun setChat(chat: Chat)
+    fun setChats(vararg chat: Chat)
+
+    @Update
+    fun updateChats(vararg chat: Chat)
+
+    @Query("UPDATE chats SET lastMessage = :lastMessage, lastSequence = :lastSequence WHERE id = :id")
+    fun updateLast(id: String, lastMessage: String, lastSequence: Long)
 
     @Delete
     fun deleteChat(chat: Chat)

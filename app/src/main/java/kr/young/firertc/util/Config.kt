@@ -25,6 +25,7 @@ class Config {
         const val CHAT_ID = "chatId"
         const val MESSAGE_ID = "messageId"
         const val MESSAGE = "message"
+        const val MESSAGE_PAGE_SIZE = 50L
 
         //chat
         const val TITLE = "title"

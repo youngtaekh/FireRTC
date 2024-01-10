@@ -4,17 +4,26 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.View.*
 import android.view.ViewGroup
-import androidx.recyclerview.widget.RecyclerView.Adapter
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView.ViewHolder
 import kr.young.common.DateUtil
+import kr.young.common.UtilLog.Companion.d
 import kr.young.firertc.databinding.LayoutMessageDateBinding
 import kr.young.firertc.databinding.LayoutRecvMessage2Binding
 import kr.young.firertc.databinding.LayoutRecvMessageBinding
 import kr.young.firertc.databinding.LayoutSendMessageBinding
 import kr.young.firertc.model.Message
+import kr.young.firertc.vm.MessageVM
 import kr.young.firertc.vm.MyDataViewModel
 
-class MessageAdapter(private val list: List<Message>): Adapter<ViewHolder>() {
+class MessageAdapter: ListAdapter<Message, ViewHolder>(MessageDiffItemCallback()) {
+    var data = listOf<Message>()
+        set(value) {
+            d(TAG, "data size ${data.size}")
+            d(TAG, "value size ${value.size}")
+            field = value
+//            notifyDataSetChanged()
+        }
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         return when (viewType) {
             SEND -> SendViewHolder(LayoutSendMessageBinding.inflate(LayoutInflater.from(parent.context), parent, false))
@@ -27,24 +36,24 @@ class MessageAdapter(private val list: List<Message>): Adapter<ViewHolder>() {
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val safePosition = holder.adapterPosition
         when (holder) {
-            is SendViewHolder -> holder.bind(list[safePosition], if (safePosition == 0) null else list[safePosition - 1])
-            is RecvViewHolder -> holder.bind(list[safePosition])
-            is DateViewHolder -> holder.bind(list[safePosition])
-            is RecvViewHolder2 -> holder.bind(list[safePosition])
+            is SendViewHolder -> holder.bind(getItem(safePosition), if (safePosition == 0) null else getItem(safePosition-1))
+            is RecvViewHolder -> holder.bind(getItem(safePosition))
+            is DateViewHolder -> holder.bind(getItem(safePosition))
+            is RecvViewHolder2 -> holder.bind(getItem(safePosition))
         }
     }
 
-    override fun getItemCount() = list.size
+    override fun getItemCount() = currentList.size
 
     override fun getItemViewType(position: Int): Int {
-        return if (list[position].isDate) {
+        return if (getItem(position).isDate) {
             DATE
-        } else if (list[position].from == MyDataViewModel.instance.getMyId()) {
+        } else if (getItem(position).from == MyDataViewModel.instance.getMyId()) {
             SEND
         } else if (
             position == 0 ||
-            list[position-1].from != list[position].from ||
-            list[position-1].isDate
+            getItem(position-1).from != getItem(position).from ||
+            getItem(position-1).isDate
         ) {
             RECV2
         } else {
@@ -124,7 +133,7 @@ class MessageAdapter(private val list: List<Message>): Adapter<ViewHolder>() {
 
     inner class RecvViewHolder2(private val binding: LayoutRecvMessage2Binding): ViewHolder(binding.root), OnLongClickListener {
         fun bind(message: Message) {
-            binding.tvName.text = message.from
+            binding.tvName.text = MessageVM.instance.participantMap[message.from]?.name ?: ""
             binding.tvMessage.text = message.body
             if (message.timeFlag) {
                 binding.tvTime.visibility = VISIBLE

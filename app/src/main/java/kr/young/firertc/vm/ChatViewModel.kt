@@ -12,17 +12,15 @@ import io.reactivex.rxkotlin.toObservable
 import io.reactivex.schedulers.Schedulers
 import kr.young.firertc.db.AppRoomDatabase
 import kr.young.firertc.model.Chat
-import kr.young.firertc.model.Message
 import kr.young.firertc.repo.ChatRepository
 import kr.young.firertc.repo.ChatRepository.Companion.CHAT_READ_SUCCESS
-import kr.young.firertc.repo.MessageRepository
 
 class ChatViewModel private constructor(): ViewModel() {
 
     val responseCode = MutableLiveData<Int>()
     var chatList = mutableListOf<Chat>()
     val selectedChat: Chat? = null
-        get() { return field ?: MessageViewModel.instance.chat }
+        get() { return field ?: MessageVM.instance.chat.value }
 
     fun setResponseCode(code: Int) {
         Handler(Looper.getMainLooper()).post { responseCode.value = code }
@@ -40,11 +38,10 @@ class ChatViewModel private constructor(): ViewModel() {
                 list = it.toObservable()
                     .observeOn(Schedulers.computation())
                     .map { doc -> doc.toObject<Chat>() }
+                    .map { chat -> chat.removeParticipants(MyDataViewModel.instance.getMyId()) }
                     .observeOn(Schedulers.io())
-                    .map { chat ->
-                        AppRoomDatabase.getInstance()!!.chatDao().setChat(chat)
-                        chat
-                    }
+                    .map { chat -> chat.setLocalTitle(AppRoomDatabase.getInstance()!!.userDao().getUser(chat.participants.first())?.name) }
+                    .doOnNext { chat -> AppRoomDatabase.getInstance()!!.chatDao().setChats(chat) }
                     .toList().blockingGet()
                 addChats(list)
             }

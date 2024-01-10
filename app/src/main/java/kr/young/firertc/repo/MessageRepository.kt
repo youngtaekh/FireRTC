@@ -11,6 +11,7 @@ import kr.young.common.UtilLog.Companion.d
 import kr.young.common.UtilLog.Companion.e
 import kr.young.firertc.model.Message
 import kr.young.firertc.util.Config.Companion.CHAT_ID
+import kr.young.firertc.util.Config.Companion.MESSAGE_PAGE_SIZE
 import kr.young.firertc.util.Config.Companion.SEQUENCE
 import kr.young.firertc.vm.CallViewModel
 
@@ -33,13 +34,12 @@ class MessageRepository {
                 d(TAG, "get message success")
             }
         ) {
-            d(TAG, "getMessages($min - $max)")
             Firebase.firestore.collection(COLLECTION)
                 .whereEqualTo(CHAT_ID, chatId)
                 .whereGreaterThan(SEQUENCE, min)
                 .whereLessThan(SEQUENCE, max)
                 .orderBy(SEQUENCE, Query.Direction.DESCENDING)
-                .limit(100)
+                .limit(MESSAGE_PAGE_SIZE)
                 .get()
                 .addOnSuccessListener(success)
                 .addOnFailureListener(failure)

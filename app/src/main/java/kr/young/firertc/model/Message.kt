@@ -20,7 +20,7 @@ data class Message(
     val chatId: String? = null,
     @PrimaryKey
     val id: String = Crypto().getHash("$from$chatId${System.currentTimeMillis()}"),
-    val body: String? = null,
+    var body: String? = null,
     var sequence: Long = -1,
     val createdAt: Date? = null,
     var timeFlag: Boolean = true,
@@ -61,6 +61,19 @@ data class Message(
                 body = obj.getString(BODY),
                 sequence = obj.getLong(SEQUENCE),
                 createdAt = Date(obj.getLong(CREATED_AT))
+            )
+        }
+
+        fun copy(origin: Message): Message {
+            return Message(
+                from = origin.from,
+                chatId = origin.chatId,
+                id = origin.id,
+                body = origin.body,
+                sequence = origin.sequence,
+                createdAt = origin.createdAt,
+                timeFlag = origin.timeFlag,
+                isDate = origin.isDate
             )
         }
     }

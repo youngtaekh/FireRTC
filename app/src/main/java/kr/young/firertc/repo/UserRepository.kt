@@ -54,13 +54,13 @@ class UserRepository {
 
         fun getUsers(
             list: List<String>,
-            success: OnSuccessListener<QuerySnapshot> = OnSuccessListener {
-                d(TAG, "get users success")
-                UserViewModel.instance.setResponseCode(USER_READ_SUCCESS)
-            },
             failure: OnFailureListener = OnFailureListener {
                 e(TAG, "get users failure", it)
                 UserViewModel.instance.setResponseCode(USER_READ_FAILURE)
+            },
+            success: OnSuccessListener<QuerySnapshot> = OnSuccessListener {
+                d(TAG, "get users success")
+                UserViewModel.instance.setResponseCode(USER_READ_SUCCESS)
             }
         ) {
             d(TAG, "getUsers list size ${list.size}")

@@ -2,6 +2,8 @@ package kr.young.firertc
 
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP
+import android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP
 import android.os.Bundle
 import android.view.MotionEvent
 import android.view.View
@@ -9,7 +11,6 @@ import android.view.View.*
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.databinding.DataBindingUtil
 import com.google.android.gms.tasks.OnCompleteListener
-import com.google.firebase.firestore.ktx.toObject
 import com.google.firebase.messaging.FirebaseMessaging
 import kr.young.common.TouchEffect
 import kr.young.common.UtilLog
@@ -48,7 +49,7 @@ class HomeActivity : BaseActivity(), OnClickListener, OnTouchListener {
         myViewModel.isSigned.observe(this) {
             if (!it) {
                 val intent = Intent(this, SignActivity::class.java)
-                intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                intent.flags = FLAG_ACTIVITY_CLEAR_TOP or FLAG_ACTIVITY_SINGLE_TOP
                 signLauncher.launch(intent)
             }
         }
@@ -80,7 +81,11 @@ class HomeActivity : BaseActivity(), OnClickListener, OnTouchListener {
 //                d(TAG, msg)
 //            }
 
-        getChat(intent.getStringExtra(CHAT_ID))
+        if (AppSP.instance.isSigned() && currentFragment != CONTACT) {
+            UserViewModel.instance.getContacts()
+        }
+
+        notificationEvent(intent.getStringExtra(CHAT_ID))
     }
 
     override fun onResume() {
@@ -96,14 +101,14 @@ class HomeActivity : BaseActivity(), OnClickListener, OnTouchListener {
             }
         } else {
             val intent = Intent(this, SignActivity::class.java)
-            intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            intent.flags = FLAG_ACTIVITY_CLEAR_TOP or FLAG_ACTIVITY_SINGLE_TOP
             signLauncher.launch(intent)
         }
     }
 
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
-        getChat(intent!!.getStringExtra(CHAT_ID))
+        notificationEvent(intent!!.getStringExtra(CHAT_ID))
     }
 
     override fun onClick(v: View?) {
@@ -148,32 +153,12 @@ class HomeActivity : BaseActivity(), OnClickListener, OnTouchListener {
         return super.onTouchEvent(event)
     }
 
-    private fun getChat(chatId: String?) {
-        if (!chatId.isNullOrEmpty()) {
-            d(TAG, "getChat($chatId)")
-            ChatViewModel.instance.getChat(chatId) {
-                val vm = MessageViewModel.instance
-                vm.chat = it.toObject()
-                if (vm.chat == null) return@getChat
-
-                var counterpartId: String? = null
-                for (p in vm.chat!!.participants) {
-                    if (p != myViewModel.getMyId()) {
-                        counterpartId = p
-                        break
-                    }
-                }
-
-                UserViewModel.instance.readUser(counterpartId!!) { userDocument ->
-                    vm.counterpart = userDocument.toObject()
-                    if (vm.counterpart != null) {
-                        val intent = Intent(this, MessageActivity::class.java)
-                        intent.flags =
-                            Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-                        startActivity(intent)
-                    }
-                }
-            }
+    private fun notificationEvent(chatId: String?) {
+        chatId?.let {
+            MessageVM.instance.chatId = chatId
+            val intent = Intent(this, MessageActivity::class.java)
+            intent.flags = FLAG_ACTIVITY_CLEAR_TOP or FLAG_ACTIVITY_SINGLE_TOP
+            startActivity(intent)
         }
     }
 

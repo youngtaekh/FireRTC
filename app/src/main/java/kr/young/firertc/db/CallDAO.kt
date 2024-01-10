@@ -19,7 +19,10 @@ interface CallDAO {
     fun getCall(id: String): Call
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun setCall(call: Call)
+    fun setCalls(vararg call: Call)
+
+    @Update
+    fun updateCalls(vararg call: Call)
 
     @Delete
     fun deleteCall(call: Call)

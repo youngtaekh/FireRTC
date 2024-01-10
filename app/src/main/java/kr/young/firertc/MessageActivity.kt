@@ -15,6 +15,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.databinding.DataBindingUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.RecyclerView.AdapterDataObserver
 import androidx.recyclerview.widget.RecyclerView.OnScrollListener
 import kr.young.common.TouchEffect
 import kr.young.common.UtilLog.Companion.d
@@ -22,13 +23,9 @@ import kr.young.firertc.adapter.MessageAdapter
 import kr.young.firertc.databinding.ActivityMessageBinding
 import kr.young.firertc.fcm.SendFCM
 import kr.young.firertc.model.Message
-import kr.young.firertc.model.User
 import kr.young.firertc.repo.ChatRepository
-import kr.young.firertc.repo.UserRepository.Companion.USER_READ_SUCCESS
 import kr.young.firertc.util.RecyclerViewNotifier.ModifierCategory.*
-import kr.young.firertc.vm.MessageViewModel
-import kr.young.firertc.vm.MyDataViewModel
-import kr.young.rtp.RTPManager
+import kr.young.firertc.vm.MessageVM
 import kr.young.rtp.observer.PCObserver
 import kr.young.rtp.observer.PCObserverImpl
 import org.webrtc.IceCandidate
@@ -38,17 +35,12 @@ import java.util.*
 
 class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, PCObserver, PCObserver.ICE, PCObserver.SDP {
     private lateinit var binding: ActivityMessageBinding
-    private val viewModel = MessageViewModel.instance
-    private val rtpManager = RTPManager.instance
-
-    private val counterpart: User get() {
-        return viewModel.counterpart!!
-    }
-    private val messageList = mutableListOf<Message>()
+    private val messageVM = MessageVM.instance
 
     private var isBottom = true
     private var lastVisiblePosition = -1
     private var isLoading = false
+    private var isSending = false
 
     private var checkFirst = true
 
@@ -61,7 +53,7 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
         binding = DataBindingUtil.setContentView(this, R.layout.activity_message)
         d(TAG, "onCreate")
 
-        messageAdapter = MessageAdapter(messageList)
+        messageAdapter = MessageAdapter()
         messageAdapter.setOnItemClickListener(longClickListener)
         binding.recyclerView.adapter = messageAdapter
         layoutManager = LinearLayoutManager(this)
@@ -79,8 +71,6 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
         binding.ivBottom.setOnClickListener(this)
         binding.tvLastMessage.setOnTouchListener(this)
         binding.tvLastMessage.setOnClickListener(this)
-
-        viewModel.setReceivedMessage(null)
 
         binding.etMessage.addTextChangedListener(object: TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
@@ -103,7 +93,7 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
                     super.onScrolled(recyclerView, dx, dy)
                     if (layoutManager.findLastCompletelyVisibleItemPosition() != lastVisiblePosition) {
                         lastVisiblePosition = layoutManager.findLastCompletelyVisibleItemPosition()
-                        if (layoutManager.findLastCompletelyVisibleItemPosition() == messageList.size - 1) {
+                        if (layoutManager.findLastCompletelyVisibleItemPosition() == messageAdapter.itemCount - 1) {
                             binding.ivBottom.visibility = INVISIBLE
                             binding.tvLastMessage.visibility = INVISIBLE
                             isBottom = true
@@ -114,14 +104,13 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
 
                         if (layoutManager.findLastCompletelyVisibleItemPosition() < 20 &&
                             !isLoading &&
-                            !viewModel.isEndReload &&
-                            messageList.first().sequence != 0L &&
-                            viewModel.firstSequence != messageList.first().sequence
+                            !messageVM.isNoAdditionalMessage &&
+                            messageVM.messageList.value!!.first().sequence != 0L &&
+                            messageVM.firstSequence != messageVM.messageList.value!!.first().sequence
                         ) {
                             isLoading = true
-                            viewModel.firstSequence = messageList.first().sequence
-                            d(TAG, "notifier ${messageList.size}")
-                            viewModel.getAdditionalMessages(list = messageList, max = messageList.first().sequence)
+                            messageVM.firstSequence = messageVM.messageList.value!!.first().sequence
+                            messageVM.getMessages(isAdditional = true, max = messageVM.messageList.value!!.first().sequence)
                         }
                     }
                 }
@@ -133,69 +122,55 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
             }
         })
 
+        messageAdapter.registerAdapterDataObserver(adapterObserver)
+
         PCObserverImpl.instance.add(this as PCObserver)
         PCObserverImpl.instance.add(this as PCObserver.SDP)
         PCObserverImpl.instance.add(this as PCObserver.ICE)
 
-        viewModel.responseCode.observe(this) {
-            if (it != null && it != 0) {
-                if (it == USER_READ_SUCCESS) {
-                    startCall()
-                }
-            }
-        }
-
-        viewModel.recyclerViewNotifier.observe(this) {
-            if (it == null || it.list.isEmpty()) {
-                return@observe
-            }
-//            runOnUiThread {
-                d(TAG, "notifier ${messageList.size}")
-                messageList.addAll(it.position, it.list)
-                d(TAG, "notifier ${messageList.size}")
-                when (it.modifierCategory) {
-                    Insert -> messageAdapter.notifyItemRangeInserted(it.position, it.count)
-                    Changed -> messageAdapter.notifyItemRangeChanged(it.position, it.count-1)
-                    Removed -> messageAdapter.notifyItemRangeRemoved(it.position, it.count)
-                }
-                if (it.isBottom && messageList.last().from == MyDataViewModel.instance.getMyId() || isBottom) {
-                    binding.recyclerView.scrollToPosition(messageAdapter.itemCount - 1)
-                } else if (it.position != 0 && messageList.last().from != MyDataViewModel.instance.getMyId() && !isBottom) {
-                    binding.tvLastMessage.text = messageList.last().body
-                    binding.tvLastMessage.visibility = VISIBLE
-                }
-                isLoading = false
-//            }
-        }
-
-        viewModel.receivedMessage.observe(this) {
+        messageVM.receiveMessage.observe(this) {
             if (checkFirst) {
                 checkFirst = false
                 return@observe
             }
-            if (it != null) {
+            it?.let {
                 d(TAG, "receivedMessage $it")
-                viewModel.addMessage(messageList, it)
+                messageVM.addDateMessage(listOf(it), false)
             }
         }
 
-        binding.tvTitle.text = counterpart.name
+        messageVM.chat.observe(this) {
+            it?.let {
+                binding.tvTitle.text = if (it.isGroup) {
+                    it.title
+                } else {
+                    it.localTitle
+                }
+            }
+        }
+
+        messageVM.messageList.observe(this) {
+            d(TAG, "messageList observe isSending $isSending, isBottom $isBottom")
+            messageAdapter.submitList(it)
+            isLoading = false
+        }
     }
 
     override fun onResume() {
         super.onResume()
 
-        viewModel.getChatMessage()
+        messageVM.start()
     }
 
     override fun onDestroy() {
         super.onDestroy()
         d(TAG, "onDestroy")
         ChatRepository.removeChatListener()
-        if (viewModel.rtpConnected) {
-            viewModel.end(SendFCM.FCMType.Bye)
+        messageAdapter.unregisterAdapterDataObserver(adapterObserver)
+        if (messageVM.rtpConnected) {
+            messageVM.endRTP(SendFCM.FCMType.Bye)
         }
-        viewModel.release()
+        messageVM.release()
         PCObserverImpl.instance.remove(this as PCObserver)
         PCObserverImpl.instance.remove(this as PCObserver.SDP)
         PCObserverImpl.instance.remove(this as PCObserver.ICE)
@@ -222,43 +197,28 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
     }
 
     private fun send() {
+        isSending = true
         val msg = binding.etMessage.text.toString()
 
-        val message = viewModel.sendData(msg)
-        viewModel.addMessage(messageList, message)
+        messageVM.readySendMessage(msg)
+        messageVM.addDateMessage(listOf(messageVM.sendMessage!!), false)
         binding.etMessage.setText("")
         binding.ivSend.visibility = INVISIBLE
     }
 
-    private fun startCall() {
-        rtpManager.init(this,
-            isAudio = false,
-            isVideo = false,
-            isDataChannel = true,
-            enableStat = false,
-            recordAudio = false
-        )
-
-        rtpManager.startRTP(context = this, data = null, isOffer = viewModel.isOffer, viewModel.remoteSDP, viewModel.remoteIce)
-    }
-
     private val longClickListener = object: MessageAdapter.LongClickListener {
         override fun onLongClick(pos: Int, v: View) {
-            d(TAG, "onLongClick($pos, v) - ${messageList[pos].body}")
+            d(TAG, "onLongClick($pos, v) - ${messageAdapter.currentList[pos].body}")
             val clipBoard = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
-            val clipData = ClipData.newPlainText("message", messageList[pos].body)
+            val clipData = ClipData.newPlainText("message", messageAdapter.currentList[pos].body)
             clipBoard.setPrimaryClip(clipData)
             Toast.makeText(this@MessageActivity, "Copy!!!!!", LENGTH_SHORT).show()
         }
     }
 
-    companion object {
-        private const val TAG = "MessageActivity"
-    }
-
     override fun onPCConnected() {
         d(TAG, "onPCConnected")
-        viewModel.onPCConnected()
+        messageVM.rtpConnected = true
     }
 
     override fun onPCDisconnected() {
@@ -267,11 +227,12 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
 
     override fun onPCFailed() {
         d(TAG, "onPCFailed")
+        messageVM.rtpConnected = false
     }
 
     override fun onPCClosed() {
         d(TAG, "onPCClosed")
-        viewModel.onPCClosed()
+        messageVM.rtpConnected = false
     }
 
     override fun onPCStatsReady(reports: Array<StatsReport?>?) {
@@ -283,23 +244,27 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
     }
 
     override fun onMessage(msg: String) {
-        d(TAG, "onMessage ${counterpart.id} $msg")
+        d(TAG, "onMessage ${messageVM.counterpart!!.id} $msg")
         val message = Message.fromJson(msg)
-        viewModel.addMessage(messageList, message)
+        messageVM.addDateMessage(listOf(message), false)
     }
 
     override fun onLocalDescription(sdp: SessionDescription?) {
         d(TAG, "onLocalDescription")
-        if (viewModel.isOffer) {
-            viewModel.sendOffer(sdp!!.description)
-        } else {
-            viewModel.sendAnswer(sdp!!.description)
+        sdp?.let {
+            if (messageVM.isOffer) {
+                messageVM.sendFCMMessage(SendFCM.FCMType.Offer, sdp.description)
+            } else {
+                messageVM.sendFCMMessage(SendFCM.FCMType.Answer, sdp.description)
+            }
         }
     }
 
     override fun onICECandidate(candidate: IceCandidate?) {
         d(TAG, "onICECandidate")
-        viewModel.onIceCandidate(candidate!!.sdp)
+        candidate?.let {
+            messageVM.onIceCandidate(candidate.sdp)
+        }
     }
 
     override fun onICECandidatesRemoved(candidates: Array<out IceCandidate?>?) {
@@ -312,5 +277,43 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
 
     override fun onICEDisconnected() {
         d(TAG, "onICEDisconnected")
+    }
+
+    private val adapterObserver: AdapterDataObserver = object: AdapterDataObserver() {
+        override fun onItemRangeChanged(positionStart: Int, itemCount: Int) {
+            super.onItemRangeChanged(positionStart, itemCount)
+            d(TAG, "onItemRangeChanged($positionStart, $itemCount)")
+        }
+
+        override fun onItemRangeChanged(positionStart: Int, itemCount: Int, payload: Any?) {
+            super.onItemRangeChanged(positionStart, itemCount, payload)
+            d(TAG, "onItemRangeChanged($positionStart, $itemCount, payload)")
+        }
+
+        override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
+            super.onItemRangeInserted(positionStart, itemCount)
+            d(TAG, "onItemRangeInserted($positionStart, $itemCount)")
+            if (isSending || isBottom) {
+                binding.recyclerView.post {
+                    d(TAG, "itemCount ${messageAdapter.itemCount}")
+                    binding.recyclerView.scrollToPosition(messageAdapter.itemCount - 1)
+                }
+                isSending = false
+            }
+        }
+
+        override fun onItemRangeRemoved(positionStart: Int, itemCount: Int) {
+            super.onItemRangeRemoved(positionStart, itemCount)
+            d(TAG, "onItemRangeRemoved($positionStart, $itemCount)")
+        }
+
+        override fun onItemRangeMoved(fromPosition: Int, toPosition: Int, itemCount: Int) {
+            super.onItemRangeMoved(fromPosition, toPosition, itemCount)
+            d(TAG, "onItemRangeMoved($fromPosition, $toPosition, $itemCount)")
+        }
+    }
+
+    companion object {
+        private const val TAG = "MessageActivity"
     }
 }

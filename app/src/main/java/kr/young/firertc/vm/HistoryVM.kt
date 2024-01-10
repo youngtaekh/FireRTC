@@ -87,7 +87,7 @@ class HistoryVM private constructor() {
                 .observeOn(Schedulers.io())
                 .map { snapshot ->
                     val call = snapshot.toObject<Call>()
-                    AppRoomDatabase.getInstance()!!.callDao().setCall(call)
+                    AppRoomDatabase.getInstance()!!.callDao().setCalls(call)
                     if (subList.isEmpty() || checkDay(subList.last(), call)) {
                         subList.add(Call(isHeader = true, createdAt = call.createdAt))
                     }
