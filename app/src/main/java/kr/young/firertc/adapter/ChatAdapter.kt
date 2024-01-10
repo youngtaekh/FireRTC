@@ -8,18 +8,11 @@ import android.view.View.OnLongClickListener
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView.Adapter
 import androidx.recyclerview.widget.RecyclerView.ViewHolder
-import com.google.firebase.firestore.ktx.toObject
-import io.reactivex.Observable
-import io.reactivex.android.schedulers.AndroidSchedulers
-import io.reactivex.schedulers.Schedulers
 import kr.young.common.DateUtil
 import kr.young.firertc.R
 import kr.young.firertc.databinding.LayoutChatBinding
-import kr.young.firertc.db.AppRoomDatabase
 import kr.young.firertc.model.Chat
-import kr.young.firertc.model.User
 import kr.young.firertc.vm.ChatViewModel
-import kr.young.firertc.vm.MyDataViewModel
 import kr.young.firertc.vm.UserViewModel
 import java.lang.System.currentTimeMillis
 
@@ -68,25 +61,12 @@ class ChatAdapter : Adapter<ViewHolder>() {
     inner class ChatHolder(val binding: LayoutChatBinding): ViewHolder(binding.root), OnClickListener, OnLongClickListener {
         fun bind(chat: Chat) {
             binding.ivProfile.setImageResource(UserViewModel.instance.selectImage(chat.id))
-            if (chat.participants.size < 2) {
+            if (chat.participants.isEmpty()) {
                 binding.tvName.text = context!!.getString(R.string.no_one)
             } else if (chat.isGroup) {
                 binding.tvName.text = chat.title
             } else {
-                for (participant in chat.participants) {
-                    if (participant != MyDataViewModel.instance.getMyId()) {
-                        Observable.just(0)
-                            .observeOn(Schedulers.io())
-                            .map { AppRoomDatabase.getInstance()!!.userDao().getUser(participant) }
-                            .observeOn(AndroidSchedulers.mainThread())
-                            .map { binding.tvName.text = it.name }
-                            .doOnComplete { UserViewModel.instance.readUser(participant) {
-                                binding.tvName.text = it.toObject<User>()?.name ?: context!!.getString(R.string.no_one)
-                            }}
-                            .subscribe()
-                        break
-                    }
-                }
+                binding.tvName.text = chat.localTitle
             }
             binding.tvMessage.text = chat.lastMessage
             val now = DateUtil.toFormattedString(currentTimeMillis(), "yy-MM-dd")

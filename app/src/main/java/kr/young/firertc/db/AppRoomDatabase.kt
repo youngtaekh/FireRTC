@@ -15,11 +15,11 @@ import kr.young.firertc.util.Converter
 
 @Database(
     entities = [Call::class, Chat::class, Message::class, User::class],
-    version = 2,
+    version = 5,
     exportSchema = true,
-//    autoMigrations = [
-//        androidx.room.AutoMigration(from = 3, to = 4, spec = AppRoomDatabase.AppRoomAutoMigration::class),
-//    ]
+    autoMigrations = [
+        AutoMigration(from = 3, to = 4, spec = AppRoomDatabase.AppRoomAutoMigration::class),
+    ]
 )
 @TypeConverters(Converter::class)
 abstract class AppRoomDatabase: RoomDatabase() {
@@ -30,7 +30,8 @@ abstract class AppRoomDatabase: RoomDatabase() {
 
 //    @DeleteColumn(tableName = "", columnName = "")
 //    @RenameColumn(tableName = "", fromColumnName = "", toColumnName = "")
-//    class AppRoomAutoMigration: AutoMigrationSpec
+    @DeleteColumn(tableName = "messages", columnName = "timeFlag")
+    class AppRoomAutoMigration: AutoMigrationSpec
 
     companion object {
         private var instance: AppRoomDatabase? = null
@@ -44,7 +45,7 @@ abstract class AppRoomDatabase: RoomDatabase() {
                         ApplicationUtil.getContext()!!.applicationContext,
                         AppRoomDatabase::class.java,
                         "fireRTC.db"
-                    ).addMigrations(MIGRATION_1_2).build()
+                    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_4_5).build()
                 }
             }
             return instance
@@ -52,6 +53,18 @@ abstract class AppRoomDatabase: RoomDatabase() {
 
         fun destroyInstance() {
             instance = null
+        }
+
+        private val MIGRATION_4_5 = object: Migration(4, 5) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE messages ADD COLUMN timeFlag INTEGER NOT NULL default 1")
+            }
+        }
+
+        private val MIGRATION_2_3 = object: Migration(2, 3) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE chats ADD COLUMN localTitle TEXT NOT NULL default ''")
+            }
         }
 
         private val MIGRATION_1_2 = object: Migration(1, 2) {

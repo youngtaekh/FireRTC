@@ -1,6 +1,8 @@
 package kr.young.firertc.fragment
 
 import android.content.Intent
+import android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP
+import android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -12,22 +14,14 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.google.android.material.floatingactionbutton.FloatingActionButton
-import com.google.firebase.firestore.ktx.toObject
-import io.reactivex.Observable
-import io.reactivex.rxkotlin.toObservable
-import io.reactivex.schedulers.Schedulers
 import kr.young.common.UtilLog.Companion.d
 import kr.young.firertc.AddChatActivity
 import kr.young.firertc.MessageActivity
 import kr.young.firertc.R
 import kr.young.firertc.adapter.ChatAdapter
-import kr.young.firertc.db.AppRoomDatabase
-import kr.young.firertc.model.User
 import kr.young.firertc.repo.ChatRepository.Companion.CHAT_READ_SUCCESS
 import kr.young.firertc.vm.ChatViewModel
-import kr.young.firertc.vm.MessageViewModel
-import kr.young.firertc.vm.MyDataViewModel
-import kr.young.firertc.vm.UserViewModel
+import kr.young.firertc.vm.MessageVM
 
 class ChatFragment : Fragment(), OnClickListener {
     private val chatViewModel = ChatViewModel.instance
@@ -73,8 +67,8 @@ class ChatFragment : Fragment(), OnClickListener {
             }
         }
 
-        MessageViewModel.instance.receivedMessage.observe(viewLifecycleOwner) {
-            if (it != null) {
+        MessageVM.instance.receiveMessage.observe(viewLifecycleOwner) {
+            it?.let {
                 for (i in chatViewModel.chatList.indices) {
                     if (chatViewModel.chatList[i].id == it.chatId) {
                         chatViewModel.chatList[i].lastMessage = it.body!!
@@ -95,42 +89,13 @@ class ChatFragment : Fragment(), OnClickListener {
         }
     }
 
-    private fun startMessageActivity() {
-        val intent = Intent(this@ChatFragment.context, MessageActivity::class.java)
-        intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-        startActivity(intent)
-    }
-
     private val listener = { it: Int ->
         val chat = chatViewModel.chatList[it]
         d(TAG, "clickListener $chat")
-        if (!chat.isGroup) {
-            var participant = ""
-            for (i in chat.participants.indices) {
-                participant = chat.participants[i]
-                if (participant != MyDataViewModel.instance.getMyId()) {
-                    break
-                }
-            }
-            Observable.just(0)
-                .observeOn(Schedulers.io())
-                .map {
-                    val user = AppRoomDatabase.getInstance()!!.userDao().getUser(participant)
-                    if (user != null) {
-                        MessageViewModel.instance.startChat(user) { startMessageActivity() }
-                        user
-                    } else {
-                        User()
-                    }
-                }
-                .filter { user -> user.id.isEmpty() }
-                .map {
-                    UserViewModel.instance.readUser(participant) {
-                        MessageViewModel.instance.startChat(it.toObject<User>()) { startMessageActivity() }
-                    }
-                }
-                .subscribe()
-        }
+        MessageVM.instance.setChat(chat)
+        val intent = Intent(this@ChatFragment.context, MessageActivity::class.java)
+        intent.flags = FLAG_ACTIVITY_CLEAR_TOP or FLAG_ACTIVITY_SINGLE_TOP
+        startActivity(intent)
     }
 
     private val longListener = { it: Int, _: View ->

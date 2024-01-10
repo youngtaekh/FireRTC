@@ -2,6 +2,7 @@ package kr.young.firertc.db
 
 import androidx.room.*
 import kr.young.firertc.model.Message
+import kr.young.firertc.util.Config.Companion.MESSAGE_PAGE_SIZE
 
 @Dao
 interface MessageDAO {
@@ -12,7 +13,7 @@ interface MessageDAO {
         chatId: String,
         min: Long = -1L,
         max: Long = 9_223_372_036_854_775_807,
-        limit: Long = 100
+        limit: Long = MESSAGE_PAGE_SIZE
     ): List<Message>
 
     @Query("SELECT * FROM messages where chatId = :chatId ORDER BY sequence DESC LIMIT 1")
@@ -22,7 +23,13 @@ interface MessageDAO {
     fun getMessage(id: String): Message
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun setMessage(message: Message)
+    fun setMessages(vararg message: Message)
+
+    @Update
+    fun updateMessages(vararg message: Message)
+
+    @Query("DELETE FROM messages where sequence >= :from AND sequence <= :to")
+    fun deleteMessages(from: Long, to: Long)
 
     @Delete
     fun deleteMessage(message: Message)

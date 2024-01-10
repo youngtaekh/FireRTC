@@ -46,7 +46,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
                     FCMType.Answer -> receiveAnswerMessage(fm)
                     FCMType.Bye, FCMType.Cancel, FCMType.Decline, FCMType.Busy -> receiveEndMessage(fm)
                     FCMType.Message -> onReceiveChatMessage(fm)
-                    else -> { sendNotification("else") }
+                    else -> sendNotification(fm)
                 }
             }
         }
@@ -90,7 +90,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
                 CallRepository.updateTerminatedAt(call)
             }
         } else if (fm.callType == Call.Type.MESSAGE.toString()) {
-            MessageViewModel.instance.onIncomingCall(fm.userId, fm.chatId, fm.message, fm.sdp, fm.fcmToken)
+            MessageVM.instance.onIncomingCall(fm.userId, fm.chatId, fm.sdp, fm.fcmToken)
         } else {
             CallRepository.getCall(fm.callId!!) {
                 val call = it.toObject<Call>()
@@ -102,7 +102,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
     private fun receiveAnswerMessage(fm: FirebaseMessage) {
         d(TAG, "receiveAnswerMessage")
         if (fm.callType == Call.Type.MESSAGE.toString()) {
-            MessageViewModel.instance.onAnswerCall(fm.sdp)
+            MessageVM.instance.onAnsweredCall(fm.sdp)
         } else {
             CallRepository.getCall(fm.callId!!) {
                 val call = it.toObject<Call>()!!
@@ -114,7 +114,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
     private fun receiveEndMessage(fm: FirebaseMessage) {
         d(TAG, "receiveEndMessage")
         if (fm.callType == Call.Type.MESSAGE.toString()) {
-            MessageViewModel.instance.onTerminatedCall()
+            MessageVM.instance.onTerminatedCall()
         } else {
             CallVM.instance.onTerminatedCall()
         }
@@ -142,10 +142,10 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
                 val remote = IceCandidate("0", 0, fm.sdp!!)
                 RTPManager.instance.addRemoteIceCandidate(remote)
             } else if (fm.callType == Call.Type.MESSAGE.toString()) {
-                if (MessageViewModel.instance.remoteIce == null) {
-                    MessageViewModel.instance.remoteIce = fm.sdp!!
+                if (MessageVM.instance.remoteICE == null) {
+                    MessageVM.instance.remoteICE = fm.sdp!!
                 } else {
-                    MessageViewModel.instance.remoteIce += ";${fm.sdp!!}"
+                    MessageVM.instance.remoteICE += ";${fm.sdp!!}"
                 }
             } else {
                 if (CallVM.instance.remoteIce == null) {
@@ -159,7 +159,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
     private fun onReceiveChatMessage(fm: FirebaseMessage) {
         d(TAG, "onReceiveChatMessage(${fm.chatId != null}, ${fm.userId}, ${fm.name}, ${fm.messageId != null}, ${fm.message})")
-        MessageViewModel.instance.onMessageReceived(fm.chatId, fm.userId, fm.messageId, fm.message)
+        MessageVM.instance.onMessageReceived(fm.chatId, fm.userId, fm.messageId, fm.message)
         NotificationUtil.messageNotification(this, fm.chatId!!, fm.name!!, fm.message!!)
     }
 
@@ -187,7 +187,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         d(TAG, "sendRegistrationTokenToServer($token)")
     }
 
-    private fun sendNotification(messageBody: String) {
+    private fun sendNotification(fm: FirebaseMessage) {
         val intent = Intent(this, HomeActivity::class.java)
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
         val pendingIntent = PendingIntent.getActivity(this, 0 /* Request code */, intent,
@@ -197,8 +197,8 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         val defaultSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
         val notificationBuilder = NotificationCompat.Builder(this, channelId)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setContentTitle("FCM Message")
-            .setContentText(messageBody)
+            .setContentTitle(fm.name ?: "Title")
+            .setContentText(fm.message ?: "Message")
             .setAutoCancel(true)
             .setSound(defaultSoundUri)
             .setContentIntent(pendingIntent)

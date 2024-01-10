@@ -15,10 +15,9 @@ import kr.young.common.TouchEffect
 import kr.young.common.UtilLog.Companion.d
 import kr.young.firertc.databinding.ActivityReceiveBinding
 import kr.young.firertc.fcm.SendFCM
-import kr.young.firertc.model.Call
+import kr.young.firertc.model.Call.Type.*
 import kr.young.firertc.vm.CallVM
 import kr.young.firertc.vm.UserViewModel
-import kr.young.rtp.RTPManager
 
 class ReceiveActivity : AppCompatActivity(), OnClickListener, OnTouchListener {
     private lateinit var binding: ActivityReceiveBinding
@@ -39,15 +38,11 @@ class ReceiveActivity : AppCompatActivity(), OnClickListener, OnTouchListener {
             }
         }
 
-        if (vm.call!!.type == Call.Type.VIDEO) {
-            binding.ivAnswer.setImageResource(R.drawable.round_videocam_24)
-        } else if (vm.call!!.type == Call.Type.SCREEN) {
-            binding.ivAnswer.setImageResource(R.drawable.round_mobile_screen_share_24)
-        } else if (vm.call!!.type == Call.Type.MESSAGE) {
-            binding.ivAnswer.setImageResource(R.drawable.round_chat_bubble_24)
-        } else {
-            binding.ivAnswer.setImageResource(R.drawable.round_call_24)
-        }
+        binding.ivAnswer.setImageResource(when (vm.call!!.type) {
+            VIDEO -> R.drawable.round_videocam_24
+            SCREEN -> R.drawable.round_mobile_screen_share_24
+            else -> R.drawable.round_call_24
+        })
 
         binding.ivProfile.setImageResource(UserViewModel.instance.selectImage(""))
         binding.ivAnswer.setOnClickListener(this)
@@ -80,11 +75,8 @@ class ReceiveActivity : AppCompatActivity(), OnClickListener, OnTouchListener {
         d(TAG, "answer")
         finish()
         when (vm.call!!.type) {
-            Call.Type.AUDIO -> {
+            AUDIO -> {
                 startActivity(Intent(this, AudioCallActivity::class.java))
-            }
-            Call.Type.MESSAGE -> {
-                startActivity(Intent(this, MessageActivity::class.java))
             }
             else -> {
                 startActivity(Intent(this, VideoCallActivity::class.java))

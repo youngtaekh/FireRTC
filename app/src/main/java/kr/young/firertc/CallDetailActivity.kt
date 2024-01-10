@@ -2,6 +2,8 @@ package kr.young.firertc
 
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP
+import android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP
 import android.os.Bundle
 import android.view.MotionEvent
 import android.view.View
@@ -23,9 +25,9 @@ class CallDetailActivity : BaseActivity(), OnClickListener, OnTouchListener {
     private lateinit var binding: ActivityCallDetailBinding
     private val callVM = CallVM.instance
     private val call = callVM.selectedCall
-    var space: Space? = null
-    var counterpartId: String? = null
-    var counterpart: User? = null
+    private var space: Space? = null
+    private var counterpartId: String? = null
+    private var counterpart: User? = null
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -139,13 +141,13 @@ class CallDetailActivity : BaseActivity(), OnClickListener, OnTouchListener {
 
     private fun call() {
         d(TAG, "audio call")
-        if (counterpart != null) {
+        counterpart?.let {
             val audioVM = AudioViewModel.instance
-            audioVM.startOffer(counterpart = counterpart!!, type = Call.Type.AUDIO) {
+            audioVM.startOffer(counterpart = it, type = Call.Type.AUDIO) {
                 audioVM.updateCallList()
                 audioVM.updateParticipantList()
                 val intent = Intent(this, AudioCallActivity::class.java)
-                intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                intent.flags = FLAG_ACTIVITY_CLEAR_TOP or FLAG_ACTIVITY_SINGLE_TOP
                 startActivity(intent)
                 startForegroundService(Intent(this, CallService::class.java))
             }
@@ -154,26 +156,24 @@ class CallDetailActivity : BaseActivity(), OnClickListener, OnTouchListener {
 
     private fun chat() {
         d(TAG, "chat()")
-        if (counterpart != null) {
-            val messageVM = MessageViewModel.instance
-            messageVM.startChat(counterpart!!) {
-                val intent = Intent(this, MessageActivity::class.java)
-                intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-                startActivity(intent)
-            }
+        counterpart?.let {
+            MessageVM.instance.participantMap[it.id] = it
+            val intent = Intent(this, MessageActivity::class.java)
+            intent.flags = FLAG_ACTIVITY_CLEAR_TOP or FLAG_ACTIVITY_SINGLE_TOP
+            startActivity(intent)
         }
     }
 
     private fun video() {
         d(TAG, "video call")
-        if (counterpart != null) {
+        counterpart?.let {
             val videoVM = VideoViewModel.instance
-            videoVM.startOffer(counterpart!!, Call.Type.VIDEO) {
+            videoVM.startOffer(it, Call.Type.VIDEO) {
                 videoVM.updateCallList()
                 videoVM.updateParticipantList()
                 startForegroundService(Intent(this, CallService::class.java))
                 val intent = Intent(this, VideoCallActivity::class.java)
-                intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                intent.flags = FLAG_ACTIVITY_CLEAR_TOP or FLAG_ACTIVITY_SINGLE_TOP
                 startActivity(intent)
             }
         }
@@ -181,14 +181,14 @@ class CallDetailActivity : BaseActivity(), OnClickListener, OnTouchListener {
 
     private fun screen() {
         d(TAG, "screen call")
-        if (counterpart != null) {
+        counterpart?.let {
             val videoVM = VideoViewModel.instance
-            videoVM.startOffer(counterpart!!, Call.Type.SCREEN) {
+            videoVM.startOffer(it, Call.Type.SCREEN) {
                 videoVM.updateCallList()
                 videoVM.updateParticipantList()
                 startForegroundService(Intent(this, CallService::class.java))
                 val intent = Intent(this, VideoCallActivity::class.java)
-                intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                intent.flags = FLAG_ACTIVITY_CLEAR_TOP or FLAG_ACTIVITY_SINGLE_TOP
                 startActivity(intent)
             }
         }

@@ -2,6 +2,8 @@ package kr.young.firertc
 
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP
+import android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP
 import android.os.Bundle
 import android.view.MotionEvent
 import android.view.View
@@ -13,10 +15,7 @@ import kr.young.common.UtilLog.Companion.d
 import kr.young.firertc.databinding.ActivityProfileBinding
 import kr.young.firertc.model.Call
 import kr.young.firertc.util.BaseActivity
-import kr.young.firertc.vm.AudioViewModel
-import kr.young.firertc.vm.MessageViewModel
-import kr.young.firertc.vm.UserViewModel
-import kr.young.firertc.vm.VideoViewModel
+import kr.young.firertc.vm.*
 
 class ProfileActivity : BaseActivity(), OnClickListener, OnTouchListener {
 
@@ -67,7 +66,7 @@ class ProfileActivity : BaseActivity(), OnClickListener, OnTouchListener {
             audioVM.updateCallList()
             audioVM.updateParticipantList()
             val intent = Intent(this, AudioCallActivity::class.java)
-            intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            intent.flags = FLAG_ACTIVITY_CLEAR_TOP or FLAG_ACTIVITY_SINGLE_TOP
             startActivity(intent)
             startForegroundService(Intent(this, CallService::class.java))
         }
@@ -81,7 +80,7 @@ class ProfileActivity : BaseActivity(), OnClickListener, OnTouchListener {
             videoVM.updateParticipantList()
             startForegroundService(Intent(this, CallService::class.java))
             val intent = Intent(this, VideoCallActivity::class.java)
-            intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            intent.flags = FLAG_ACTIVITY_CLEAR_TOP or FLAG_ACTIVITY_SINGLE_TOP
             startActivity(intent)
         }
     }
@@ -94,19 +93,17 @@ class ProfileActivity : BaseActivity(), OnClickListener, OnTouchListener {
             videoVM.updateParticipantList()
             startForegroundService(Intent(this, CallService::class.java))
             val intent = Intent(this, VideoCallActivity::class.java)
-            intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            intent.flags = FLAG_ACTIVITY_CLEAR_TOP or FLAG_ACTIVITY_SINGLE_TOP
             startActivity(intent)
         }
     }
 
     private fun chat() {
         d(TAG, "chat")
-        val messageVM = MessageViewModel.instance
-        messageVM.startChat(userViewModel.selectedProfile!!) {
-            val intent = Intent(this, MessageActivity::class.java)
-            intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-            startActivity(intent)
-        }
+        MessageVM.instance.participantMap[userViewModel.selectedProfile!!.id] = userViewModel.selectedProfile
+        val intent = Intent(this, MessageActivity::class.java)
+        intent.flags = FLAG_ACTIVITY_CLEAR_TOP or FLAG_ACTIVITY_SINGLE_TOP
+        startActivity(intent)
     }
 
     companion object {

@@ -2,6 +2,8 @@ package kr.young.firertc
 
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP
+import android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP
 import android.os.Bundle
 import android.view.MotionEvent
 import android.view.View
@@ -11,14 +13,13 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.databinding.DataBindingUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.google.firebase.firestore.ktx.toObject
 import kr.young.common.TouchEffect
 import kr.young.common.UtilLog.Companion.d
 import kr.young.firertc.adapter.AddChatAdapter
 import kr.young.firertc.adapter.AddedChatAdapter
 import kr.young.firertc.databinding.ActivityAddChatBinding
 import kr.young.firertc.model.User
-import kr.young.firertc.vm.MessageViewModel
+import kr.young.firertc.vm.MessageVM
 import kr.young.firertc.vm.UserViewModel
 
 class AddChatActivity : AppCompatActivity(), OnClickListener, OnTouchListener {
@@ -104,7 +105,7 @@ class AddChatActivity : AppCompatActivity(), OnClickListener, OnTouchListener {
 
     override fun onClick(v: View?) {
         when (v?.id) {
-            R.id.tv_confirm -> { createChat() }
+            R.id.tv_confirm -> { startMessage() }
         }
     }
 
@@ -114,22 +115,13 @@ class AddChatActivity : AppCompatActivity(), OnClickListener, OnTouchListener {
         return false
     }
 
-    private fun createChat() {
+    private fun startMessage() {
         if (checkedContacts.size == 1) {
-            UserViewModel.instance.readUser(checkedContacts[0].id) {
-                val user = it.toObject<User>()
-                if (user != null) {
-                    MessageViewModel.instance.startChat(user) {
-                        val intent = Intent(this, MessageActivity::class.java)
-                        intent.flags =
-                            Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-                        startActivity(intent)
-                        finish()
-                    }
-                } else {
-                    Toast.makeText(this, "No User", Toast.LENGTH_SHORT).show()
-                }
-            }
+            checkedContacts.map { MessageVM.instance.participantMap[it.id] = it }
+            val intent = Intent(this, MessageActivity::class.java)
+            intent.flags = FLAG_ACTIVITY_CLEAR_TOP or FLAG_ACTIVITY_SINGLE_TOP
+            startActivity(intent)
+            finish()
         } else {
             Toast.makeText(this, "Next...", Toast.LENGTH_SHORT).show()
         }

@@ -9,10 +9,13 @@ interface UserDAO {
     fun getUsers(): List<User>
 
     @Query("SELECT * FROM users where id = :id")
-    fun getUser(id: String): User?
+    fun getUser(id: String?): User?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun setUser(user: User)
+    fun setUsers(vararg user: User)
+
+    @Update
+    fun updateUsers(vararg user: User)
 
     @Delete
     fun deleteUser(user: User)
