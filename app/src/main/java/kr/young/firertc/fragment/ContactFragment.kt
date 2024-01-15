@@ -18,7 +18,6 @@ import kr.young.firertc.AddContactActivity
 import kr.young.firertc.ProfileActivity
 import kr.young.firertc.R
 import kr.young.firertc.adapter.ContactAdapter
-import kr.young.firertc.model.User
 import kr.young.firertc.vm.UserViewModel
 
 class ContactFragment : Fragment(), OnClickListener {
@@ -35,7 +34,7 @@ class ContactFragment : Fragment(), OnClickListener {
         val recyclerView = layout.findViewById<RecyclerView>(R.id.recycler_view)
         val tvEmpty = layout.findViewById<TextView>(R.id.tv_empty)
         val fabAdd: FloatingActionButton = layout.findViewById(R.id.fab_add)
-        fabAdd.setOnClickListener(this)
+        fabAdd.visibility = GONE
 
         swipe.setOnRefreshListener {
             d(TAG, "contacts swipe refresh")

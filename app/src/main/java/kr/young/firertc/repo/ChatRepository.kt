@@ -21,7 +21,7 @@ import kr.young.firertc.vm.ChatViewModel
 
 class ChatRepository {
     companion object {
-        var registration: ListenerRegistration? = null
+        private var registration: ListenerRegistration? = null
 
         fun addChatListener(id: String, handler: (Map<String, Any>?) -> Unit) {
             registration = Firebase.firestore.collection(COLLECTION).document(id)
@@ -93,7 +93,7 @@ class ChatRepository {
             }
         ) {
             d(TAG, "post chat")
-            Firebase.firestore.collection(COLLECTION).document(chat.id!!)
+            Firebase.firestore.collection(COLLECTION).document(chat.id)
                 .set(chat.toMap())
                 .addOnFailureListener(failure)
                 .addOnSuccessListener(success)
@@ -111,7 +111,7 @@ class ChatRepository {
             }
         ) {
             d(TAG, "update modified at")
-            Firebase.firestore.collection(COLLECTION).document(chat.id!!)
+            Firebase.firestore.collection(COLLECTION).document(chat.id)
                 .update(MODIFIED_AT, FieldValue.serverTimestamp())
                 .addOnSuccessListener(success)
                 .addOnFailureListener(failure)
@@ -134,7 +134,7 @@ class ChatRepository {
                 LAST_SEQUENCE to FieldValue.increment(1),
                 LAST_MESSAGE to chat.lastMessage
             )
-            Firebase.firestore.collection(COLLECTION).document(chat.id!!)
+            Firebase.firestore.collection(COLLECTION).document(chat.id)
                 .update(map)
                 .addOnSuccessListener(success)
                 .addOnFailureListener(failure)

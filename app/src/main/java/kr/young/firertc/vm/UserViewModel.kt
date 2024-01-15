@@ -30,6 +30,7 @@ class UserViewModel: ViewModel() {
     var selectedProfile: User? = null
     var sourcePage = 0
     var destinationPage = 0
+    private var userList = mutableListOf<User>()
 
     internal val responseCode = MutableLiveData<Int> ()
 
@@ -151,6 +152,7 @@ class UserViewModel: ViewModel() {
 
         RelationRepository.getAll {
             setResponseCode(RelationRepository.RELATION_READ_SUCCESS)
+            userList = mutableListOf()
             val list = mutableListOf<String>()
             for (document in it) {
                 val relation = document.toObject<Relation>()
@@ -172,7 +174,6 @@ class UserViewModel: ViewModel() {
 
     @SuppressLint("CheckResult")
     val getUsersListener = OnSuccessListener<QuerySnapshot> {
-        val userList = mutableListOf<User>()
         Observable.fromIterable(it)
             .observeOn(Schedulers.io())
             .map { doc ->

@@ -92,7 +92,7 @@ class ChatFragment : Fragment(), OnClickListener {
     private val listener = { it: Int ->
         val chat = chatViewModel.chatList[it]
         d(TAG, "clickListener $chat")
-        MessageVM.instance.setChat(chat)
+        MessageVM.instance.setChatLiveData(chat)
         val intent = Intent(this@ChatFragment.context, MessageActivity::class.java)
         intent.flags = FLAG_ACTIVITY_CLEAR_TOP or FLAG_ACTIVITY_SINGLE_TOP
         startActivity(intent)

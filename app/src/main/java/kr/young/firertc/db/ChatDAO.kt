@@ -10,7 +10,7 @@ interface ChatDAO {
     fun getChats(): List<Chat>
 
     @Query("SELECT * FROM chats where id = :id")
-    fun getChat(id: String): Chat
+    fun getChat(id: String): Chat?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun setChats(vararg chat: Chat)
@@ -22,7 +22,7 @@ interface ChatDAO {
     fun updateLast(id: String, lastMessage: String, lastSequence: Long)
 
     @Delete
-    fun deleteChat(chat: Chat)
+    fun delete(chat: Chat)
 
     @Query("DELETE FROM chats")
     fun deleteAll()

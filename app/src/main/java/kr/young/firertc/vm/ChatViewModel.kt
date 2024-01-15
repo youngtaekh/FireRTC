@@ -76,7 +76,7 @@ class ChatViewModel private constructor(): ViewModel() {
         }
         chatList.removeAll { true }
         chatList.addAll(copies)
-        chatList.sortBy { chat -> chat.modifiedAt }
+        chatList.sortByDescending { chat -> chat.modifiedAt }
         setResponseCode(CHAT_READ_SUCCESS)
     }
 

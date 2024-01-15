@@ -3,6 +3,7 @@ package kr.young.firertc.model
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.PropertyName
 import kr.young.common.ApplicationUtil
 import kr.young.common.Crypto
 import kr.young.firertc.R
@@ -22,6 +23,7 @@ data class Chat(
     var localTitle: String = "",
     @PrimaryKey
     var id: String = if (participants.isEmpty()) "" else Crypto().getHash("${participants[0]}${participants[1]}"),
+    @get:PropertyName("isGroup") @set:PropertyName("isGroup")
     var isGroup: Boolean = false,
     var lastMessage: String = "",
     var lastSequence: Long = -1,
