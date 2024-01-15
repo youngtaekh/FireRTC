@@ -38,7 +38,7 @@ class AddChatActivity : BaseActivity(), OnClickListener, OnTouchListener {
         binding.tvConfirm.setOnClickListener(this)
         binding.tvConfirm.setOnTouchListener(this)
 
-        for (user in UserViewModel.instance.contacts) {
+        for (user in UserViewModel.instance.contacts.value!!) {
             contacts.add(AddChatAdapter.AddUser(user, false))
         }
         if (contacts.isEmpty()) {

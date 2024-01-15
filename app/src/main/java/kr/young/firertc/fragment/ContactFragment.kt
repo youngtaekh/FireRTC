@@ -13,16 +13,20 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import io.reactivex.Observable
+import io.reactivex.schedulers.Schedulers
 import kr.young.common.UtilLog.Companion.d
 import kr.young.firertc.AddContactActivity
 import kr.young.firertc.ProfileActivity
 import kr.young.firertc.R
 import kr.young.firertc.adapter.ContactAdapter
+import kr.young.firertc.db.AppRoomDatabase
+import kr.young.firertc.model.User
 import kr.young.firertc.vm.UserViewModel
 
 class ContactFragment : Fragment(), OnClickListener {
 
-    private val userViewModel = UserViewModel.instance
+    private val userVM = UserViewModel.instance
     private lateinit var contactAdapter: ContactAdapter
 
     override fun onCreateView(
@@ -38,11 +42,11 @@ class ContactFragment : Fragment(), OnClickListener {
 
         swipe.setOnRefreshListener {
             d(TAG, "contacts swipe refresh")
-            userViewModel.getRelations()
+            userVM.getRelations()
             swipe.isRefreshing = false
         }
 
-        contactAdapter = ContactAdapter(userViewModel.contacts)
+        contactAdapter = ContactAdapter()
         contactAdapter.setOnItemClickListener(clickListener, longClickListener)
         recyclerView.adapter = contactAdapter
 
@@ -50,16 +54,10 @@ class ContactFragment : Fragment(), OnClickListener {
         layoutManager.orientation = RecyclerView.VERTICAL
         recyclerView.layoutManager = layoutManager
 
-        userViewModel.refreshContacts.observe(viewLifecycleOwner) {
-            if (it) {
-                d(TAG, "refresh contacts observe")
-                if (userViewModel.contacts.isEmpty()) {
-                    tvEmpty.visibility = VISIBLE
-                } else {
-                    tvEmpty.visibility = INVISIBLE
-                    contactAdapter.notifyItemRangeChanged(0, userViewModel.contacts.size)
-                }
-            }
+        userVM.contacts.observe(viewLifecycleOwner) {
+            d(TAG, "contacts observe size ${it.size}")
+            contactAdapter.submitList(it)
+            tvEmpty.visibility = if (it.isEmpty()) VISIBLE else INVISIBLE
         }
 
         // Inflate the layout for this fragment
@@ -73,16 +71,22 @@ class ContactFragment : Fragment(), OnClickListener {
     }
 
     private fun removeContact(pos: Int) {
-        val user = userViewModel.contacts[pos]
-        userViewModel.deleteRelation(user.id)
-        userViewModel.contacts.removeAt(pos)
-        contactAdapter.notifyItemRemoved(pos)
+        val user = contactAdapter.currentList[pos]
+        userVM.deleteRelation(user.id)
+        Observable.just(user)
+            .observeOn(Schedulers.io())
+            .doOnNext { AppRoomDatabase.getInstance()!!.userDao().deleteUser(user) }
+            .subscribe()
+        val list = mutableListOf<User>()
+        list.addAll(userVM.contacts.value!!)
+        list.removeAt(pos)
+        userVM.setContactsLiveData(list)
     }
 
     private val clickListener = object: ContactAdapter.ClickListener {
         override fun onClick(pos: Int, v: View) {
             d(TAG, "onClick($pos, view)")
-            userViewModel.selectedProfile = userViewModel.contacts[pos]
+            userVM.selectedProfile = contactAdapter.currentList[pos]
             startActivity(Intent(context, ProfileActivity::class.java))
         }
     }
@@ -90,8 +94,8 @@ class ContactFragment : Fragment(), OnClickListener {
     private val longClickListener = object: ContactAdapter.LongClickListener {
         override fun onLongClick(pos: Int, v: View) {
             d(TAG, "onLongClick($pos, v)")
-            val user = userViewModel.contacts[pos]
-            val builder = AlertDialog.Builder(context!!)
+            val user = contactAdapter.currentList[pos]
+            val builder = AlertDialog.Builder(requireContext())
                 .setTitle(user.name)
                 .setMessage(getString(R.string.delete_contact))
                 .setCancelable(true)

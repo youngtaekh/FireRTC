@@ -1,6 +1,8 @@
 package kr.young.firertc.vm
 
 import android.annotation.SuppressLint
+import android.os.Handler
+import android.os.Looper
 import androidx.lifecycle.MutableLiveData
 import com.google.firebase.firestore.ktx.toObject
 import io.reactivex.Observable
@@ -19,9 +21,25 @@ import kr.young.firertc.util.RecyclerViewNotifier
 import kr.young.firertc.util.RecyclerViewNotifier.ModifierCategory.*
 
 class HistoryVM private constructor() {
-    val list = mutableListOf<Call>()
+    val roomDB = AppRoomDatabase.getInstance()!!
+    val list = MutableLiveData(listOf<Call>())
     val notifier = MutableLiveData<RecyclerViewNotifier<Call>>()
     var isEndReload = false
+
+    fun setListLiveData(value: List<Call>) {
+        Handler(Looper.getMainLooper()).post { list.value = value }
+    }
+
+//    fun addDateHistory(iterator: List<Call>, isAdditional: Boolean) {
+//        val list = iterator.toObservable()
+//            .buffer(2, 1)
+//            .concatMap {  }
+//    }
+//
+//    fun checkDateHistory(up: Call, down: Call): List<Call> {
+//        val upDate = DateUtil.toFormattedString(up.createdAt!!, "yy MM dd")
+//        val downDate = DateUtil.toFormattedString(down.createdAt!!, "yy MM dd")
+//    }
 
     @SuppressLint("CheckResult")
     fun getHistory(isAdditional: Boolean = false) {
@@ -29,17 +47,17 @@ class HistoryVM private constructor() {
             d("HistoryVM", "reload additional history")
         }
         MyDataViewModel.instance.myData?.let {
-            val size = list.size
+            val size = list.value!!.size
             val subList = mutableListOf<Call>()
             val ob = Observable.just(it)
                 .observeOn(Schedulers.io())
                 .flatMap {
-                    if (isAdditional && list.isNotEmpty() && list.last().createdAt != null) {
-                        AppRoomDatabase.getInstance()!!.callDao().getAdditionCalls(list.last().createdAt!!).toObservable()
-                    } else if (!isAdditional && list.isNotEmpty() && list.first().createdAt != null) {
-                        AppRoomDatabase.getInstance()!!.callDao().getCalls(list.first().createdAt!!).toObservable()
+                    if (isAdditional && list.value!!.isNotEmpty() && list.value!!.last().createdAt != null) {
+                        roomDB.callDao().getAdditionCalls(list.value!!.last().createdAt!!).toObservable()
+                    } else if (!isAdditional && list.value!!.isNotEmpty() && list.value!!.first().createdAt != null) {
+                        roomDB.callDao().getCalls(list.value!!.first().createdAt!!).toObservable()
                     } else {
-                        AppRoomDatabase.getInstance()!!.callDao().getCalls().toObservable()
+                        roomDB.callDao().getCalls().toObservable()
                     }
                 }
                 .observeOn(Schedulers.computation())
@@ -53,20 +71,20 @@ class HistoryVM private constructor() {
             ob.subscribeBy(
                 onComplete = {
                     if (subList.isNotEmpty()) {
+                        val existList = mutableListOf<Call>()
+                        existList.addAll(list.value!!)
                         if (isAdditional) {
-                            if (!checkDay(list.last(), subList.first())) {
+                            if (!checkDay(list.value!!.last(), subList.first())) {
                                 subList.removeAt(0)
                             }
-                            list.addAll(size, subList)
-                            notifier.value = RecyclerViewNotifier(size, subList.size, Insert)
+                            existList.addAll(size, subList)
                         } else {
-                            if (list.isNotEmpty() && !checkDay(list.first(), subList.last())) {
-                                list.removeAt(0)
-                                notifier.value = RecyclerViewNotifier(0, 1, Removed)
+                            if (list.value!!.isNotEmpty() && !checkDay(list.value!!.first(), subList.last())) {
+                                existList.removeAt(0)
                             }
-                            list.addAll(0, subList)
-                            notifier.value = RecyclerViewNotifier(0, subList.size, Insert, true)
+                            existList.addAll(0, subList)
                         }
+                        setListLiveData(existList)
                     }
                     getHistoryFromServer(isAdditional)
                 }
@@ -78,16 +96,16 @@ class HistoryVM private constructor() {
     fun getHistoryFromServer(isAdditional: Boolean = false) {
         CallRepository.getByUserId(
             MyDataViewModel.instance.getMyId(),
-            if (list.isEmpty()) null else if (isAdditional) { list.last().createdAt } else { list.first().createdAt },
+            if (list.value!!.isEmpty()) null else if (isAdditional) { list.value!!.last().createdAt } else { list.value!!.first().createdAt },
             isAdditional
         ) {
-            val size = list.size
+            val size = list.value!!.size
             val subList = mutableListOf<Call>()
             val ob = it.toObservable()
                 .observeOn(Schedulers.io())
                 .map { snapshot ->
                     val call = snapshot.toObject<Call>()
-                    AppRoomDatabase.getInstance()!!.callDao().setCalls(call)
+                    roomDB.callDao().setCalls(call)
                     if (subList.isEmpty() || checkDay(subList.last(), call)) {
                         subList.add(Call(isHeader = true, createdAt = call.createdAt))
                     }
@@ -96,20 +114,20 @@ class HistoryVM private constructor() {
             ob.subscribeBy(
                 onComplete = {
                     if (subList.isNotEmpty()) {
+                        val existList = mutableListOf<Call>()
+                        existList.addAll(list.value!!)
                         if (isAdditional) {
-                            if (!checkDay(list.last(), subList.first())) {
+                            if (!checkDay(list.value!!.last(), subList.first())) {
                                 subList.removeAt(0)
                             }
-                            list.addAll(size, subList)
-                            notifier.value = RecyclerViewNotifier(size, subList.size, Insert)
+                            existList.addAll(size, subList)
                         } else {
-                            if (list.isNotEmpty() && !checkDay(list.first(), subList.last())) {
-                                list.removeAt(0)
-                                notifier.value = RecyclerViewNotifier(0, 1, Removed)
+                            if (list.value!!.isNotEmpty() && !checkDay(list.value!!.first(), subList.last())) {
+                                existList.removeAt(0)
                             }
-                            list.addAll(0, subList)
-                            notifier.value = RecyclerViewNotifier(0, subList.size, Insert, true)
+                            existList.addAll(0, subList)
                         }
+                        setListLiveData(existList)
                     } else if (isAdditional) {
                         d("HistoryVM", "end reload")
                         isEndReload = true

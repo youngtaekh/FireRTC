@@ -14,10 +14,14 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.RecyclerView.*
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import io.reactivex.Observable
+import io.reactivex.schedulers.Schedulers
 import kr.young.common.UtilLog.Companion.d
 import kr.young.firertc.CallDetailActivity
 import kr.young.firertc.R
 import kr.young.firertc.adapter.HistoryAdapter
+import kr.young.firertc.db.AppRoomDatabase
+import kr.young.firertc.model.Call
 import kr.young.firertc.util.RecyclerViewNotifier.ModifierCategory.*
 import kr.young.firertc.vm.CallVM
 import kr.young.firertc.vm.HistoryVM
@@ -48,7 +52,7 @@ class HistoryFragment : Fragment() {
             swipe.isRefreshing = false
         }
 
-        historyAdapter = HistoryAdapter(historyVM.list)
+        historyAdapter = HistoryAdapter()
         historyAdapter.setOnItemClickListener(clickListener, longClickListener)
         recyclerView.adapter = historyAdapter
 
@@ -63,7 +67,7 @@ class HistoryFragment : Fragment() {
                 if (dragging) {
                     if (layoutManager.findLastCompletelyVisibleItemPosition() != lastVisiblePosition) {
                         lastVisiblePosition = layoutManager.findLastCompletelyVisibleItemPosition()
-                        isBottom = layoutManager.findLastCompletelyVisibleItemPosition() == historyVM.list.size - 1
+                        isBottom = layoutManager.findLastCompletelyVisibleItemPosition() == historyVM.list.value!!.size - 1
 
                         if (layoutManager.findLastCompletelyVisibleItemPosition() < 20 &&
                             !isLoading &&
@@ -84,7 +88,7 @@ class HistoryFragment : Fragment() {
         })
 
         historyVM.notifier.observe(viewLifecycleOwner) {
-            tvEmpty.visibility = if (historyVM.list.isEmpty()) VISIBLE else INVISIBLE
+            tvEmpty.visibility = if (historyVM.list.value!!.isEmpty()) VISIBLE else INVISIBLE
             it?.let {
                 d(TAG, "historyList ${it.position} ${it.count} ${it.modifierCategory}")
                 when (it.modifierCategory) {
@@ -98,6 +102,13 @@ class HistoryFragment : Fragment() {
             }
         }
 
+        historyVM.list.observe(viewLifecycleOwner) {
+            d(TAG, "list observe size ${it.size}")
+            historyAdapter.submitList(it)
+            tvEmpty.visibility = if (it.isEmpty()) VISIBLE else INVISIBLE
+            recyclerView.visibility = if (it.isEmpty()) INVISIBLE else VISIBLE
+        }
+
         return layout
     }
 
@@ -108,14 +119,20 @@ class HistoryFragment : Fragment() {
 
     private fun removeHistory(pos: Int) {
         d(TAG, "removeHistory($pos)")
-        historyVM.list.removeAt(pos)
-        historyAdapter.notifyItemRemoved(pos)
+        val call = historyAdapter.currentList[pos]
+        Observable.just(call)
+            .observeOn(Schedulers.io())
+            .map { AppRoomDatabase.getInstance()!!.callDao().deleteCall(it) }
+            .subscribe()
+        val list = mutableListOf<Call>()
+        list.removeAt(pos)
+        historyVM.setListLiveData(list)
     }
 
     private val clickListener = object: HistoryAdapter.ClickListener {
         override fun onClick(pos: Int, v: View) {
             d(TAG, "onClick($pos, v)")
-            callViewModel.selectedCall = historyVM.list[pos]
+            callViewModel.selectedCall = historyAdapter.currentList[pos]
             startActivity(Intent(context, CallDetailActivity::class.java))
         }
     }
@@ -123,7 +140,7 @@ class HistoryFragment : Fragment() {
     private val longClickListener = object: HistoryAdapter.LongClickListener {
         override fun onLongClick(pos: Int, v: View) {
             d(TAG, "onLongClick($pos, v)")
-            val call = historyVM.list[pos]
+            val call = historyAdapter.currentList[pos]
             val builder = AlertDialog.Builder(context!!)
                 .setTitle(call.counterpartName ?: "No name")
                 .setMessage(R.string.delete_history)

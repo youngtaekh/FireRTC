@@ -7,14 +7,14 @@ import android.view.View.OnLongClickListener
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
-import androidx.recyclerview.widget.RecyclerView.Adapter
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView.ViewHolder
 import kr.young.common.DateUtil
 import kr.young.firertc.R
 import kr.young.firertc.model.Call
 import java.util.*
 
-class HistoryAdapter(private val calls: MutableList<Call>): Adapter<ViewHolder>() {
+class HistoryAdapter: ListAdapter<Call, ViewHolder>(CallDiffItemCallback()) {
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         return if (viewType == 0) {
             HistoryHolder(LayoutInflater.from(parent.context).inflate(R.layout.layout_history, parent, false))
@@ -24,7 +24,7 @@ class HistoryAdapter(private val calls: MutableList<Call>): Adapter<ViewHolder>(
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        val call = calls[position]
+        val call = getItem(position)
         if (call.isHeader) {
             (holder as HistoryDateHolder).tvDate.text = DateUtil.toFormattedString(call.createdAt!!, "yy.MM.dd", TimeZone.getDefault())
         } else {
@@ -55,10 +55,10 @@ class HistoryAdapter(private val calls: MutableList<Call>): Adapter<ViewHolder>(
         }
     }
 
-    override fun getItemCount() = calls.size
+    override fun getItemCount() = currentList.size
 
     override fun getItemViewType(position: Int): Int {
-        return if (calls[position].isHeader) {
+        return if (getItem(position).isHeader) {
             1
         } else {
             0

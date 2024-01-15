@@ -9,22 +9,26 @@ import android.view.View
 import android.view.View.*
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import io.reactivex.Observable
+import io.reactivex.schedulers.Schedulers
 import kr.young.common.UtilLog.Companion.d
 import kr.young.firertc.AddChatActivity
 import kr.young.firertc.MessageActivity
 import kr.young.firertc.R
 import kr.young.firertc.adapter.ChatAdapter
-import kr.young.firertc.repo.ChatRepository.Companion.CHAT_READ_SUCCESS
+import kr.young.firertc.db.AppRoomDatabase
+import kr.young.firertc.model.Chat
 import kr.young.firertc.vm.ChatViewModel
 import kr.young.firertc.vm.MessageVM
 
 class ChatFragment : Fragment(), OnClickListener {
-    private val chatViewModel = ChatViewModel.instance
+    private val chatVM = ChatViewModel.instance
     private lateinit var chatAdapter: ChatAdapter
 
     override fun onCreateView(
@@ -49,31 +53,24 @@ class ChatFragment : Fragment(), OnClickListener {
 
         swipe.setOnRefreshListener {
             d(TAG, "chat swipe refresh")
-            chatViewModel.getChats()
+            chatVM.getChats()
             swipe.isRefreshing = false
         }
 
-        chatViewModel.responseCode.observe(viewLifecycleOwner) {
-            if (it != null && it == CHAT_READ_SUCCESS) {
-                d(TAG, "response code CHAT_READ_SUCCESS")
-                if (chatViewModel.chatList.isEmpty()) {
-                    tvEmpty.visibility = VISIBLE
-                    recyclerView.visibility = INVISIBLE
-                } else {
-                    tvEmpty.visibility = INVISIBLE
-                    recyclerView.visibility = VISIBLE
-                    chatAdapter.notifyItemRangeChanged(0, chatViewModel.chatList.size)
-                }
-            }
+        chatVM.chatList.observe(viewLifecycleOwner) {
+            d(TAG, "chatList observe size ${it.size}")
+            chatAdapter.submitList(it)
+            tvEmpty.visibility = if (it.isEmpty()) VISIBLE else INVISIBLE
+            recyclerView.visibility = if (it.isEmpty()) INVISIBLE else VISIBLE
         }
 
         MessageVM.instance.receiveMessage.observe(viewLifecycleOwner) {
             it?.let {
-                for (i in chatViewModel.chatList.indices) {
-                    if (chatViewModel.chatList[i].id == it.chatId) {
-                        chatViewModel.chatList[i].lastMessage = it.body!!
-                        chatViewModel.chatList[i].lastSequence = it.sequence
-                        chatViewModel.chatList[i].modifiedAt = it.createdAt
+                for (i in chatVM.chatList.value!!.indices) {
+                    if (chatVM.chatList.value!![i].id == it.chatId) {
+                        chatVM.chatList.value!![i].lastMessage = it.body!!
+                        chatVM.chatList.value!![i].lastSequence = it.sequence
+                        chatVM.chatList.value!![i].modifiedAt = it.createdAt
                         chatAdapter.notifyItemChanged(i)
                     }
                 }
@@ -89,8 +86,20 @@ class ChatFragment : Fragment(), OnClickListener {
         }
     }
 
+    private fun removeChat(pos: Int) {
+        val chat = chatAdapter.currentList[pos]
+        Observable.just(chat)
+            .observeOn(Schedulers.io())
+            .doOnNext { AppRoomDatabase.getInstance()!!.chatDao().delete(chat) }
+            .subscribe()
+        val list = mutableListOf<Chat>()
+        list.addAll(chatVM.chatList.value!!)
+        list.removeAt(pos)
+        chatVM.setChatListLiveData(list)
+    }
+
     private val listener = { it: Int ->
-        val chat = chatViewModel.chatList[it]
+        val chat = chatAdapter.currentList[it]
         d(TAG, "clickListener $chat")
         MessageVM.instance.setChatLiveData(chat)
         val intent = Intent(this@ChatFragment.context, MessageActivity::class.java)
@@ -100,6 +109,15 @@ class ChatFragment : Fragment(), OnClickListener {
 
     private val longListener = { it: Int, _: View ->
         d(TAG, "longClickListener $it")
+        val chat = chatAdapter.currentList[it]
+        val builder = AlertDialog.Builder(requireContext())
+            .setTitle(chat.localTitle)
+            .setMessage(getString(R.string.quit_chat))
+            .setCancelable(true)
+            .setPositiveButton(
+                R.string.confirm
+            ) { _, _ -> removeChat(it) }
+        builder.show()
     }
 
     companion object {
