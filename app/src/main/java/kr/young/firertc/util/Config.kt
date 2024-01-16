@@ -26,6 +26,7 @@ class Config {
         const val MESSAGE_ID = "messageId"
         const val MESSAGE = "message"
         const val MESSAGE_PAGE_SIZE = 50L
+        const val HISTORY_PAGE_SIZE = 50L
         const val MIN_LONG = -1L
         const val MAX_LONG = 9_223_372_036_854_775_807L
 

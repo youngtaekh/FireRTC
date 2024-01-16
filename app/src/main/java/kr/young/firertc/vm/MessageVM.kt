@@ -304,7 +304,7 @@ class MessageVM {
             val list = it.documents.asReversed().toObservable()
                 .map { doc -> doc.toObject<Message>()!! }
                 .observeOn(Schedulers.io())
-                .map { message -> roomDB.messageDao().setMessages(message); message }
+                .doOnNext { message -> roomDB.messageDao().setMessages(message) }
                 .toList().blockingGet()
 
             isNoAdditionalMessage = list.isEmpty() && isAdditional
@@ -403,7 +403,6 @@ class MessageVM {
         if (pendingMessage?.sequence == -1L) {
             pendingMessage!!.sequence = it!![LAST_SEQUENCE] as Long
             MessageRepository.post(pendingMessage!!) {
-                AppRoomDatabase.getInstance()!!.messageDao().setMessages(pendingMessage!!)
                 if (rtpConnected) {
                     rtpManager.sendData(pendingMessage!!.toString())
                 } else {
