@@ -10,6 +10,7 @@ import com.google.firebase.firestore.ktx.toObject
 import io.reactivex.Observable
 import io.reactivex.rxkotlin.toObservable
 import io.reactivex.schedulers.Schedulers
+import kr.young.common.UtilLog.Companion.d
 import kr.young.firertc.db.AppRoomDatabase
 import kr.young.firertc.model.Chat
 import kr.young.firertc.repo.ChatRepository
@@ -18,9 +19,13 @@ import kr.young.firertc.repo.ChatRepository.Companion.CHAT_READ_SUCCESS
 class ChatViewModel private constructor(): ViewModel() {
 
     val responseCode = MutableLiveData<Int>()
-    var chatList = mutableListOf<Chat>()
+    var chatList = MutableLiveData(listOf<Chat>())
     val selectedChat: Chat? = null
         get() { return field ?: MessageVM.instance.chat.value }
+
+    fun setChatListLiveData(list: List<Chat>) {
+        Handler(Looper.getMainLooper()).post { chatList.value = list }
+    }
 
     fun setResponseCode(code: Int) {
         Handler(Looper.getMainLooper()).post { responseCode.value = code }
@@ -61,23 +66,8 @@ class ChatViewModel private constructor(): ViewModel() {
     }
 
     private fun addChats(list: List<Chat>) {
-        var i = 0
-        var j = 0
-        val copies = mutableListOf<Chat>()
-        copies.addAll(chatList)
-        copies.sortBy { chat -> chat.id }
-        val sortedList = list.sortedBy { chat -> chat.id }
-        while (j < sortedList.size) {
-            if (i == copies.size || copies[i].id != sortedList[j].id) {
-                copies.add(i++, sortedList[j++])
-            } else {
-                copies[i++] = sortedList[j++]
-            }
-        }
-        chatList.removeAll { true }
-        chatList.addAll(copies)
-        chatList.sortBy { chat -> chat.modifiedAt }
-        setResponseCode(CHAT_READ_SUCCESS)
+        d(TAG, "addChats(${list.size})")
+        setChatListLiveData(list.sortedByDescending { it.modifiedAt })
     }
 
     fun release() {
@@ -85,7 +75,7 @@ class ChatViewModel private constructor(): ViewModel() {
     }
 
     init {
-        setResponseCode(0)
+        release()
     }
 
     private object Holder {

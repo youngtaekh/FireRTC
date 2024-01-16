@@ -92,12 +92,14 @@ class HomeActivity : BaseActivity(), OnClickListener, OnTouchListener {
         super.onResume()
 
         if (AppSP.instance.isSigned()) {
-            binding.tvTitle.text = myViewModel.myData!!.name
-            when (currentFragment) {
-                CONTACT -> UserViewModel.instance.getContacts()
-                CHAT -> ChatViewModel.instance.getChats()
-                CONFERENCE -> {}
-                HISTORY -> HistoryVM.getInstance()!!.getHistory()
+            if (intent == null || intent.getStringExtra(CHAT_ID) == null) {
+                binding.tvTitle.text = myViewModel.myData!!.name
+                when (currentFragment) {
+                    CONTACT -> UserViewModel.instance.getContacts()
+                    CHAT -> ChatViewModel.instance.getChats()
+                    CONFERENCE -> {}
+                    HISTORY -> HistoryVM.getInstance()!!.getHistory()
+                }
             }
         } else {
             val intent = Intent(this, SignActivity::class.java)
@@ -116,7 +118,6 @@ class HomeActivity : BaseActivity(), OnClickListener, OnTouchListener {
             R.id.iv_menu -> {
                 when (currentFragment) {
                     CONTACT -> { startActivity(Intent(this, AddContactActivity::class.java)) }
-                    CHAT -> { startActivity(Intent(this, AddChatActivity::class.java)) }
                 }
             }
             R.id.rl_contact -> {
@@ -197,7 +198,7 @@ class HomeActivity : BaseActivity(), OnClickListener, OnTouchListener {
                 binding.ivSetting.setColorFilter(getColor(R.color.white))
 
                 binding.ivMenu.setImageResource(R.drawable.round_add_24)
-                binding.ivMenu.visibility = VISIBLE
+                binding.ivMenu.visibility = GONE
             }
             CONFERENCE -> {
                 binding.ivContact.setColorFilter(getColor(R.color.white))

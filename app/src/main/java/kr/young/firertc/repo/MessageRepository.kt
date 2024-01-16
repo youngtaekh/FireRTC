@@ -11,7 +11,9 @@ import kr.young.common.UtilLog.Companion.d
 import kr.young.common.UtilLog.Companion.e
 import kr.young.firertc.model.Message
 import kr.young.firertc.util.Config.Companion.CHAT_ID
+import kr.young.firertc.util.Config.Companion.MAX_LONG
 import kr.young.firertc.util.Config.Companion.MESSAGE_PAGE_SIZE
+import kr.young.firertc.util.Config.Companion.MIN_LONG
 import kr.young.firertc.util.Config.Companion.SEQUENCE
 import kr.young.firertc.vm.CallViewModel
 
@@ -19,8 +21,8 @@ class MessageRepository {
     companion object {
         fun getMessages(
             chatId: String,
-            min: Long = -1,
-            max: Long = 9_223_372_036_854_775_807,
+            min: Long = MIN_LONG,
+            max: Long = MAX_LONG,
             failure: OnFailureListener = OnFailureListener {
                 CallViewModel.instance.setResponseCode(MESSAGE_READ_FAILURE)
                 e(TAG, "get message failure", it)

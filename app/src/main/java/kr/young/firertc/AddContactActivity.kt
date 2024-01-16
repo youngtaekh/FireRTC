@@ -17,7 +17,7 @@ import kr.young.firertc.vm.UserViewModel
 class AddContactActivity : BaseActivity(), OnClickListener, OnTouchListener {
 
     private lateinit var binding: ActivityAddContactBinding
-    private val userViewModel = UserViewModel.instance
+    private val userVM = UserViewModel.instance
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -29,7 +29,7 @@ class AddContactActivity : BaseActivity(), OnClickListener, OnTouchListener {
         binding.tvAdd.setOnTouchListener(this)
         binding.tvAdd.setOnClickListener(this)
 
-        userViewModel.responseCode.observe(this) {
+        userVM.responseCode.observe(this) {
             when (it) {
                 NO_USER -> {
                     binding.tvName.visibility = INVISIBLE
@@ -42,10 +42,10 @@ class AddContactActivity : BaseActivity(), OnClickListener, OnTouchListener {
             }
         }
 
-        userViewModel.foundUser.observe(this) {
+        userVM.foundUser.observe(this) {
             if (it != null) {
                 var already = false
-                for (contact in userViewModel.contacts) {
+                for (contact in userVM.contacts.value!!) {
                     if (contact.id == it.id) {
                         already = true
                         break
@@ -67,7 +67,7 @@ class AddContactActivity : BaseActivity(), OnClickListener, OnTouchListener {
 
     override fun onDestroy() {
         super.onDestroy()
-        userViewModel.setFoundUser(null)
+        userVM.setFoundUser(null)
     }
 
     private fun findUser() {
@@ -77,12 +77,12 @@ class AddContactActivity : BaseActivity(), OnClickListener, OnTouchListener {
         } else if (userId == MyDataViewModel.instance.getMyId()) {
             binding.tvWarning.text = getString(R.string.mine_warn)
         } else {
-            userViewModel.readUser(userId)
+            userVM.readUser(userId)
         }
     }
 
     private fun addUser() {
-        userViewModel.createRelation(userViewModel.foundUser.value!!.id)
+        userVM.createRelation(userVM.foundUser.value!!.id)
     }
 
     override fun onClick(v: View?) {

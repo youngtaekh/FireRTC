@@ -78,7 +78,7 @@ data class Call(
     }
 
     override fun hashCode(): Int {
-        var result = userId.hashCode() ?: 0
+        var result = userId.hashCode()
         result = 31 * result + (spaceId?.hashCode() ?: 0)
         result = 31 * result + id.hashCode()
         result = 31 * result + (direction?.hashCode() ?: 0)

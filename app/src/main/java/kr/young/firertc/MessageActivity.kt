@@ -22,8 +22,11 @@ import kr.young.common.UtilLog.Companion.d
 import kr.young.firertc.adapter.MessageAdapter
 import kr.young.firertc.databinding.ActivityMessageBinding
 import kr.young.firertc.fcm.SendFCM
+import kr.young.firertc.model.Chat
 import kr.young.firertc.model.Message
+import kr.young.firertc.model.User
 import kr.young.firertc.repo.ChatRepository
+import kr.young.firertc.util.Config.Companion.MESSAGE_PAGE_SIZE
 import kr.young.firertc.util.RecyclerViewNotifier.ModifierCategory.*
 import kr.young.firertc.vm.MessageVM
 import kr.young.rtp.observer.PCObserver
@@ -36,6 +39,12 @@ import java.util.*
 class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, PCObserver, PCObserver.ICE, PCObserver.SDP {
     private lateinit var binding: ActivityMessageBinding
     private val messageVM = MessageVM.instance
+    private val chat: Chat? get() = messageVM.chat.value
+    private val counterpart: User? get() = messageVM.counterpart
+    private val pendingMessage: Message? get() = messageVM.pendingMessage
+    private val isOffer: Boolean get() = messageVM.isOffer
+    private var rtpConnected: Boolean get() = messageVM.rtpConnected
+        set(value) { messageVM.rtpConnected = value }
 
     private var isBottom = true
     private var lastVisiblePosition = -1
@@ -61,7 +70,10 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
         //keep scroll when keyboard opened
         layoutManager.stackFromEnd = true
         binding.recyclerView.layoutManager = layoutManager
-        binding.recyclerView.post { binding.recyclerView.scrollToPosition(messageAdapter.itemCount - 1) }
+        counterpart?.let {
+            d(TAG, "counterpart name ${it.name}")
+            binding.tvTitle.text = it.name
+        }
 
         binding.ivBack.setOnTouchListener(this)
         binding.ivBack.setOnClickListener(this)
@@ -102,7 +114,7 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
                             isBottom = false
                         }
 
-                        if (layoutManager.findLastCompletelyVisibleItemPosition() < 20 &&
+                        if (layoutManager.findLastCompletelyVisibleItemPosition() < MESSAGE_PAGE_SIZE / 2 &&
                             !isLoading &&
                             !messageVM.isNoAdditionalMessage &&
                             messageVM.messageList.value!!.first().sequence != 0L &&
@@ -141,10 +153,14 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
 
         messageVM.chat.observe(this) {
             it?.let {
-                binding.tvTitle.text = if (it.isGroup) {
-                    it.title
-                } else {
-                    it.localTitle
+                if (it.isGroup && !it.title.isNullOrEmpty()) {
+                    binding.tvTitle.text = it.title
+                } else if (!it.isGroup && it.localTitle.isNotEmpty()) {
+                    d(TAG, "localTitle ${it.localTitle}")
+                    binding.tvTitle.text = it.localTitle
+                }
+                if (isSending) {
+                    send()
                 }
             }
         }
@@ -154,6 +170,9 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
             messageAdapter.submitList(it)
             isLoading = false
         }
+
+        binding.etMessage.isActivated = true
+        binding.etMessage.isPressed = true
     }
 
     override fun onResume() {
@@ -167,7 +186,7 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
         d(TAG, "onDestroy")
         ChatRepository.removeChatListener()
         messageAdapter.unregisterAdapterDataObserver(adapterObserver)
-        if (messageVM.rtpConnected) {
+        if (rtpConnected) {
             messageVM.endRTP(SendFCM.FCMType.Bye)
         }
         messageVM.release()
@@ -198,12 +217,16 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
 
     private fun send() {
         isSending = true
-        val msg = binding.etMessage.text.toString()
+        if (chat == null) {
+            messageVM.createOneChat()
+        } else {
+            val msg = binding.etMessage.text.toString()
 
-        messageVM.readySendMessage(msg)
-        messageVM.addDateMessage(listOf(messageVM.sendMessage!!), false)
-        binding.etMessage.setText("")
-        binding.ivSend.visibility = INVISIBLE
+            messageVM.readySendMessage(msg)
+            messageVM.addDateMessage(listOf(pendingMessage!!), false)
+            binding.etMessage.setText("")
+            binding.ivSend.visibility = INVISIBLE
+        }
     }
 
     private val longClickListener = object: MessageAdapter.LongClickListener {
@@ -218,7 +241,7 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
 
     override fun onPCConnected() {
         d(TAG, "onPCConnected")
-        messageVM.rtpConnected = true
+        rtpConnected = true
     }
 
     override fun onPCDisconnected() {
@@ -227,12 +250,12 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
 
     override fun onPCFailed() {
         d(TAG, "onPCFailed")
-        messageVM.rtpConnected = false
+        rtpConnected = false
     }
 
     override fun onPCClosed() {
         d(TAG, "onPCClosed")
-        messageVM.rtpConnected = false
+        rtpConnected = false
     }
 
     override fun onPCStatsReady(reports: Array<StatsReport?>?) {
@@ -244,7 +267,7 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
     }
 
     override fun onMessage(msg: String) {
-        d(TAG, "onMessage ${messageVM.counterpart!!.id} $msg")
+        d(TAG, "onMessage ${counterpart!!.id} $msg")
         val message = Message.fromJson(msg)
         messageVM.addDateMessage(listOf(message), false)
     }
@@ -252,7 +275,7 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
     override fun onLocalDescription(sdp: SessionDescription?) {
         d(TAG, "onLocalDescription")
         sdp?.let {
-            if (messageVM.isOffer) {
+            if (isOffer) {
                 messageVM.sendFCMMessage(SendFCM.FCMType.Offer, sdp.description)
             } else {
                 messageVM.sendFCMMessage(SendFCM.FCMType.Answer, sdp.description)

@@ -1,13 +1,11 @@
 package kr.young.firertc.vm
 
-import android.annotation.SuppressLint
 import android.os.Handler
 import android.os.Looper
 import androidx.lifecycle.MutableLiveData
 import com.google.firebase.firestore.ktx.toObject
 import io.reactivex.Observable
 import io.reactivex.android.schedulers.AndroidSchedulers
-import io.reactivex.rxkotlin.subscribeBy
 import io.reactivex.rxkotlin.toObservable
 import io.reactivex.schedulers.Schedulers
 import kr.young.common.ApplicationUtil
@@ -24,7 +22,9 @@ import kr.young.firertc.repo.ChatRepository
 import kr.young.firertc.repo.MessageRepository
 import kr.young.firertc.repo.UserRepository
 import kr.young.firertc.util.Config.Companion.LAST_SEQUENCE
+import kr.young.firertc.util.Config.Companion.MAX_LONG
 import kr.young.firertc.util.Config.Companion.MESSAGE_PAGE_SIZE
+import kr.young.firertc.util.Config.Companion.MIN_LONG
 import kr.young.rtp.RTPManager
 import org.webrtc.SessionDescription
 import org.webrtc.SessionDescription.Type
@@ -41,11 +41,10 @@ class MessageVM {
     var receiveMessage = MutableLiveData<Message>(null)
     var isNoAdditionalMessage = false
     var firstSequence = -1L
-    var isSending = false
 
     var participantMap = linkedMapOf<String, User?>()
     val counterpart: User? get() = participantMap.values.firstOrNull()
-    var sendMessage: Message? = null
+    var pendingMessage: Message? = null
 
     private val rtpManager = RTPManager.instance
     private var remoteSDP: SessionDescription? = null
@@ -53,11 +52,25 @@ class MessageVM {
     internal var isOffer = true
     var rtpConnected = false
 
-    fun setChat(chat: Chat?) {
-        Handler(Looper.getMainLooper()).post { this.chat.value = chat }
+    fun setChatLiveData(chat: Chat?) {
+        d(TAG, "setChatLiveData(chat - $chat)")
+        chatId = chat?.id
+        if (Thread.currentThread().name.lowercase() == "main") {
+            this.chat.value = chat
+        } else {
+            if (chat == null) {
+                Handler(Looper.getMainLooper()).post { this.chat.value = null }
+            } else {
+                Observable.just(chat)
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .map { this.chat.value = it }
+                    .blockingSubscribe()
+            }
+        }
     }
 
     private fun setMessageList(messageList: MutableList<Message> = this.messageList.value!!) {
+        d(TAG, "setMessageList(${messageList.size})")
         if (Thread.currentThread().name.lowercase() == "main") {
             this.messageList.value = messageList
         } else {
@@ -67,12 +80,14 @@ class MessageVM {
     }
 
     private fun setReceiveMessage(message: Message?) {
+        d(TAG, "setReceiveMessage($message)")
         Handler(Looper.getMainLooper()).post { this.receiveMessage.value = message }
     }
 
     fun release() {
+        d(TAG, "release()")
         chatId = null
-        setChat(null)
+        setChatLiveData(null)
         setMessageList(mutableListOf())
         setReceiveMessage(null)
         isNoAdditionalMessage = false
@@ -80,7 +95,7 @@ class MessageVM {
 
         participantMap = linkedMapOf()
 //        counterpart = participants.firstOrNull()
-        sendMessage = null
+        pendingMessage = null
 
         remoteSDP = null
         remoteICE = null
@@ -91,83 +106,118 @@ class MessageVM {
     fun start() {
         d(TAG, "start()")
         if (chatId != null) {
+            //From Notification
             getChatDetail(chatId = chatId)
         } else if (chat.value != null) {
+            //From ChatFragment
             getChatInfo(chat.value!!)
         } else if (participantMap.size == 1) {
+            //From ProfileActivity
             getOneChatDetail()
+        } else {
+            //From AddChatActivity
         }
     }
 
     private fun getParticipantInfo() {
-        chat.value!!.participants.toObservable()
-            .filter { it != MyDataViewModel.instance.getMyId() }
-            .observeOn(Schedulers.io())
-            .map { roomDB.userDao().getUser(it) }
-            .map { participantMap[it.id] = it }
-            .blockingSubscribe()
+        d(TAG, "getParticipantInfo()")
+        chat.value?.let {
+            Observable.just(chat.value!!.participants)
+                .observeOn(Schedulers.io())
+                .concatMap { AppRoomDatabase.getInstance()!!.userDao().getUsers(it).toObservable() }
+                .map { participantMap[it.id] = it }
+                .blockingSubscribe()
 
-        var start = 0
-        val size = chat.value!!.participants.size
-        while (size > start) {
-            UserRepository.getUsers(chat.value!!.participants.subList(start, min(start + 10, size))) {
-                it.documents.toObservable()
-                    .map { doc -> doc.toObject<User>() }
-                    .filter { user -> user != participantMap[user.id] }
-                    .map { user -> participantMap[user.id] = user }
-                    .subscribe()
+            var start = 0
+            val size = chat.value!!.participants.size
+            while (size > start) {
+                UserRepository.getUsers(chat.value!!.participants.subList(start, min(start + 10, size))) {
+                    it.documents.toObservable()
+                        .map { doc -> doc.toObject<User>() }
+                        .map { user -> participantMap[user.id] = user }
+                        .blockingSubscribe()
+                }
+                start += 10
             }
-            start += 10
         }
     }
 
     private fun getOneChatDetail() {
+        d(TAG, "getOneChatDetail")
         val participants = mutableListOf(MyDataViewModel.instance.getMyId(), counterpart!!.id)
         participants.sort()
-        val chat = Chat(
-            participants = participants,
-            title = if (participants.size == 2) "" else counterpart!!.name,
-            isGroup = participants.size == 2
-        )
+        val chat = Chat(participants = participants, localTitle = counterpart!!.name)
         getChatDetail(chat = chat)
     }
 
-    @SuppressLint("CheckResult")
-    fun getChatDetail(chat: Chat? = null, chatId: String? = null) {
+    private fun getChatDetail(chat: Chat? = null, chatId: String? = null) {
+        d(TAG, "getChatDetail(chat ${chat != null}, chatId ${chatId != null})")
         Observable.just(chatId ?: chat!!.id)
             .observeOn(Schedulers.io())
+            .filter { existChat(it) }
             .map { roomDB.chatDao().getChat(it) }
-            .subscribeBy(
-                onNext = { println("onNext"); setChat(it); getChatInfo(it) },
-                onError = { println("onError ${it.localizedMessage}"); setChatToServer(chat) },
-                onComplete = { println("onComplete") }
-            )
+            .doOnNext { setChatLiveData(it) }
+            .doOnNext { getChatInfo(it!!) }
+            .subscribe()
+
+        Observable.just(chatId ?: chat!!.id)
+            .observeOn(Schedulers.io())
+            .filter { !existChat(it) }
+            .doOnNext { getChatDetailFromServer(it, chat?.localTitle, true) }
+            .subscribe()
+    }
+
+    fun createOneChat() {
+        d(TAG, "createOneChat")
+        val participants = mutableListOf(MyDataViewModel.instance.getMyId(), counterpart!!.id)
+        participants.sort()
+        val chat = Chat(participants = participants, localTitle = counterpart!!.name)
+        setChatToServer(chat)
+    }
+
+    private fun existChat(id: String): Boolean {
+        return roomDB.chatDao().getChat(id) != null
+    }
+
+    private fun getChatInfo(chat: Chat, getMessage: Boolean = true) {
+        d(TAG, "getChatInfo $chat ${participantMap.isEmpty()}")
+        ChatRepository.addChatListener(chat.id, chatChangeListener)
+        if (participantMap.isEmpty()) {
+            getParticipantInfo()
+        }
+        if (getMessage) {
+            getMessages()
+        }
     }
 
     fun getMessages(
         isAdditional: Boolean = false,
-        min: Long = -1L,
-        max: Long = 9_223_372_036_854_775_807
+        min: Long = MIN_LONG,
+        max: Long = MAX_LONG
     ) {
         d(TAG, "getMessages(isAdditional = $isAdditional, $min ~ $max)")
-        val list = Observable.just(chatId ?: chat.value!!.id)
-            .observeOn(Schedulers.io())
-            .concatMap { id -> roomDB.messageDao().getMessages(id, min, max).asReversed().toObservable() }
-            .toList().blockingGet()
+        val chatId = this.chatId ?: this.chat.value?.id
+        chatId?.let {
+            val list = Observable.just(chatId)
+                .observeOn(Schedulers.io())
+                .concatMap { id -> roomDB.messageDao().getMessages(id, min, max).asReversed().toObservable() }
+                .toList().blockingGet()
 
-        addDateMessage(list, isAdditional)
+            addDateMessage(list, isAdditional)
 
-        if (isAdditional) {
-            getMessagesFromServer(chat.value!!.id, true, max - MESSAGE_PAGE_SIZE, list.firstOrNull()?.sequence ?: max)
-        } else {
-            if (list.isNotEmpty() && list.size < MESSAGE_PAGE_SIZE) {
-                getMessagesFromServer(chat.value!!.id, true, list.last().sequence - MESSAGE_PAGE_SIZE, list.first().sequence)
+            if (isAdditional) {
+                getMessagesFromServer(chatId, true, max - MESSAGE_PAGE_SIZE, list.firstOrNull()?.sequence ?: max)
+            } else {
+                if (list.isNotEmpty() && list.size < MESSAGE_PAGE_SIZE) {
+                    getMessagesFromServer(chatId, true, list.last().sequence - MESSAGE_PAGE_SIZE, list.first().sequence)
+                }
+                getMessagesFromServer(chatId, false, list.lastOrNull()?.sequence ?: min, max)
             }
-            getMessagesFromServer(chat.value!!.id, false, list.lastOrNull()?.sequence ?: min, max)
         }
     }
 
     fun addDateMessage(iterator: List<Message>, isAdditional: Boolean) {
+        d(TAG, "addDateMessage(${iterator.size}, $isAdditional)")
         val list = iterator.toObservable()
             .buffer(2, 1)
             .concatMap { checkDateMessage(it.first(), it.last()).toObservable() }
@@ -225,31 +275,37 @@ class MessageVM {
     /** Firestore Access */
     private fun setChatToServer(chat: Chat?) { chat?.let {
         ChatRepository.post(it) { _ ->
-            setChat(it)
-            getChatInfo(it)
+            getChatDetailFromServer(it.id, chat.localTitle, false)
         }
     }}
 
-    private fun getChatInfo(chat: Chat) {
-        d(TAG, "getChatInfo $chat ${participantMap.isEmpty()}")
-        ChatRepository.addChatListener(chat.id, chatChangeListener)
-        if (participantMap.isEmpty()) {
-            getParticipantInfo()
+    private fun getChatDetailFromServer(id: String, localTitle: String?, getMessage: Boolean) {
+        ChatRepository.getChat(id) {
+            it.toObject<Chat>()?.let { chat ->
+                chat.removeParticipants(MyDataViewModel.instance.getMyId())
+                if (!localTitle.isNullOrEmpty()) {
+                    chat.setLocalTitle(localTitle)
+                }
+                Observable.just(0)
+                    .observeOn(Schedulers.io())
+                    .doOnNext { chat.setLocalTitle(roomDB.userDao().getUser(chat.participants.first())?.name) }
+                    .doOnNext { roomDB.chatDao().setChats(chat) }
+                    .doOnNext { setChatLiveData(chat) }
+                    .doOnNext { getChatInfo(chat, getMessage) }
+                    .subscribe()
+            }
         }
-        getMessages()
     }
 
     private fun getMessagesFromServer(id: String, isAdditional: Boolean, min: Long, max: Long) {
         d(TAG, "getMessagesFromServer(isAdditional = $isAdditional, $min ~ $max)")
-        if (max - min <= 1) return
+        if ((max != MAX_LONG || min != MIN_LONG) && max - min <= 1) return
         MessageRepository.getMessages(id, min, max) {
             val list = it.documents.asReversed().toObservable()
                 .map { doc -> doc.toObject<Message>()!! }
                 .observeOn(Schedulers.io())
-                .map { message -> roomDB.messageDao().setMessages(message); message }
+                .doOnNext { message -> roomDB.messageDao().setMessages(message) }
                 .toList().blockingGet()
-
-            list.map { message -> d(TAG, message.toString()) }
 
             isNoAdditionalMessage = list.isEmpty() && isAdditional
             addDateMessage(list, isAdditional)
@@ -257,24 +313,23 @@ class MessageVM {
     }
 
     fun readySendMessage(msg: String) {
-        isSending = true
-        this.sendMessage = Message(chatId = chat.value!!.id, body = msg, createdAt = Date(currentTimeMillis()))
+        this.pendingMessage = Message(chatId = chat.value!!.id, body = msg, createdAt = Date(currentTimeMillis()))
         ChatViewModel.instance.selectedChat!!.lastMessage = msg
         ChatViewModel.instance.updateChatLastMessage()
     }
 
     fun sendFCMMessage(fcmType: FCMType, sdp: String? = null) {
-        SendFCM.sendMessage(
+        counterpart?.fcmToken?.let { SendFCM.sendMessage(
             toToken = counterpart!!.fcmToken!!,
             type = fcmType,
             callType = Call.Type.MESSAGE,
             chatId = chat.value?.id,
-            messageId = sendMessage?.id,
-            sequence = if (sendMessage == null) -1 else sendMessage!!.sequence,
-            message = sendMessage?.body,
+            messageId = pendingMessage?.id,
+            sequence = if (pendingMessage == null) -1 else pendingMessage!!.sequence,
+            message = pendingMessage?.body,
             targetOS = counterpart?.os,
             sdp = sdp,
-        )
+        )}
     }
 
     private fun startRTP() {
@@ -345,12 +400,11 @@ class MessageVM {
 
     // sync message sequence
     private val chatChangeListener: (Map<String, Any>?) -> Unit = {
-        if (sendMessage?.sequence == -1L) {
-            sendMessage!!.sequence = it!![LAST_SEQUENCE] as Long
-            MessageRepository.post(sendMessage!!) {
-//                AppRoomDatabase.getInstance()!!.messageDao().setMessages(sendMessage!!)
+        if (pendingMessage?.sequence == -1L) {
+            pendingMessage!!.sequence = it!![LAST_SEQUENCE] as Long
+            MessageRepository.post(pendingMessage!!) {
                 if (rtpConnected) {
-                    rtpManager.sendData(sendMessage!!.toString())
+                    rtpManager.sendData(pendingMessage!!.toString())
                 } else {
                     sendFCMMessage(FCMType.Message)
                 }

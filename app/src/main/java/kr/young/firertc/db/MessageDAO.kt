@@ -2,7 +2,9 @@ package kr.young.firertc.db
 
 import androidx.room.*
 import kr.young.firertc.model.Message
+import kr.young.firertc.util.Config.Companion.MAX_LONG
 import kr.young.firertc.util.Config.Companion.MESSAGE_PAGE_SIZE
+import kr.young.firertc.util.Config.Companion.MIN_LONG
 
 @Dao
 interface MessageDAO {
@@ -11,8 +13,8 @@ interface MessageDAO {
             "ORDER BY sequence DESC LIMIT :limit")
     fun getMessages(
         chatId: String,
-        min: Long = -1L,
-        max: Long = 9_223_372_036_854_775_807,
+        min: Long = MIN_LONG,
+        max: Long = MAX_LONG,
         limit: Long = MESSAGE_PAGE_SIZE
     ): List<Message>
 
@@ -32,5 +34,5 @@ interface MessageDAO {
     fun deleteMessages(from: Long, to: Long)
 
     @Delete
-    fun deleteMessage(message: Message)
+    fun delete(message: Message)
 }

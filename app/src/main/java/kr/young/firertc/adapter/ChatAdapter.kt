@@ -6,6 +6,7 @@ import android.view.View
 import android.view.View.OnClickListener
 import android.view.View.OnLongClickListener
 import android.view.ViewGroup
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView.Adapter
 import androidx.recyclerview.widget.RecyclerView.ViewHolder
 import kr.young.common.DateUtil
@@ -16,9 +17,8 @@ import kr.young.firertc.vm.ChatViewModel
 import kr.young.firertc.vm.UserViewModel
 import java.lang.System.currentTimeMillis
 
-class ChatAdapter : Adapter<ViewHolder>() {
+class ChatAdapter : ListAdapter<Chat, ViewHolder>(ChatDiffItemCallback()) {
     private var context: Context? = null
-    private val chatViewModel = ChatViewModel.instance
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         context = parent.context
@@ -26,17 +26,17 @@ class ChatAdapter : Adapter<ViewHolder>() {
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        (holder as ChatHolder).bind(chatViewModel.chatList[position])
+        (holder as ChatHolder).bind(getItem(position))
     }
 
-    override fun getItemCount() = chatViewModel.chatList.size
+    override fun getItemCount() = currentList.size
 
     fun setOnItemClickListener(listener: ClickListener, longListener: LongClickListener) {
         mClickListener = listener
         mLongClickListener = longListener
     }
 
-    fun setOnItemClickListener(listener: (Int) -> Unit, longListener: (Int, View) -> Unit) {
+    fun setOnItemClickListener(listener: (Int) -> Unit, longListener: (Int, View) -> Any) {
         this.mClickListener = object: ClickListener {
             override fun onClick(pos: Int) {
                 listener(pos)

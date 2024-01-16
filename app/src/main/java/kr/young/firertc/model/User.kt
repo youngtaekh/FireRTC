@@ -7,6 +7,7 @@ import kr.young.firertc.util.Config.Companion.FCM_TOKEN
 import kr.young.firertc.util.Config.Companion.NAME
 import kr.young.firertc.util.Config.Companion.OS
 import java.util.*
+import kotlin.math.min
 
 @Entity(tableName = "users")
 data class User (
@@ -33,7 +34,9 @@ data class User (
     }
 
     override fun toString(): String {
-        return "id $id, pwd $password, $NAME $name, createdAt $createdAt\nfcmToken $fcmToken"
+        return "id-$id, $NAME-$name, createdAt-$createdAt, " +
+                "pwd-${password.substring(0, min(5, password.length))}, " +
+                "fcmToken-${fcmToken?.substring(0, min(5, fcmToken?.length ?: 0))}"
     }
 
     companion object {

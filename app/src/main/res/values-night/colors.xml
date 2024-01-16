@@ -7,8 +7,13 @@
     <color name="teal_700">#FF018786</color>
 
     <color name="app_color">#448AFF</color>
+    <color name="app_color_alpha">#A2448AFF</color>
     <color name="negative_color">#F24747</color>
     <color name="positive_color">#1AC100</color>
+
+    <color name="background1">#000000</color>
+    <color name="text1">#FFFFFF</color>
+    <color name="app_button_text">#EEEEEE</color>
 
     <color name="black">#FFFFFFFF</color>
     <color name="white">#FF000000</color>

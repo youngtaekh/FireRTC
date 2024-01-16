@@ -7,7 +7,6 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView.ViewHolder
 import kr.young.common.DateUtil
-import kr.young.common.UtilLog.Companion.d
 import kr.young.firertc.databinding.LayoutMessageDateBinding
 import kr.young.firertc.databinding.LayoutRecvMessage2Binding
 import kr.young.firertc.databinding.LayoutRecvMessageBinding
@@ -17,13 +16,7 @@ import kr.young.firertc.vm.MessageVM
 import kr.young.firertc.vm.MyDataViewModel
 
 class MessageAdapter: ListAdapter<Message, ViewHolder>(MessageDiffItemCallback()) {
-    var data = listOf<Message>()
-        set(value) {
-            d(TAG, "data size ${data.size}")
-            d(TAG, "value size ${value.size}")
-            field = value
-//            notifyDataSetChanged()
-        }
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         return when (viewType) {
             SEND -> SendViewHolder(LayoutSendMessageBinding.inflate(LayoutInflater.from(parent.context), parent, false))

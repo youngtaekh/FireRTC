@@ -14,11 +14,14 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.RecyclerView.*
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import io.reactivex.Observable
+import io.reactivex.schedulers.Schedulers
 import kr.young.common.UtilLog.Companion.d
 import kr.young.firertc.CallDetailActivity
 import kr.young.firertc.R
 import kr.young.firertc.adapter.HistoryAdapter
-import kr.young.firertc.util.RecyclerViewNotifier.ModifierCategory.*
+import kr.young.firertc.db.AppRoomDatabase
+import kr.young.firertc.model.Call
 import kr.young.firertc.vm.CallVM
 import kr.young.firertc.vm.HistoryVM
 
@@ -48,9 +51,10 @@ class HistoryFragment : Fragment() {
             swipe.isRefreshing = false
         }
 
-        historyAdapter = HistoryAdapter(historyVM.list)
+        historyAdapter = HistoryAdapter()
         historyAdapter.setOnItemClickListener(clickListener, longClickListener)
         recyclerView.adapter = historyAdapter
+        historyAdapter.registerAdapterDataObserver(adapterObserver)
 
         val layoutManager = LinearLayoutManager(context)
         layoutManager.orientation = VERTICAL
@@ -63,14 +67,13 @@ class HistoryFragment : Fragment() {
                 if (dragging) {
                     if (layoutManager.findLastCompletelyVisibleItemPosition() != lastVisiblePosition) {
                         lastVisiblePosition = layoutManager.findLastCompletelyVisibleItemPosition()
-                        isBottom = layoutManager.findLastCompletelyVisibleItemPosition() == historyVM.list.size - 1
 
-                        if (layoutManager.findLastCompletelyVisibleItemPosition() < 20 &&
+                        if (layoutManager.findLastCompletelyVisibleItemPosition() > historyAdapter.currentList.size - 20 &&
                             !isLoading &&
                             !historyVM.isEndReload
                         ) {
                             isLoading = true
-                            d(TAG, "scroll Additional history ${layoutManager.findLastCompletelyVisibleItemPosition()}")
+                            d(TAG, "scroll Additional history ${historyAdapter.currentList.size} ${layoutManager.findLastCompletelyVisibleItemPosition()}")
                             historyVM.getHistory(true)
                         }
                     }
@@ -83,19 +86,11 @@ class HistoryFragment : Fragment() {
             }
         })
 
-        historyVM.notifier.observe(viewLifecycleOwner) {
-            tvEmpty.visibility = if (historyVM.list.isEmpty()) VISIBLE else INVISIBLE
-            it?.let {
-                d(TAG, "historyList ${it.position} ${it.count} ${it.modifierCategory}")
-                when (it.modifierCategory) {
-                    Insert -> historyAdapter.notifyItemRangeInserted(it.position, it.count)
-                    Removed -> historyAdapter.notifyItemRangeRemoved(it.position, it.count)
-                    Changed -> historyAdapter.notifyItemRangeChanged(it.position, it.count)
-                }
-                if (it.isBottom) {
-                    recyclerView.scrollToPosition(0)
-                }
-            }
+        historyVM.historyList.observe(viewLifecycleOwner) {
+            d(TAG, "list observe size ${it.size}")
+            historyAdapter.submitList(it)
+            tvEmpty.visibility = if (it.isEmpty()) VISIBLE else INVISIBLE
+            recyclerView.visibility = if (it.isEmpty()) INVISIBLE else VISIBLE
         }
 
         return layout
@@ -106,16 +101,28 @@ class HistoryFragment : Fragment() {
         d(TAG, "onResume")
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        d(TAG, "onDestroy")
+        historyAdapter.unregisterAdapterDataObserver(adapterObserver)
+    }
+
     private fun removeHistory(pos: Int) {
         d(TAG, "removeHistory($pos)")
-        historyVM.list.removeAt(pos)
-        historyAdapter.notifyItemRemoved(pos)
+        val call = historyAdapter.currentList[pos]
+        Observable.just(call)
+            .observeOn(Schedulers.io())
+            .map { AppRoomDatabase.getInstance()!!.callDao().deleteCall(it) }
+            .subscribe()
+        val list = mutableListOf<Call>()
+        list.removeAt(pos)
+        historyVM.setHistoryListLiveData(list)
     }
 
     private val clickListener = object: HistoryAdapter.ClickListener {
         override fun onClick(pos: Int, v: View) {
             d(TAG, "onClick($pos, v)")
-            callViewModel.selectedCall = historyVM.list[pos]
+            callViewModel.selectedCall = historyAdapter.currentList[pos]
             startActivity(Intent(context, CallDetailActivity::class.java))
         }
     }
@@ -123,7 +130,7 @@ class HistoryFragment : Fragment() {
     private val longClickListener = object: HistoryAdapter.LongClickListener {
         override fun onLongClick(pos: Int, v: View) {
             d(TAG, "onLongClick($pos, v)")
-            val call = historyVM.list[pos]
+            val call = historyAdapter.currentList[pos]
             val builder = AlertDialog.Builder(context!!)
                 .setTitle(call.counterpartName ?: "No name")
                 .setMessage(R.string.delete_history)
@@ -132,6 +139,34 @@ class HistoryFragment : Fragment() {
                     removeHistory(pos)
                 }
             builder.show()
+        }
+    }
+
+    private val adapterObserver = object: AdapterDataObserver() {
+        override fun onItemRangeChanged(positionStart: Int, itemCount: Int) {
+            super.onItemRangeChanged(positionStart, itemCount)
+            d(TAG, "onItemRangeChanged($positionStart, $itemCount)")
+        }
+
+        override fun onItemRangeChanged(positionStart: Int, itemCount: Int, payload: Any?) {
+            super.onItemRangeChanged(positionStart, itemCount, payload)
+            d(TAG, "onItemRangeChanged($positionStart, $itemCount, payload)")
+        }
+
+        override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
+            super.onItemRangeInserted(positionStart, itemCount)
+            d(TAG, "onItemRangeInserted($positionStart, $itemCount)")
+            isLoading = false
+        }
+
+        override fun onItemRangeRemoved(positionStart: Int, itemCount: Int) {
+            super.onItemRangeRemoved(positionStart, itemCount)
+            d(TAG, "onItemRangeRemoved($positionStart, $itemCount)")
+        }
+
+        override fun onItemRangeMoved(fromPosition: Int, toPosition: Int, itemCount: Int) {
+            super.onItemRangeMoved(fromPosition, toPosition, itemCount)
+            d(TAG, "onItemRangeMoved($fromPosition, $toPosition, $itemCount)")
         }
     }
 

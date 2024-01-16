@@ -9,7 +9,6 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.View.*
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
 import androidx.databinding.DataBindingUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -19,10 +18,11 @@ import kr.young.firertc.adapter.AddChatAdapter
 import kr.young.firertc.adapter.AddedChatAdapter
 import kr.young.firertc.databinding.ActivityAddChatBinding
 import kr.young.firertc.model.User
+import kr.young.firertc.util.BaseActivity
 import kr.young.firertc.vm.MessageVM
 import kr.young.firertc.vm.UserViewModel
 
-class AddChatActivity : AppCompatActivity(), OnClickListener, OnTouchListener {
+class AddChatActivity : BaseActivity(), OnClickListener, OnTouchListener {
     private lateinit var binding: ActivityAddChatBinding
     private val checkedContacts = mutableListOf<User>()
     private val contacts = mutableListOf<AddChatAdapter.AddUser>()
@@ -38,7 +38,7 @@ class AddChatActivity : AppCompatActivity(), OnClickListener, OnTouchListener {
         binding.tvConfirm.setOnClickListener(this)
         binding.tvConfirm.setOnTouchListener(this)
 
-        for (user in UserViewModel.instance.contacts) {
+        for (user in UserViewModel.instance.contacts.value!!) {
             contacts.add(AddChatAdapter.AddUser(user, false))
         }
         if (contacts.isEmpty()) {

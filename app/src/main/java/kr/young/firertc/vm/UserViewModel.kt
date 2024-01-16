@@ -24,12 +24,12 @@ import kr.young.firertc.util.ResponseCode.Companion.NO_USER
 
 class UserViewModel: ViewModel() {
     val participants = mutableListOf<User>()
-    val refreshContacts = MutableLiveData<Boolean>()
-    val contacts = mutableListOf<User>()
+    var contacts = MutableLiveData(mutableListOf<User>())
     val foundUser = MutableLiveData<User?>()
     var selectedProfile: User? = null
     var sourcePage = 0
     var destinationPage = 0
+    private var userList = mutableListOf<User>()
 
     internal val responseCode = MutableLiveData<Int> ()
 
@@ -38,9 +38,8 @@ class UserViewModel: ViewModel() {
         Handler(Looper.getMainLooper()).post { responseCode.value = value }
     }
 
-    private fun setRefreshContacts(value: Boolean = true) {
-        d(TAG, "setRefreshContacts")
-        Handler(Looper.getMainLooper()).post { refreshContacts.value = value }
+    fun setContactsLiveData(value: MutableList<User>) {
+        Handler(Looper.getMainLooper()).post { contacts.value = value }
     }
 
     fun setFoundUser(user: User?) {
@@ -61,24 +60,8 @@ class UserViewModel: ViewModel() {
     }
 
     private fun addContacts(list: List<User>) {
-        d(TAG, "addContacts")
-        var i = 0
-        var j = 0
-        val copies = mutableListOf<User>()
-        copies.addAll(contacts)
-        copies.sortBy { user -> user.id }
-        val sortedList = list.sortedBy { user -> user.id }
-        while (j < sortedList.size) {
-            if (i == copies.size || copies[i].id != sortedList[j].id) {
-                copies.add(i++, sortedList[j++])
-            } else {
-                copies[i++] = sortedList[j++]
-            }
-        }
-        contacts.removeAll { true }
-        contacts.addAll(copies)
-        contacts.sortBy { user -> user.name }
-        setRefreshContacts()
+        d(TAG, "addContacts(${list.size})")
+        setContactsLiveData(list.sortedBy { it.name } as MutableList<User>)
     }
 
     fun readUsers(list: List<String>) {
@@ -151,14 +134,14 @@ class UserViewModel: ViewModel() {
 
         RelationRepository.getAll {
             setResponseCode(RelationRepository.RELATION_READ_SUCCESS)
+            userList = mutableListOf()
             val list = mutableListOf<String>()
             for (document in it) {
                 val relation = document.toObject<Relation>()
                 list.add(relation.to!!)
             }
             if (list.isEmpty()) {
-                contacts.removeAll { true }
-                setRefreshContacts()
+                setContactsLiveData(mutableListOf())
             } else {
                 UserRepository.getUsers(list = list, success = getUsersListener)
             }
@@ -166,13 +149,11 @@ class UserViewModel: ViewModel() {
     }
 
     init {
-        setRefreshContacts(false)
         responseCode.value = 0
     }
 
     @SuppressLint("CheckResult")
     val getUsersListener = OnSuccessListener<QuerySnapshot> {
-        val userList = mutableListOf<User>()
         Observable.fromIterable(it)
             .observeOn(Schedulers.io())
             .map { doc ->
