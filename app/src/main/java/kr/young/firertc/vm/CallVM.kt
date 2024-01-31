@@ -28,6 +28,8 @@ import kr.young.firertc.util.Config.Companion.CONNECTED_AT
 import kr.young.rtp.RTPManager
 import org.webrtc.RendererCommon.ScalingType
 import org.webrtc.SessionDescription
+import java.lang.System.currentTimeMillis
+import java.util.*
 
 open class CallVM internal constructor(): ViewModel() {
     var space: Space? = null
@@ -38,6 +40,9 @@ open class CallVM internal constructor(): ViewModel() {
     var callDirection: Call.Direction? = null
         get() { return field ?: Call.Direction.Offer }
     var selectedCall: Call? = null
+
+    var connectedTime: Long = 0L
+    val status = MutableLiveData("Connecting...")
 
     val responseCode = MutableLiveData<Int>()
     val terminatedCall = MutableLiveData<Boolean>()
@@ -135,6 +140,7 @@ open class CallVM internal constructor(): ViewModel() {
 
     open fun startOffer(counterpart: User, type: Call.Type, callCreateSuccess: OnSuccessListener<Void>) {
         d(TAG, "startOffer")
+        status.postValue("Calling...")
         callDirection = Call.Direction.Offer
         this.counterpart = counterpart
         space = Space(callType = type)
@@ -221,6 +227,7 @@ open class CallVM internal constructor(): ViewModel() {
         d(TAG, "onIncomingCall")
         if (spaceId == null || type == null) { return }
 
+        status.postValue("Connecting...")
         callType = Call.Type.valueOf(type)
         callDirection = Call.Direction.Answer
         remoteSDP = SessionDescription(SessionDescription.Type.OFFER, sdp!!)
@@ -271,6 +278,14 @@ open class CallVM internal constructor(): ViewModel() {
 
     fun onPCConnected() {
         call!!.connected = true
+        connectedTime = currentTimeMillis()
+        timer = Timer()
+        val timerTask = object: TimerTask() {
+            override fun run() {
+                parseTime()
+            }
+        }
+        timer.schedule(timerTask, 0L, 200L)
         CallRepository.update(call!!.id, mapOf("connected" to true, CONNECTED_AT to FieldValue.serverTimestamp()))
     }
 
@@ -284,11 +299,30 @@ open class CallVM internal constructor(): ViewModel() {
                 CallRepository.updateTerminatedAt(call!!)
             }
         }
+        timer.cancel()
     }
 
     fun getSpace(id: String, success: OnSuccessListener<DocumentSnapshot>) {
         SpaceRepository.getSpace(id = id, success = success)
     }
+
+    private fun parseTime() {
+        val currentTime = currentTimeMillis()
+        var callTime = (currentTime - connectedTime) / 1000L
+        val builder = StringBuilder("(")
+
+        if (callTime > 3600L) {
+            builder.append(String.format("%02d : ", callTime / 3600L))
+            callTime -= (callTime / 3600L).toLong() * 3_600L
+        }
+
+        builder.append(String.format("%02d : %02d", callTime / 60, callTime % 60))
+        builder.append(")")
+
+        status.postValue(builder.toString())
+    }
+
+    private var timer = Timer()
 
     init {
         setResponseCode(0)

@@ -61,7 +61,9 @@ class UserViewModel: ViewModel() {
 
     private fun addContacts(list: List<User>) {
         d(TAG, "addContacts(${list.size})")
-        setContactsLiveData(list.sortedBy { it.name } as MutableList<User>)
+        if (list.isNotEmpty()) {
+            setContactsLiveData(list.sortedBy { it.name } as MutableList<User>)
+        }
     }
 
     fun readUsers(list: List<String>) {
@@ -98,22 +100,6 @@ class UserViewModel: ViewModel() {
         UserRepository.getUser(id = userId, success = success)
     }
 
-    fun selectImage(id: String?): Int {
-        var key = 0
-        for (i in id!!.indices) {
-            key += id[i].code
-        }
-        return when (key % 7) {
-            0 -> R.drawable.outline_sentiment_very_satisfied_24
-            1 -> R.drawable.outline_mood_24
-            2 -> R.drawable.outline_sentiment_satisfied_24
-            3 -> R.drawable.outline_sentiment_neutral_24
-            4 -> R.drawable.outline_sentiment_dissatisfied_24
-            5 -> R.drawable.outline_mood_bad_24
-            else -> R.drawable.outline_sentiment_very_dissatisfied_24
-        }
-    }
-
     fun createRelation(userId: String) {
         d(TAG, "createRelation($userId)")
         val relation = Relation(
@@ -130,7 +116,7 @@ class UserViewModel: ViewModel() {
 
     fun getRelations() {
         d(TAG, "getRelations")
-        if (MyDataViewModel.instance.myData == null) return
+        if (MyDataViewModel.instance.myData.value == null) return
 
         RelationRepository.getAll {
             setResponseCode(RelationRepository.RELATION_READ_SUCCESS)
@@ -172,5 +158,16 @@ class UserViewModel: ViewModel() {
     companion object {
         private const val TAG = "UserViewModel"
         val instance: UserViewModel by lazy { Holder.INSTANCE }
+
+        const val defaultResource = R.drawable.outline_mood_24
+        val profileImages = listOf(
+            R.drawable.outline_sentiment_very_satisfied_24,
+            R.drawable.outline_mood_24,
+            R.drawable.outline_sentiment_satisfied_24,
+            R.drawable.outline_sentiment_neutral_24,
+            R.drawable.outline_sentiment_dissatisfied_24,
+            R.drawable.outline_mood_bad_24,
+            R.drawable.outline_sentiment_very_dissatisfied_24,
+        )
     }
 }

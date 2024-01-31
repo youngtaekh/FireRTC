@@ -90,15 +90,15 @@ class PCManager(
         executor: ExecutorService,
         isAudioToFile: Boolean = true
     ): PeerConnectionFactory? {
+        // 하나의 객체만 생성한다.
         if (factory != null) {
             e(TAG, "peerConnectionFactory already created")
             return null
         }
-        if (isAudioToFile) {
-            if (!useOpenSLES) {
-                saveRecordedAudioToFile =
-                    RecordedAudioToFileController(executor)
-            }
+        // 음성을 파일로 저장할 경우 실행되는 코드
+        if (isAudioToFile && !useOpenSLES) {
+            saveRecordedAudioToFile =
+                RecordedAudioToFileController(executor)
         }
 
         val audioDeviceModule = AudioMedia()
@@ -108,7 +108,7 @@ class PCManager(
         if (isLoopback) {
             options.networkIgnoreMask = 0
         }
-
+        // 영상 인코더/디코더 선택
         val encoderFactory: VideoEncoderFactory?
         val decoderFactory: VideoDecoderFactory?
 
@@ -122,7 +122,7 @@ class PCManager(
             encoderFactory = SoftwareVideoEncoderFactory()
             decoderFactory = SoftwareVideoDecoderFactory()
         }
-
+        // 객체 생성
         this.factory = PeerConnectionFactory.builder()
             .setOptions(options)
             .setAudioDeviceModule(audioDeviceModule)
@@ -131,7 +131,7 @@ class PCManager(
             .createPeerConnectionFactory()
 
         audioDeviceModule?.release()
-
+        // 로그 출력 레벨 설정
         Logging.enableLogToDebugOutput(Logging.Severity.LS_NONE)
 
         return factory
@@ -144,14 +144,15 @@ class PCManager(
      * set peer connection event listener
      */
     fun createPeerConnection(isOffer: Boolean, iceServers: List<PeerConnection.IceServer>?): PeerConnection? {
-        createMediaConstraintsInternal(isOffer)
+        //음성, 영상 미디어에 관련된 값 설정
+        createMediaConstraintsInternal()
         this.peerConnection = factory!!.createPeerConnection(getRTCConfig(iceServers), pcListener)
         this.sdpListener = SDPListener(
             isOffer,
             peerConnection!!,
             pcObserverImpl!!
         )
-
+        // 음성, 영상 외의 데이터를 전송을 원할 경우 데이터채널 설정 (실시간 채팅에 활용)
         if (pcParameters.isDataChannel) {
             val init = DataChannel.Init()
             init.ordered = DefaultValues.isOrdered
@@ -197,7 +198,7 @@ class PCManager(
      * Set video width/height/fps
      * receive audio/video or not
      */
-    private fun createMediaConstraintsInternal(isOffer: Boolean) {
+    private fun createMediaConstraintsInternal() {
         if (pcParameters.isVideo) {
             if (videoWidth == 0 || videoHeight == 0) {
                 videoWidth =
@@ -261,6 +262,7 @@ class PCManager(
     fun createAnswer() {
         if (peerConnection != null) {
             d(TAG, "PC create ANSWER")
+            // 2. 상대방의 데이터를 토대로 SDP를 생성하여 전송
             peerConnection!!.createAnswer(sdpListener, sdpMediaConstraints)
         }
     }
@@ -289,10 +291,11 @@ class PCManager(
 
     fun sendData(message: String) {
         if (dataChannel == null) return
-        i(TAG, "sendData($message)")
+        // 메시지를 바이트배열로 변환
         val byteBuffer = ByteBuffer.allocate(message.toByteArray().size)
         byteBuffer.put(message.toByteArray())
         byteBuffer.flip()
+        // PeerConnection 객체에서 생성한 데이터채널을 통해 메시지 전송
         val buffer = DataChannel.Buffer(byteBuffer, false)
         dataChannel!!.send(buffer)
     }

@@ -38,7 +38,7 @@ class ChatViewModel private constructor(): ViewModel() {
             .toList().blockingGet()
         addChats(list)
 
-        if (MyDataViewModel.instance.myData != null) {
+        if (MyDataViewModel.instance.myData.value != null) {
             ChatRepository.getChats(MyDataViewModel.instance.getMyId()) {
                 list = it.toObservable()
                     .observeOn(Schedulers.computation())

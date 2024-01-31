@@ -10,7 +10,7 @@ import java.util.*
 
 data class Space(
     val name: String = MyDataViewModel.instance.getMyId(),
-    val id: String = Crypto().getHash("$name${System.currentTimeMillis()}"),
+    val id: String = Crypto.getHash("$name${System.currentTimeMillis()}"),
     val maximum: Int = 2,
     var status: SpaceStatus = SpaceStatus.INACTIVE,
     var connected: Boolean = false,

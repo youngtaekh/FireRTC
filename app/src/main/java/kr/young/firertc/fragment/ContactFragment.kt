@@ -56,7 +56,7 @@ class ContactFragment : Fragment(), OnClickListener {
 
         userVM.contacts.observe(viewLifecycleOwner) {
             d(TAG, "contacts observe size ${it.size}")
-            contactAdapter.submitList(it)
+            contactAdapter.submitList(it.toList())
             tvEmpty.visibility = if (it.isEmpty()) VISIBLE else INVISIBLE
         }
 

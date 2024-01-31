@@ -25,6 +25,7 @@ import kr.young.common.UtilLog.Companion.d
 import kr.young.firertc.databinding.ActivityVideoCallBinding
 import kr.young.firertc.fcm.SendFCM
 import kr.young.firertc.model.Call
+import kr.young.firertc.vm.CallVM
 import kr.young.firertc.vm.VideoViewModel
 import kr.young.rtp.RTPManager
 
@@ -72,6 +73,12 @@ class VideoCallActivity : AppCompatActivity(), OnClickListener, OnTouchListener,
         powerManager = getSystemService(POWER_SERVICE) as PowerManager
         sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
         proximity = sensorManager.getDefaultSensor(TYPE_PROXIMITY)
+
+        CallVM.instance.status.observe(this) {
+            if (it.isNotEmpty()) {
+                binding.tvStatus.text = it
+            }
+        }
 
         callVM.terminatedCall.observe(this) {
             if (it != null && it) {
@@ -254,9 +261,11 @@ class VideoCallActivity : AppCompatActivity(), OnClickListener, OnTouchListener,
             visibility = false
             binding.llBtns.visibility = INVISIBLE
             binding.tvName.visibility = INVISIBLE
+            binding.tvStatus.visibility = INVISIBLE
         } else {
             visibility = true
             binding.llBtns.visibility = VISIBLE
+            binding.tvName.visibility = VISIBLE
             binding.tvName.visibility = VISIBLE
         }
     }

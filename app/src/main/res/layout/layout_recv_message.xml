@@ -13,7 +13,7 @@
             android:layout_height="wrap_content"
             android:padding="10dp"
             android:maxWidth="255dp"
-            android:layout_marginStart="53dp"
+            android:layout_marginStart="63dp"
             android:background="@drawable/recv_text_box"
             android:ellipsize="end"
             android:maxLines="5"

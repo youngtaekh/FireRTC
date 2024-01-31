@@ -54,6 +54,12 @@ class HomeActivity : BaseActivity(), OnClickListener, OnTouchListener {
             }
         }
 
+        myViewModel.myData.observe(this) {
+            it?.let {
+                binding.tvTitle.text = it.name
+            }
+        }
+
         FirebaseMessaging.getInstance().token.addOnCompleteListener(OnCompleteListener { task ->
             if (!task.isSuccessful) {
                 UtilLog.w(TAG, "Fetching FCM registration token failed", task.exception)
@@ -81,8 +87,11 @@ class HomeActivity : BaseActivity(), OnClickListener, OnTouchListener {
 //                d(TAG, msg)
 //            }
 
-        if (AppSP.instance.isSigned() && currentFragment != CONTACT) {
-            UserViewModel.instance.getContacts()
+        if (AppSP.instance.isSigned()) {
+
+            if (currentFragment != CONTACT) {
+                UserViewModel.instance.getContacts()
+            }
         }
 
         notificationEvent(intent.getStringExtra(CHAT_ID))
@@ -93,7 +102,7 @@ class HomeActivity : BaseActivity(), OnClickListener, OnTouchListener {
 
         if (AppSP.instance.isSigned()) {
             if (intent == null || intent.getStringExtra(CHAT_ID) == null) {
-                binding.tvTitle.text = myViewModel.myData!!.name
+                myViewModel.getMyData()
                 when (currentFragment) {
                     CONTACT -> UserViewModel.instance.getContacts()
                     CHAT -> ChatViewModel.instance.getChats()

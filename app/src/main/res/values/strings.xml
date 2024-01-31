@@ -25,6 +25,7 @@
     <string name="confirm">Confirm</string>
     <string name="no_one">No One</string>
     <string name="add_chat">Add Chat</string>
+    <string name="call_from">Call From</string>
 
     <string name="empty_warn">%s can\'t be empty</string>
     <string name="create_warn">Can\'t create</string>

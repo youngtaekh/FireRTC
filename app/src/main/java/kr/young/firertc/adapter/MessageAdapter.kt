@@ -6,12 +6,19 @@ import android.view.View.*
 import android.view.ViewGroup
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView.ViewHolder
+import com.bumptech.glide.Glide
+import com.bumptech.glide.load.resource.bitmap.CenterCrop
+import com.bumptech.glide.load.resource.bitmap.RoundedCorners
+import com.bumptech.glide.request.RequestOptions
+import kr.young.common.ApplicationUtil
 import kr.young.common.DateUtil
+import kr.young.firertc.R
 import kr.young.firertc.databinding.LayoutMessageDateBinding
 import kr.young.firertc.databinding.LayoutRecvMessage2Binding
 import kr.young.firertc.databinding.LayoutRecvMessageBinding
 import kr.young.firertc.databinding.LayoutSendMessageBinding
 import kr.young.firertc.model.Message
+import kr.young.firertc.util.ImageUtil
 import kr.young.firertc.vm.MessageVM
 import kr.young.firertc.vm.MyDataViewModel
 
@@ -134,6 +141,13 @@ class MessageAdapter: ListAdapter<Message, ViewHolder>(MessageDiffItemCallback()
             } else {
                 binding.tvTime.visibility = INVISIBLE
             }
+            val requestOption = RequestOptions().transform(CenterCrop(), RoundedCorners(29))
+            Glide.with(ApplicationUtil.getContext()!!)
+                .load(ImageUtil.selectImageFromWeb(message.from))
+                .placeholder(R.drawable.profile_placeholder)
+                .error(R.drawable.outline_mood_24)
+                .apply(requestOption)
+                .into(binding.ivProfile)
         }
 
         override fun onLongClick(v: View?): Boolean {

@@ -11,13 +11,14 @@ import android.view.View.OnClickListener
 import android.view.View.OnTouchListener
 import androidx.appcompat.app.AppCompatActivity
 import androidx.databinding.DataBindingUtil
+import com.bumptech.glide.Glide
 import kr.young.common.TouchEffect
 import kr.young.common.UtilLog.Companion.d
 import kr.young.firertc.databinding.ActivityReceiveBinding
 import kr.young.firertc.fcm.SendFCM
 import kr.young.firertc.model.Call.Type.*
+import kr.young.firertc.util.ImageUtil.Companion.selectImageFromWeb
 import kr.young.firertc.vm.CallVM
-import kr.young.firertc.vm.UserViewModel
 
 class ReceiveActivity : AppCompatActivity(), OnClickListener, OnTouchListener {
     private lateinit var binding: ActivityReceiveBinding
@@ -44,7 +45,10 @@ class ReceiveActivity : AppCompatActivity(), OnClickListener, OnTouchListener {
             else -> R.drawable.round_call_24
         })
 
-        binding.ivProfile.setImageResource(UserViewModel.instance.selectImage(""))
+        Glide.with(this)
+            .load(selectImageFromWeb(CallVM.instance.counterpart!!.id))
+            .circleCrop()
+            .into(binding.ivProfile)
         binding.ivAnswer.setOnClickListener(this)
         binding.ivAnswer.setOnTouchListener(this)
         binding.ivEnd.setOnClickListener(this)

@@ -19,7 +19,7 @@ data class Message(
     val from: String = MyDataViewModel.instance.getMyId(),
     val chatId: String? = null,
     @PrimaryKey
-    val id: String = Crypto().getHash("$from$chatId${System.currentTimeMillis()}"),
+    val id: String = Crypto.getHash("$from$chatId${System.currentTimeMillis()}"),
     var body: String? = null,
     var sequence: Long = -1,
     val createdAt: Date? = null,
