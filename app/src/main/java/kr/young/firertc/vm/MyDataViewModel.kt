@@ -8,6 +8,7 @@ import com.google.firebase.firestore.ktx.toObject
 import kr.young.common.Crypto
 import kr.young.common.UtilLog.Companion.d
 import kr.young.common.UtilLog.Companion.e
+import kr.young.firertc.HomeActivity
 import kr.young.firertc.model.User
 import kr.young.firertc.repo.AppSP
 import kr.young.firertc.repo.UserRepository
@@ -76,6 +77,7 @@ class MyDataViewModel {
                     _myData.postValue(user)
                     AppSP.instance.setUserId(user.id)
                     AppSP.instance.setUserName(user.name)
+                    AppSP.instance.setUserPwd(pwd)
                     AppSP.instance.setSignIn(true)
                     setSigned(true)
                     updateFCMToken(AppSP.instance.getFCMToken()!!)
@@ -89,6 +91,8 @@ class MyDataViewModel {
     fun signOut() {
         _myData.postValue(null)
         AppSP.instance.setSignIn(false)
+        d(TAG, "setFragmentIndex 0")
+        AppSP.instance.setFragmentIndex(0)
         setSigned(false)
     }
 

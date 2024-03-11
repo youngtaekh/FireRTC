@@ -23,7 +23,6 @@ import kr.young.firertc.util.Config.Companion.CHAT_ID
 import kr.young.firertc.vm.*
 
 class HomeActivity : BaseActivity(), OnClickListener, OnTouchListener {
-
     private lateinit var binding: ActivityHomeBinding
     private lateinit var myViewModel: MyDataViewModel
 
@@ -34,6 +33,9 @@ class HomeActivity : BaseActivity(), OnClickListener, OnTouchListener {
         super.onCreate(savedInstanceState)
         binding = DataBindingUtil.setContentView(this, R.layout.activity_home)
         myViewModel = MyDataViewModel.instance
+
+        currentFragment = AppSP.instance.getFragmentIndex()
+        d(TAG, "getFragmentIndex $currentFragment")
 
         replaceFragment(currentFragment)
         switchIcon(currentFragment)
@@ -173,6 +175,7 @@ class HomeActivity : BaseActivity(), OnClickListener, OnTouchListener {
     }
 
     private fun replaceFragment(fragmentNumber: Int) {
+        d(TAG, "setFragmentIndex $fragmentNumber")
         AppSP.instance.setFragmentIndex(fragmentNumber)
         val fragment = when (fragmentNumber) {
             CHAT -> { ChatFragment() }
@@ -244,6 +247,8 @@ class HomeActivity : BaseActivity(), OnClickListener, OnTouchListener {
     ) { result ->
         if (result.resultCode == RESULT_OK) {
             d(TAG, "result ok")
+            replaceFragment(currentFragment)
+            switchIcon(currentFragment)
         } else if (result.resultCode == RESULT_CANCELED) {
             d(TAG, "result canceled")
             finish()
