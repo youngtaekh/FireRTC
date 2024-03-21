@@ -10,12 +10,16 @@ import android.view.View.OnClickListener
 import android.view.View.OnTouchListener
 import androidx.appcompat.app.AppCompatActivity
 import androidx.databinding.DataBindingUtil
+import com.bumptech.glide.Glide
 import kr.young.common.TouchEffect
 import kr.young.common.UtilLog.Companion.d
 import kr.young.firertc.databinding.ActivityAudioCallBinding
 import kr.young.firertc.fcm.SendFCM
 import kr.young.firertc.model.Call
+import kr.young.firertc.util.ImageUtil
+import kr.young.firertc.util.ImageUtil.Companion.selectImage
 import kr.young.firertc.vm.AudioViewModel
+import kr.young.firertc.vm.CallVM
 import kr.young.firertc.vm.UserViewModel
 import kr.young.rtp.RTPManager
 
@@ -34,7 +38,19 @@ class AudioCallActivity : AppCompatActivity(), OnClickListener, OnTouchListener 
         binding = DataBindingUtil.setContentView(this, R.layout.activity_audio_call)
         binding.user = audioViewModel.counterpart
 
-        binding.ivProfile.setImageResource(UserViewModel.instance.selectImage(audioViewModel.counterpart!!.id))
+        Glide.with(this)
+            .load(ImageUtil.selectImageFromWeb(audioViewModel.counterpart!!.id))
+            .placeholder(R.drawable.profile_placeholder)
+            .error(R.drawable.outline_mood_24)
+            .circleCrop()
+            .into(binding.ivProfile)
+
+//        Glide.with(this)
+//            .load(ImageUtil.selectBackground(audioViewModel.counterpart!!.id))
+//            .placeholder(R.drawable.profile_placeholder)
+//            .centerCrop()
+//            .into(binding.ivBackground)
+
         binding.ivMute.setOnClickListener(this)
         binding.ivMute.setOnTouchListener(this)
         binding.ivSpeaker.setOnClickListener(this)
@@ -65,6 +81,11 @@ class AudioCallActivity : AppCompatActivity(), OnClickListener, OnTouchListener 
                 } else {
                     binding.ivSpeaker.setImageResource(R.drawable.round_speaker_24)
                 }
+            }
+        }
+        CallVM.instance.status.observe(this) {
+            if (it.isNotEmpty()) {
+                binding.tvStatus.text = it
             }
         }
 

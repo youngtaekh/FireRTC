@@ -77,7 +77,7 @@ class SendFCM {
             payload.addProperty(TO, toToken)
             val data = JsonObject()
             val notification = JsonObject()
-            notification.addProperty("title", MyDataViewModel.instance.myData!!.name)
+            notification.addProperty("title", MyDataViewModel.instance.myData.value!!.name)
             if (type == FCMType.Message) {
                 notification.addProperty("body", "$type $message")
             } else {
@@ -87,7 +87,7 @@ class SendFCM {
             data.addProperty(TYPE, type.toString())
             data.addProperty(CALL_TYPE, callType.toString())
             data.addProperty(USER_ID, MyDataViewModel.instance.getMyId())
-            data.addProperty(NAME, MyDataViewModel.instance.myData!!.name)
+            data.addProperty(NAME, MyDataViewModel.instance.myData.value!!.name)
             data.addProperty(FCM_TOKEN, AppSP.instance.getFCMToken())
             data.addProperty(TARGET_OS, "Android")
             if (callId != null) {

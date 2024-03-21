@@ -9,9 +9,16 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView.ViewHolder
+import com.bumptech.glide.Glide
+import com.bumptech.glide.load.resource.bitmap.CenterCrop
+import com.bumptech.glide.load.resource.bitmap.RoundedCorners
+import com.bumptech.glide.request.RequestOptions
+import com.squareup.picasso.Picasso
+import kr.young.common.ApplicationUtil
 import kr.young.firertc.R
 import kr.young.firertc.model.User
-import kr.young.firertc.vm.UserViewModel
+import kr.young.firertc.util.CircleTransform
+import kr.young.firertc.util.ImageUtil.Companion.selectImageFromWeb
 
 class ContactAdapter: ListAdapter<User, ViewHolder>(UserDiffItemCallback()) {
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -24,7 +31,13 @@ class ContactAdapter: ListAdapter<User, ViewHolder>(UserDiffItemCallback()) {
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val contact = getItem(position)
         (holder as ContactHolder).tvName.text = contact.name
-        holder.ivProfile.setImageResource(UserViewModel.instance.selectImage(contact.id))
+        val requestOption = RequestOptions().transform(CenterCrop(), RoundedCorners(50))
+        Glide.with(ApplicationUtil.getContext()!!)
+            .load(selectImageFromWeb(contact.id))
+            .placeholder(R.drawable.profile_placeholder)
+            .error(R.drawable.outline_mood_24)
+            .apply(requestOption)
+            .into(holder.ivProfile)
     }
 
     override fun getItemCount() = currentList.size

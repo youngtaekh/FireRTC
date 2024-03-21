@@ -8,7 +8,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 
 class ApiClient {
     companion object {
-        fun getApiService() =
+        fun getApiService(): NotificationApiService =
             Retrofit.Builder()
                 .baseUrl(BuildConfig.FCM_BASE_URL)
                 .client(provideClient())

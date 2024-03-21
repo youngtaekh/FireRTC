@@ -18,6 +18,7 @@
     <string name="speaker_off">Speaker Off</string>
     <string name="end">End</string>
     <string name="sign_out">Sign Out</string>
+    <string name="assets_management">Assets Management</string>
     <string name="add_contact">Add Contact</string>
     <string name="empty">Empty</string>
     <string name="find">Find</string>
@@ -25,6 +26,7 @@
     <string name="confirm">Confirm</string>
     <string name="no_one">No One</string>
     <string name="add_chat">Add Chat</string>
+    <string name="call_from">Call From</string>
 
     <string name="empty_warn">%s can\'t be empty</string>
     <string name="create_warn">Can\'t create</string>
@@ -43,5 +45,13 @@
     <string name="call_notification_desc">Call Notification Description</string>
     <string name="message_notification">Message</string>
     <string name="message_notification_desc">Received Message Notification Description</string>
+
+    <string name="portfolio_name">Portfolio Name</string>
+    <string name="portfolio_currency">Currency</string>
+    <string name="delete_portfolio">Do u want to del this portfolio?</string>
+
+    <string name="ticker_hint">Ticker or code</string>
+    <string name="amount_hint">Amount ex)3.14</string>
+    <string name="price_hint">Average buying price</string>
 
 </resources>

@@ -57,7 +57,7 @@ class RelationRepository {
 
         fun remove(id: String) {
             Firebase.firestore.collection(COLLECTION)
-                .document(Crypto().getHash("${MyDataViewModel.instance.getMyId()}$id"))
+                .document(Crypto.getHash("${MyDataViewModel.instance.getMyId()}$id"))
                 .delete()
                 .addOnSuccessListener { d(TAG, "remove relation success") }
                 .addOnFailureListener { e(TAG, "remove relation failure") }

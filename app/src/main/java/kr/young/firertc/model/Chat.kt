@@ -22,7 +22,7 @@ data class Chat(
     val title: String? = "",
     var localTitle: String = "",
     @PrimaryKey
-    var id: String = if (participants.isEmpty()) "" else Crypto().getHash("${participants[0]}${participants[1]}"),
+    var id: String = if (participants.isEmpty()) "" else Crypto.getHash("${participants[0]}${participants[1]}"),
     @get:PropertyName("isGroup") @set:PropertyName("isGroup")
     var isGroup: Boolean = false,
     var lastMessage: String = "",

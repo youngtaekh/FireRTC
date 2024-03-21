@@ -9,9 +9,9 @@ import kr.young.firertc.vm.MyDataViewModel
 import java.util.Date
 
 data class Relation(
-    val from: String? = MyDataViewModel.instance.myData?.id,
+    val from: String? = MyDataViewModel.instance.myData.value?.id,
     val to: String? = null,
-    val id: String = Crypto().getHash("$from$to"),
+    val id: String = Crypto.getHash("$from$to"),
     var type: Type = Type.Friend,
     val createdAt: Date? = null
 ) {

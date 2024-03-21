@@ -173,12 +173,13 @@ class MessageActivity : AppCompatActivity(), OnTouchListener, OnClickListener, P
 
         binding.etMessage.isActivated = true
         binding.etMessage.isPressed = true
+
+        messageVM.start()
     }
 
     override fun onResume() {
         super.onResume()
-
-        messageVM.start()
+        //TODO: get new messages for onPausing
     }
 
     override fun onDestroy() {

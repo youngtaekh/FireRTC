@@ -19,10 +19,10 @@ import java.util.*
 @Entity(tableName = "calls")
 data class Call(
     val userId: String = MyDataViewModel.instance.getMyId(),
-    val fcmToken: String? = MyDataViewModel.instance.myData!!.fcmToken,
+    val fcmToken: String? = MyDataViewModel.instance.getMyFcmToken(),
     val spaceId: String? = null,
     @PrimaryKey
-    val id: String = Crypto().getHash("$userId$spaceId${currentTimeMillis()}"),
+    val id: String = Crypto.getHash("$userId$spaceId${currentTimeMillis()}"),
     var type: Type = Type.AUDIO,
     var direction: Direction? = null,
     var counterpartName: String? = null,

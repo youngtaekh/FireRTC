@@ -10,11 +10,14 @@ import android.view.View
 import android.view.View.OnClickListener
 import android.view.View.OnTouchListener
 import androidx.databinding.DataBindingUtil
+import com.bumptech.glide.Glide
 import kr.young.common.TouchEffect
 import kr.young.common.UtilLog.Companion.d
 import kr.young.firertc.databinding.ActivityProfileBinding
 import kr.young.firertc.model.Call
 import kr.young.firertc.util.BaseActivity
+import kr.young.firertc.util.ImageUtil.Companion.selectBackground
+import kr.young.firertc.util.ImageUtil.Companion.selectImageFromWeb
 import kr.young.firertc.vm.*
 
 class ProfileActivity : BaseActivity(), OnClickListener, OnTouchListener {
@@ -29,7 +32,18 @@ class ProfileActivity : BaseActivity(), OnClickListener, OnTouchListener {
         binding.user = userViewModel.selectedProfile
         d(TAG, "user token ${userViewModel.selectedProfile!!.fcmToken}")
 
-        binding.ivProfile.setImageResource(userViewModel.selectImage(userViewModel.selectedProfile?.id))
+        Glide.with(this)
+            .load(selectImageFromWeb(userViewModel.selectedProfile!!.id))
+            .placeholder(R.drawable.profile_placeholder)
+            .error(R.drawable.outline_mood_24)
+            .circleCrop()
+            .into(binding.ivProfile)
+
+        Glide.with(this)
+            .load(selectBackground(userViewModel.selectedProfile!!.id))
+            .placeholder(R.drawable.profile_placeholder)
+            .centerCrop()
+            .into(binding.ivBackground)
 
         binding.ivClose.setOnTouchListener(this)
         binding.ivClose.setOnClickListener(this)

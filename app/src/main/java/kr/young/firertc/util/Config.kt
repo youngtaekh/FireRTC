@@ -45,6 +45,33 @@ class Config {
         const val FROM = "from"
         const val TO = "to"
 
+        const val PORTFOLIO_ID = "portfolioId"
+        const val IN_PRICE = "inPrice"
+        const val OUT_PRICE = "outPrice"
+        const val CURRENT = "current"
+        const val RATE = "rate"
+        const val CURRENCY = "currency"
+        const val TICKER = "ticker"
+        const val AMOUNT = "amount"
+        const val AVERAGE_PRICE = "averagePrice"
+        const val CURRENT_PRICE = "currentPrice"
+        const val PRICE = "price"
+        const val KRW = "KRW"
+        const val KRW_SYMBOL = "₩"
+        const val USD = "USD"
+        const val USD_SYMBOL = "$"
+        const val JPY = "JPY"
+        const val JPY_SYMBOL = "¥"
+        const val CNY = "CNY"
+        const val CNY_SYMBOL = "¥"
+        const val TWD = "TWD"
+        const val TWD_SYMBOL = "NT$"
+        const val GBP = "GBP"
+        const val GBP_SYMBOL = "£"
+        const val WITHDRAW = "WITHDRAW"
+        const val DEPOSIT = "DEPOSIT"
+        val CURRENCY_ARRAY = arrayOf(KRW, USD, JPY, CNY, TWD, GBP)
+
         val exampleMessages = listOf(
             "How was your day? I was the best.",
             "How is the weather? It’s so hot here.",
@@ -61,6 +88,39 @@ class Config {
             "Who’s your favorite movie star? I like the main character of Spider-Man.",
             "Would you like some coffee? Or do you want some water?",
             "Do you really think so? Well, I think we need to talk about it.",
+        )
+        val IMAGE_LIST = listOf(
+            "https://cdn.pixabay.com/photo/2020/05/17/20/21/cat-5183427_1280.jpg",
+            "https://cdn.pixabay.com/photo/2014/04/13/20/49/cat-323262_1280.jpg",
+            "https://cdn.pixabay.com/photo/2017/11/09/21/41/cat-2934720_1280.jpg",
+            "https://cdn.pixabay.com/photo/2017/12/11/15/34/lion-3012515_1280.jpg",
+            "https://cdn.pixabay.com/photo/2017/07/25/01/22/cat-2536662_1280.jpg",
+            "https://cdn.pixabay.com/photo/2015/03/27/13/16/maine-coon-694730_1280.jpg",
+            "https://cdn.pixabay.com/photo/2015/04/23/21/59/tree-736877_1280.jpg",
+            "https://cdn.pixabay.com/photo/2018/08/23/22/29/girl-3626901_640.jpg",
+            "https://cdn.pixabay.com/photo/2017/06/07/08/43/head-2379686_640.png",
+            "https://cdn.pixabay.com/photo/2017/10/22/17/54/wolf-2878633_640.jpg",
+            "https://cdn.pixabay.com/photo/2020/07/08/19/13/girl-5384878_640.jpg",
+            "https://cdn.pixabay.com/photo/2017/04/06/19/34/girl-2209147_640.jpg",
+            "https://cdn.pixabay.com/photo/2017/06/01/07/31/elephant-2362696_640.png",
+            "https://cdn.pixabay.com/photo/2017/03/26/11/33/binary-2175285_640.jpg",
+            "https://cdn.pixabay.com/photo/2020/06/21/15/54/bohemian-5325610_640.png",
+            "https://cdn.pixabay.com/photo/2017/06/07/08/43/head-2379687_640.png",
+            "https://cdn.pixabay.com/photo/2013/07/18/09/11/woman-163425_640.jpg",
+            "https://cdn.pixabay.com/photo/2019/05/05/20/29/portrait-4181643_640.jpg",
+            "https://cdn.pixabay.com/photo/2019/12/02/20/15/girl-4668620_640.jpg",
+            "https://cdn.pixabay.com/photo/2020/02/11/18/35/profile-4840593_640.jpg",
+            "https://cdn.pixabay.com/photo/2017/06/21/01/20/model-2425659_640.jpg",
+            "https://cdn.pixabay.com/photo/2016/08/22/22/23/cat-1613088_640.jpg",
+            "https://cdn.pixabay.com/photo/2017/10/22/17/54/wolf-2878633_640.jpg",
+        )
+
+        val BACKGROUND = listOf(
+            "https://i.pinimg.com/736x/ea/41/b0/ea41b0956cda2f60cb3aa9553dd32e09.jpg",
+            "https://i.pinimg.com/736x/9a/1c/b5/9a1cb580823d0054d083d32ab354509b.jpg",
+            "https://i.pinimg.com/736x/aa/2e/f4/aa2ef41f1e7e96a74c033cff58c5ef03.jpg",
+            "https://i.pinimg.com/736x/97/57/b3/9757b35bf3f2f853a29a87bb852e52ce.jpg",
+            "https://i.pinimg.com/736x/1f/f9/d0/1ff9d0dd8ba9ef565f4149b1f3fa7ea7.jpg"
         )
     }
 }

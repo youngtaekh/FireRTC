@@ -8,6 +8,7 @@ import androidx.recyclerview.widget.RecyclerView.ViewHolder
 import kr.young.firertc.R
 import kr.young.firertc.databinding.LayoutAddChatBinding
 import kr.young.firertc.model.User
+import kr.young.firertc.util.ImageUtil.Companion.selectImage
 import kr.young.firertc.vm.UserViewModel
 
 class AddChatAdapter(private val contacts: MutableList<AddUser>): Adapter<ViewHolder>() {
@@ -40,7 +41,7 @@ class AddChatAdapter(private val contacts: MutableList<AddUser>): Adapter<ViewHo
         ): ViewHolder(binding.root), View.OnClickListener {
 
         fun bind(contact: AddUser) {
-            binding.ivProfile.setImageResource(UserViewModel.instance.selectImage(contact.user.id))
+            binding.ivProfile.setImageResource(selectImage(contact.user.id))
             binding.tvName.text = contact.user.name
             if (contact.checked) {
                 binding.ivCheck.setImageResource(R.drawable.outline_check_box_24)

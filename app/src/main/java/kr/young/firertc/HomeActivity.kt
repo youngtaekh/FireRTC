@@ -23,7 +23,6 @@ import kr.young.firertc.util.Config.Companion.CHAT_ID
 import kr.young.firertc.vm.*
 
 class HomeActivity : BaseActivity(), OnClickListener, OnTouchListener {
-
     private lateinit var binding: ActivityHomeBinding
     private lateinit var myViewModel: MyDataViewModel
 
@@ -34,6 +33,9 @@ class HomeActivity : BaseActivity(), OnClickListener, OnTouchListener {
         super.onCreate(savedInstanceState)
         binding = DataBindingUtil.setContentView(this, R.layout.activity_home)
         myViewModel = MyDataViewModel.instance
+
+        currentFragment = AppSP.instance.getFragmentIndex()
+        d(TAG, "getFragmentIndex $currentFragment")
 
         replaceFragment(currentFragment)
         switchIcon(currentFragment)
@@ -51,6 +53,12 @@ class HomeActivity : BaseActivity(), OnClickListener, OnTouchListener {
                 val intent = Intent(this, SignActivity::class.java)
                 intent.flags = FLAG_ACTIVITY_CLEAR_TOP or FLAG_ACTIVITY_SINGLE_TOP
                 signLauncher.launch(intent)
+            }
+        }
+
+        myViewModel.myData.observe(this) {
+            it?.let {
+                binding.tvTitle.text = it.name
             }
         }
 
@@ -81,8 +89,11 @@ class HomeActivity : BaseActivity(), OnClickListener, OnTouchListener {
 //                d(TAG, msg)
 //            }
 
-        if (AppSP.instance.isSigned() && currentFragment != CONTACT) {
-            UserViewModel.instance.getContacts()
+        if (AppSP.instance.isSigned()) {
+
+            if (currentFragment != CONTACT) {
+                UserViewModel.instance.getContacts()
+            }
         }
 
         notificationEvent(intent.getStringExtra(CHAT_ID))
@@ -93,7 +104,7 @@ class HomeActivity : BaseActivity(), OnClickListener, OnTouchListener {
 
         if (AppSP.instance.isSigned()) {
             if (intent == null || intent.getStringExtra(CHAT_ID) == null) {
-                binding.tvTitle.text = myViewModel.myData!!.name
+                myViewModel.getMyData()
                 when (currentFragment) {
                     CONTACT -> UserViewModel.instance.getContacts()
                     CHAT -> ChatViewModel.instance.getChats()
@@ -164,6 +175,7 @@ class HomeActivity : BaseActivity(), OnClickListener, OnTouchListener {
     }
 
     private fun replaceFragment(fragmentNumber: Int) {
+        d(TAG, "setFragmentIndex $fragmentNumber")
         AppSP.instance.setFragmentIndex(fragmentNumber)
         val fragment = when (fragmentNumber) {
             CHAT -> { ChatFragment() }
@@ -235,6 +247,8 @@ class HomeActivity : BaseActivity(), OnClickListener, OnTouchListener {
     ) { result ->
         if (result.resultCode == RESULT_OK) {
             d(TAG, "result ok")
+            replaceFragment(currentFragment)
+            switchIcon(currentFragment)
         } else if (result.resultCode == RESULT_CANCELED) {
             d(TAG, "result canceled")
             finish()
